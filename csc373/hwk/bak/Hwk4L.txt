@@ -1,0 +1,259 @@
+     1	                                CSC373: Computer Systems 1
+     2	                                     Summer 1, 2006
+     3	                                        Homework 3
+     4	
+     5	Reminder: Final exam is on July 12. The exam is 2 1/2 hours and there will time
+     6	at the start of class for last-minute review. Open book and open notes but no
+     7	electronic devices. On Monday, we'll spend roughly half the class on an extensive
+     8	review and I'll give examples of the kind of questions you can expect. DL students
+     9	are welcome to take the exam in class, if they like.
+    10	
+    11	I'll post the make-up homework sometime later this week. It'll be due on July 19.
+    12	
+    13	Points: 100
+    14	Due:    Before midnight, July 14
+    15	
+    16	1. Consider this code segment
+    17	
+    18	         int n = 1234;
+    19	         float f = 1234.0f;
+    20	
+    21	   Here's the internal representation of each in big endian, with the
+    22	   most significant byte to the left:
+    23	
+    24	         n: 00 00 04 d2
+    25	   
+    26	         f: 44 9a 40 00
+    27	
+    28	   Explain how the bits in the integer variable n and the floating-point variable
+    29	   f are correlated. It may be easiest to show how to derive f from n.
+    30	
+    31	2. Consider this code segment:
+    32	
+    33	         int n = 1234;
+    34	         float f = 1234.0f;
+    35		 if (n == f) printf("They're equal.\n");
+    36		 else printf("They're not equal.\n");
+    37	
+    38	   When executed, the output is
+    39	
+    40	         They're equal.
+    41	
+    42	   What must the compiler be doing in order to reach this result? We know from 
+    43	   Question 1, by inspecting the hex values, that n and f differ at the bit level;
+    44	   and the equality operator ==, in this context, simply checks whether the bit
+    45	   patterns are the same.
+    46	
+    47	3. Here's a short C program:
+    48	
+    49	   
+    50	
+    51	
+    52	
+    53	
+    54	
+    55	
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	  /* This program uses the pow function, which is part of the run-time
+    62	        math library. To enable its use, this file (fpointHwk.c) was
+    63	        compiled/linked as follows:
+    64	
+    65	             gcc -o fpointHwk -lm fpointHwk.c
+    66	
+    67	        In "-lm", that's a lowercase L rather than a one.
+    68	     */
+    69	
+    70	     #include <stdio.h>
+    71	     #include <math.h>
+    72	
+    73	     int main() {
+    74	        /* first printf statements */
+    75	        double d1 = 1.0 / 10.0;
+    76	        printf("d1 == %f\n", d1);
+    77	
+    78	        double d2 = pow(2.0, -20.0) * d1;
+    79	        printf("d2 == %f\n", d1);
+    80	
+    81	        double d3 = 9.54 * pow(10.0, -8.0);
+    82	        printf("d3 == %f\n", d1);
+    83	
+    84	        printf("\n");
+    85	
+    86	        /* second printf statements */
+    87	        if (d1 == d2) printf("d1 == d2\n");
+    88	        else printf("d1 != d2\n");
+    89	
+    90	        if (d1 == d3) printf("d1 == d3\n");
+    91	        else printf("d1 != d3\n");
+    92	
+    93	        if (d2 == d3) printf("d2 == d3\n");
+    94	        else printf("d2 != d3\n");
+    95	
+    96	        return 0;
+    97	     }
+    98	
+    99	    Here's the output:
+   100	
+   101	        d1 == 0.100000
+   102	        d2 == 0.100000
+   103	        d3 == 0.100000
+   104	
+   105	        d1 != d2
+   106	        d1 != d3
+   107	        d2 != d3
+   108	
+   109	    Explain what's going on. In particular, the first printf statements give the
+   110	    same value for d1, d2, and d3: 0.100000. However, the comparisons using ==
+   111	    all evaluate to false, as show in the second group of printf statements.
+   112	    Explain, then, why the system thinks that d1 != d2 and so on.
+   113	
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	4. In the net.c program (included in NetworkingCode.jar on the home site), 
+   122	   there's a call to gethostbyname, which takes a string and returns a
+   123	   pointer to a struct hostent. Here's a code segment to illustrate:
+   124	
+   125	      struct hostent* host_ptr = gethostbyname("condor.depaul.edu");
+   126	
+   127	   This pointer is passed to the function dump_host_aux, which prints 
+   128	   information about the host with the given name. In the case of
+   129	   www.yahoo.com, for instance, here's the output:
+   130	
+   131	          Official name: www.yahoo.akadns.net
+   132	          Aliases: www.yahoo.com
+   133	          Host type: AF_INET
+   134	          Address length: 4
+   135	          Addresses: 68.142.197.86
+   136	                     68.142.197.87
+   137	                     68.142.197.90
+   138	                     68.142.197.67
+   139	                     68.142.197.69
+   140	                     68.142.197.75
+   141	                     68.142.197.77
+   142	                     68.142.197.84
+   143	 
+   144	   The structure itself looks like this:
+   145	
+   146	     struct hostent {
+   147	        char*    h_name;       ;; official name
+   148	        char**   h_aliases;    ;; alias list
+   149	        int      h_addrtype;   ;; host address type 
+   150	        int      h_length;     ;; length of address 
+   151	        char**   h_addr_list;  ;; list of addresses 
+   152	     };
+   153	
+   154	
+   155	   Of interest here is the second field in the structure, h_aliases, which
+   156	   is a list of alternative names. (The official name for yahoo is not
+   157	   www.yahoo.com but rather www.yahoo.akadns.net; hence, www.yahoo.com is an
+   158	   alias for this official name.) Here's the loop that prints the aliases:
+   159	
+   160	
+   161	         printf("Aliases: ");
+   162	         int i = 0;
+   163	         while (host_ptr->h_aliases[i] != NULL) {
+   164	            printf("%.21s\n", host_ptr->h_aliases[i]);
+   165	            i++;
+   166	         }
+   167	
+   168	   So the loop terminates when the ith entry is NULL, which is defined as 0
+   169	   in the header file stdlib.h. 
+   170	
+   171	   Here's a simpler example of what's going on. The data type of strings
+   172	   is char**, that is, strings points to an array of strings. Note that the
+   173	   last entry in the list is NULL, which is 0. (Putting the integer 0 in there
+   174	   works the same.) If you put, say, -1 in place of NULL, you get a 
+   175	   compiler warning. Explain why the compiler is willing to accept an
+   176	   array initialization in which the last element is not a string, like the
+   177	   others, but rather an integer. 
+   178	
+   179	
+   180	
+   181	          /* output from this program:
+   182	
+   183	               foo
+   184	               bar
+   185	               baz
+   186	          */
+   187	          #include <stdlib.h>
+   188	          #include <stdio.h>
+   189	
+   190	          int main() {
+   191	            char* strings[ ] = { "foo", "bar", "baz", NULL };
+   192	            int i = 0;
+   193	            while (strings[i] != NULL)
+   194	               printf("%s\n", strings[i++]);
+   195	            return 0;
+   196	          }
+   197	
+   198	
+   199	5. Here's a short program, echo.c, that prompts the user to enter a string 
+   200	   from the standard input and then echos the string back to the standard
+   201	   output:
+   202	       
+   203	      #include <stdio.h>
+   204	      #include <stdlib.h>
+   205	
+   206	      char buffer[1024 + 1];
+   207	
+   208	      char* prompt_and_read() {
+   209	         printf("\nPlease enter a string (-1 to exit): ");
+   210	         fgets(buffer, 1024, stdin);
+   211	         return buffer;
+   212	      }
+   213	
+   214	      int main() {
+   215	         while (1) {
+   216	           char* ptr = prompt_and_read();
+   217	           int flag = atoi(ptr);    /* converts string to int */
+   218	           if (flag < 0) break;     /* break out of the loop */
+   219	           printf("You entered: %s\n", ptr);
+   220	         }
+   221	         return 0;
+   222	      }
+   223	
+   224	   Note that array named buffer is not a local variable in 
+   225	   prompt_and_read but rather is defined outside of all functions.
+   226	   (In C jargon, buffer is an extern variable.) Why? In particular,
+   227	   what's the problem with defining buffer inside of prompt_and_read,
+   228	   as show here?
+   229	
+   230	     char* prompt_and_read() {
+   231	         char buffer[1024 + 1];
+   232	         printf("\nPlease enter a string (-1 to exit): ");
+   233	         fgets(buffer, 1024, stdin);
+   234	         return buffer;
+   235	      }
+   236	
+   237	6. Here's a structure with mixed types
+   238	
+   239	          struct Emp {
+   240	             char[70]       lname;      /* 70 bytes */
+   241	             char[70]       fname;      /* 70 bytes
+   242	             unsigned char  married;    /* 1 byte */
+   243	             unsigned short age;        /* 2 bytes */
+   244	             unsigned int   dept_code;  /* 4 bytes */
+   245	             float          sal;        /* 4 bytes */
+   246	             long           benefits;   /* 8 bytes */
+   247	          };
+   248	
+   249	   In C, there is no guarantee that the memory layout will reflect the
+   250	   source layout; that  is, the char array lname could come before or
+   251	   after, for instance, the unsigned short called age. The only guarantee
+   252	   is that all of the fields will be laid out in memory.
+   253	
+   254	   Assume that the compiler does 32-bit alignment; that is, each field
+   255	   starts on a 32-bit boundary on a byte-addressable machine. Assume
+   256	   that the memory layout starts, for simplicity, at address 0. So the
+   257	   next 32-bit boundary is at address 4, then 8, then 12, and so on.
+   258	
+   259	   Give an aligned layout that uses as little memory as possible.

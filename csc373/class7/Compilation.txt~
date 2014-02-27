@@ -1,0 +1,8 @@
+## The compilation process
+
+Consider the command
+
+   % gcc -o test test.c
+
+that generates an executable named test if there are no
+fatal compile-time errors.

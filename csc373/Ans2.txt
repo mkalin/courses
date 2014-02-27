@@ -1,0 +1,200 @@
+Question 1: I'm assuming that, as in the provided example,
+
+             ADD 100, 101, 105    ;; RAM[105] = RAM[100] + RAM[101]
+     
+that the last operand is the destination and that the first two are
+the source operands.
+
+
+ Address    Contents  Contents after instruction executes
+ -------    --------  -----------------------------------
+   100       -1 ==> 124 from (5)    
+   101        2
+   102      106 
+   103       31
+   104        4 ==>  106 from (2)
+   105       56
+   106      101
+   107       18
+   108      105
+   109      102
+   110        3 ==> (2 - 106) from (1) ==> +1 from (3) ==> 109 from (4)
+
+  
+ The instructions are numbered for reference
+
+ (1) SUB @106, -2(104), 110  ;; 1st src is indirect, 2nd is displacement, 3rd is direct
+                             ;; So the instruction is effectively
+                             ;;
+                             ;;  SUB $2, $106, 110 
+                             ;;
+                             ;; RAM 110 changes from 3 to 2 - 106
+
+ (2) MOV 102, 104            ;; direct mode: copies contents of 102 to 104
+                             ;; So RAM 104 changes from 4 to 106
+
+ (3) ADD 110, 2(@102), 110   ;; source1 is direct, source2 is displacement with
+                             ;; base address given in indirect mode, dest is direct
+                             ;; So the instruction is effectively
+                             ;;
+                             ;;  ADD $-104, $105, 110
+                             ;;
+                             ;; because source1 (110) now holds 2 - 106 == -104
+                             ;;         source2 is cell 108 (102 holds 106 and the
+                             ;;           dispalcement is 2, giving 108)
+                             ;;         destination is 110
+                             ;; So the contents of 110 become +1.
+
+ (4) SUB $110, 110, 110      ;; source1 is immediate, source2 is direct, dest is direct
+                             ;; So the instruction is effectively
+                             ;;
+                             ;;  SUB $110, $1, 110
+                             ;;
+                             ;; So cell 110 now holds 110 - 1 = 109
+
+ (5) ADD 6(101), -2(104), -4(104) ;; both sources and destination are displacement
+                                  ;; So the instruction is effectively
+                                  ;;
+                                  ;;  ADD 107, 102, 100
+                                  ;;  ADD $18, $106, 100
+                                  ;;
+                                  ;; So cell 100 now has 124 as its contents
+ (6) HALT                         ;; no impact on RAM
+
+ After the execution, we have:
+
+ Address    Contents
+ -------    --------
+   100      124
+   101        2
+   102      106 
+   103       31
+   104      106
+   105       56
+   106      101
+   107       18
+   108      105
+   109      102
+   110      109
+/************************************************************************************/
+
+Question 2: There are many ways to do this. I'll illustrate two, one very
+            conservative and one very aggressive. I've sketched the assembler,
+            though this is not required.
+
+ Conservative approach:
+
+ Caller needs registers for a, b, and c. There are three "callee save" registers,
+ which therefore fit the bill
+                                          Assembler sketch
+                                          ----------------
+       Local variable a ==> %ebx      ;; movl $4, %ebx
+       Local variable b ==> %edi      ;; movl $8, %edi
+       Local variable c ==> %esi      ;; movl %eax, %esi (%eax has return value)
+                                      ;; In the call to callee, %ebx and %edi would
+                                      ;; be pushed onto the stack as arguments
+
+ Callee has two parameters, n1 and n2, and also needs to compute the sum (n1 + n2),
+ the product (n1 * n2), and the difference (temp - (n1 + n2)). On the face of it,
+ then, callee needs 5 registers---but perhaps these can be shared.  Here's a possible 
+ register allocation, using the "caller save" registers:
+                                          Assembler sketch
+                                          ----------------
+           Parameter n1 ==> %edx      ;; popl into %edx
+           Parameter n2 ==> %eax      ;; popl into %eax
+             Copy of n2 ==> %ecx      ;; movl %eax, %ecx (need to save n2: see next)
+                n1 + n2 ==> %eax      ;; addl %edx, %eax (%eax is 2nd source and dest.)
+                n1 * n2 ==> %ecx      ;; mult %edx, %ecx (%ecx is 2nd source and dest.)
+                                      ;;  (%ecx is the local variable temp)
+       temp - (n1 + n2) ==> %eax      ;; sub %ecx, %eax (%eax is 2nd source and dest)
+
+             
+ Aggressive approach: An aggressive compiler could optimize away the call to callee 
+                      and instead do the entire computation in caller. Further, it's
+                      possible to use only the "callee save" registers under an
+                      assumption given below. If the assumption does not hold, then
+                      a "caller save" register or the stack would have to be used.
+
+
+                                          Assembler sketch
+                                          ----------------
+       Local variable a ==> %ebx      ;; movl $4, %ebx
+       Local variable b ==> %edi      ;; movl $8, %edi
+              Copy of b ==> %esi      ;; movl %edi, %esi
+                  a + b ==> %edi      ;; addl %ebx, %edi (%edi is 2nd source and dest.)
+                  a * b ==> %ebx      ;; mult %esi, %ebx (%ebx is 2nd source and dest.)
+  c = (a * b) - (a + b) ==> %edi      ;; sub %ebx, %edi (%edi is 2nd source and dest.)
+                                      ;; Key assumption: original value of a no longer
+                                      ;; needed. If this value is still needed, can't
+                                      ;; do it in the three "callee save" registers
+                                      ;; but need another
+/****************************************************************************************/
+
+Question 3: Here's documentation that's adequate. More is always welcome, of course.
+
+void no_op(int a, int b) {
+    int y = 5;
+    int z = 9; 
+    y += b;
+    z += a;
+    return;
+}
+
+_no_op:
+ pushl %ebp                ;; save the base pointer (call frame pointer) from
+                           ;; the caller, that is, the function that calls no_op
+                      
+ movl %esp, %ebp           ;; create a new call frame by setting %ebp to TOP
+
+ subl $8, %esp             ;; move the stack pointer 8 bytes, which means the
+                           ;; new TOP is now 2 DWORDs from the pushed (saved) %ebp
+
+ movl $5, -4(%ebp)         ;; store constant 5 one DWORD into the current call frame
+                           ;; in effect: y = 5
+
+ movl $9, -8(%ebp)         ;; store constant 9 two DWORDs into the current call frame
+                           ;; in effect: z = 9
+
+ movl 12(%ebp), %edx       ;; copy parameter b's value into %edx
+
+ leal -4(%ebp), %eax       ;; copy y's location, at -4(%ebp), into %eax
+                           ;; in effect: %eax points to y
+
+ addl %edx, (%eax)         ;; y += b: %edx holds b and (%eax) points to y, which
+                           ;; is 5; and y is stored at -4(%ebp)
+                           ;; The sum is stored where (%eax) points.
+
+ movl 8(%ebp), %edx        ;; copy parameter a's value into %edx
+
+ leal -8(%ebp), %eax       ;; copy z's location into %eax
+                           ;; in effect: %eax points to z
+
+ addl %edx, (%eax)         ;; z += a: %edx holds a and (%eax) points to z
+                           ;; the sum is stored where %eax points
+
+ leave           ;; restore the call frame pointer (%ebp) and the
+                 ;; stack pointer (%esp) to their values before the
+                 ;; call to no_op. In effect, leave is equivalent to
+                 ;;
+                 ;;  movl %ebp, %esp  ;; set TOP to start of this call frame
+                 ;;  popl %ebp        ;; restore the saved %ebp, thereby setting
+                                      ;; TOP to the end of the caller's 
+                                      ;; current call frame. Now new items
+                                      ;; can be added to the caller's stack frame
+
+ ret             ;; return control to the caller of no_op
+                 ;; when the caller invoked 
+                 ;;
+                 ;;     call no_op
+                 ;;     <next instruction in caller>
+                 ;;
+                 ;; the call instruction pushes the address of the next 
+                 ;; caller instruction onto the stack. The ret instruction
+                 ;; pops this address off the stack so that the caller
+                 ;; now can resume execution.
+
+
+ 
+
+
+

@@ -1,0 +1,60 @@
+int main() {                   +===========+
+  no_op(777, 333);             |           |<=== main's %ebp, <=== %esp: (c)
+  /*...*/                      +-----------+
+}                                    ...       
+                               +-----------+
+void no_op(int a, int b) {     |    333    | ;; call to no_op(..., 333) 
+    int y = 5;                 +-----------+ 
+    int z = 9;                 |    777    | ;; call to no_op(777, ...)
+    y += b;                    +--- -------+
+    z += a;                    |main's %eip| ;; call to no_op, <=== %esp: (c)     
+    return;                    +===========+
+}                              |main's %ebp|<=== no_op's %ebp & %esp: (1), (2), (c)
+                               +-----------+
+                               | 5, 338    | -4(%ebp): (4), (8)
+                               +-----------+
+                               | 9, 876    |<=== %esp: (3), (b)
+                               +-----------+
+         +-------------+                       +--------------------+
+         | 333, 777    | :(6), (9)             | ptr to 5, ptr to 9 | :(7), (a)
+         +-------------+                       +--------------------+
+            %edx                                      %eax
+
+_no_op:
+ pushl %ebp (1)            ;; save the base pointer (call frame pointer) from
+                           ;; the caller, that is, the function that calls no_op
+                      
+ movl %esp, %ebp (2)       ;; create a new call frame by setting %ebp to TOP
+ 
+ subl $8, %esp (3)         ;; move the stack pointer 8 bytes, which means the
+                           ;; new TOP is now 2 DWORDs from the pushed (saved) %ebp
+
+ movl $5, -4(%ebp) (4)     ;; store constant 5 one DWORD into current call frame
+                           ;; in effect: y = 5
+
+ movl $9, -8(%ebp) (5)     ;; store constant 9 two DWORDs into current call frame
+                           ;; in effect: z = 9
+
+ movl 12(%ebp), %edx (6)   ;; copy parameter b's value into %edx
+
+ leal -4(%ebp), %eax (7)   ;; copy y's location, at -4(%ebp), into %eax
+                           ;; in effect: %eax points to y
+
+ addl %edx, (%eax) (8)     ;; y += b: %edx holds b and (%eax) points to y, which
+                           ;; is 5; and y is stored at -4(%ebp)
+                           ;; The sum is stored where (%eax) points.
+
+ movl 8(%ebp), %edx (9)    ;; copy parameter a's value into %edx
+
+ leal -8(%ebp), %eax (a)   ;; copy z's location into %eax
+                           ;; in effect: %eax points to z
+
+ addl %edx, (%eax) (b)     ;; z += a: %edx holds a and (%eax) points to z
+                           ;; the sum is stored where %eax points
+
+ leave (c)       ;;  movl %ebp, %esp  ;; set TOP to start of this call frame
+                 ;;  popl %ebp        ;; restore the saved %ebp, thereby setting
+                                      ;; TOP to the end of the caller's call frame. 
+
+ ret (d)         ;; return control to the caller of no_op
+

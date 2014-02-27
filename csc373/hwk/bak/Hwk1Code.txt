@@ -1,0 +1,180 @@
+     1	/* Problem 1: Answer the questions below. For each answer, explain whether
+     2	   the expression shown evaluates to true (non-zero) or false (zero). For example,
+     3	   you'd say that 
+     4	
+     5	     (n1 < n2) == (-n1 > -n2)
+     6	
+     7	   always evaluates to true or, for some values, might evaluate to false. The
+     8	   easiest way to show that it might evaluate to false is to provide the values
+     9	   and then explain. In general, of course, the expressions are more interesting
+    10	   if they somethings evaluate to false.
+    11	*/
+    12	
+    13	#include <stdio.h>
+    14	#include <limits.h>
+    15	
+    16	int main() {
+    17	  int n1 = -1;
+    18	  int n2 = 2;
+    19	
+    20	  unsigned int u1 = (unsigned int) n1;  
+    21	  unsigned int u2 = (unsigned int) n2;
+    22	
+    23	  /* Is result always 1? Explain. */
+    24	  int result = (n1 < n2) == (-n1 > -n2);
+    25	  printf("(%d < %d) == (-%d > -%d) evaluates to %d\n", 
+    26		 n1, n2, n1, n2, result);
+    27	
+    28	  /* Is result always 0? Explain. */
+    29	  result = ~n1 + ~n2 == ~(n1 + n2);
+    30	  printf("(~%d + ~%d) == ~(%d + %d) evaluates to %d\n", 
+    31		 n1, n2, n1, n2, result);
+    32	
+    33	  /* Is result always 1? Explain. */
+    34	  result = ((n1 >> 1) << 1) <= n1;
+    35	  printf("((%d >> 1) << 1) <= %d evaluates to %d\n",
+    36		 n1, n1, result);
+    37	
+    38	  /* Is result always 1? Explain. */
+    39	  /** On left hand side, the expression (int) (u1 - u2) means that
+    40	      the subtraction of u2 from u1 is done and then this result is
+    41	      cast to an int, that is, a signed int.
+    42	  **/
+    43	  result = ((int) (u1 - u2)) == -(n2 - n1);
+    44	  printf("((int) (%u - %u)) == -(%d - %d) evaluates to %d\n",
+    45		 u1, u2, n2, n1, result);
+    46	
+    47	  return 0;
+    48	}
+    49	/*******************************************************************************/
+    50	
+    51	
+    52	
+    53	
+    54	
+    55	
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	/* Problem 1: What does the function mystery do? 
+    63	   You should answer at two levels. First, explain in general what it 
+    64	   does by giving some sample inputs and outputs. For example, the 
+    65	   code as written generates this output
+    66	
+    67	            305419896 ===> 313218680
+    68	
+    69	   How did the function mystery map 305419896 to 313218680?
+    70	   If you know how the function works, you might also suggest a better
+    71	   name for it.
+    72	
+    73	   Second, document the lines of code in the function, in particular the
+    74	   2nd line. (If you know what the 2nd line does, documenting the first
+    75	   line will make sense.) I've already documented and 3rd and 4th lines.
+    76	*/
+    77	
+    78	#include <stdio.h>
+    79	
+    80	unsigned int mystery(unsigned int  a,       
+    81			     unsigned int  b,      
+    82			     unsigned char c) {    /* a char is 8 bits */
+    83	  unsigned char* ptr = (unsigned char*) &a; /* make ptr point to a */
+    84	  unsigned int ret_val;
+    85	
+    86	  if (b >= sizeof(unsigned int)) b = 0;
+    87	
+    88	  *(ptr + b) = c;  /* In general, if ptr is a pointer, then *ptr is the
+    89	                      value pointed at. So, for example, if 
+    90	
+    91	                        int n = 27;
+    92	                        int* ptr = &n;
+    93	
+    94	                                    0x1234
+    95	                                    +----+
+    96	                          ptr ----->| 27 |
+    97	                                    +----+
+    98	                                      n
+    99	                      
+   100	                      with 0x1234 as the address of n, then *ptr is 27.
+   101			   */
+   102	  /* ptr is of type unsigned char*, that is, pointer to unsigned char; but
+   103	     the function is supposed to return an int. So, first, we cast ptr's
+   104	     value to unsigned int* (pointer to unsigned int):
+   105	
+   106	              (unsigned int*) ptr
+   107	
+   108	     However, we need to return an unsigned int, not a pointer to an 
+   109	     unsigned int. So we dereference the pointer:
+   110	
+   111	             *((unsigned int*) ptr)
+   112	
+   113	     If we just did
+   114	                             *ptr
+   115	
+   116	     we'd get an unsigned char rather than the unsigned int that we want.
+   117	  */
+   118	  ret_val = *((unsigned int*) ptr);
+   119	  return ret_val; /* return an unsigned int */
+   120	}
+   121	  
+   122	int main() {
+   123	  /* sample run */
+   124	  unsigned int n = 305419896;
+   125	  unsigned char c = 171;
+   126	  unsigned result = mystery(n, 2, c);
+   127	  printf("%u ===> %u\n", n, result);
+   128	  return 0;
+   129	}
+   130	/**********************************************************************/
+   131	
+   132	/* Problem 3: What does the function mystery do?
+   133	   You should answer at two levels. First, explain in general what it 
+   134	   does by giving some sample inputs and outputs. For example, on a 
+   135	   sample run I got
+   136	
+   137	            1234 ===> -771489792
+   138	
+   139	   as my output. How did the function mystery map 1234 to -771489792?
+   140	   If you know how the function works, you might also suggest a better
+   141	   name for it.
+   142	
+   143	   Second, document the lines of code in the function. There are four
+   144	   such lines, involving shifts and logical-ands. What do they do?
+   145	*/
+   146	
+   147	#include <stdio.h>
+   148	
+   149	unsigned int mystery(unsigned int n) {
+   150	  /* >> is the right-shift operator. The shift is logical, not arithmetic,
+   151	     because the data type is unsigned. (P. 50 in the textbook.)
+   152	     << is the left-shift operator.
+   153	     & is the bitwise logical-and operator.
+   154	     | is the bitwise logical-or operator.
+   155	  */
+   156	  unsigned int temp = 
+   157	    (n >> 24) | 
+   158	    ((n << 8) & 0x00FF0000) |
+   159	    ((n >> 8) & 0x0000FF00) |
+   160	    (n << 24);
+   161	  
+   162	  return temp;
+   163	}
+   164	
+   165	unsigned int prompt_and_read() {
+   166	  unsigned int next;
+   167	  printf("\nprompt> Please enter an integer (0 to exit): ");
+   168	  scanf("%u", &next);
+   169	  if (next == 0) exit(0);
+   170	  return next;
+   171	}
+   172	
+   173	int main() {
+   174	  while (1) {
+   175	    unsigned int next = prompt_and_read();
+   176	    unsigned int result = mystery(next);
+   177	    printf("%d ===> %d\n", next, result);
+   178	  }
+   179	  return 0;
+   180	}

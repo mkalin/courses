@@ -1,0 +1,93 @@
+<html>
+<head>
+<style type = "text/css">
+    .body  {background-color: rgb(225, 225, 225);}
+    .links {text-decoration: none;}
+    .bullets {background-color: rgb(225, 225, 225); }
+    .raw {background-color: white; }
+    h3 { color: black; font-style: italic; }
+    a { color: #151b8d; text-decoration:none; }
+    a:visited { color: #151b8d; }
+    a:hover { color: #fff; background-color: #666; }
+    .legend {color: #990000;}
+    .black {color: black;}
+    fieldset {width: 800px;}
+</style>
+<TITLE>Systems 1</TITLE>
+</head>
+
+<body>
+<P>
+
+<H2>
+CSC373/CSC406: Systems 1
+</h2>
+
+<!--
+<p>
+<div style = 'color:blue'>Final exam: Thursday, July 12th, 6:00PM to 8:30PM, CDM 218</div>
+<div>I'll email on-line students about the available dates for the final but July 11th, 12th,
+and 13th are certainly available. On-line students are welcome to take the final in-class.</div>
+</p>
+-->
+
+<p>
+<fieldset><legend class = 'legend'>Getting started</legend>
+<div>
+<a class = 'links' 
+href="syl373.html">Syllabus for CSC373</a>
+</div>
+<div>
+<a class = 'links' 
+href="syl406.html">Syllabus for CSC406</a>
+</div>
+<div style = 'color:blue'>Tutoring: Brian Gabor, 2nd Floor Tutoring Center (M-T-W-Th, 12:00PM-6:00PM)</div>
+<div><a class = 'links' 
+href="Readings.html">Readings from the textbook</a></div>
+
+<div><a class = 'links' 
+href="TextConversion.html">
+Unpacking my ZIP files, etc.</a></div>
+<div><a class = 'links' 
+href="http://www.dewassoc.com/support/msdos/decimal_hexadecimal.htm">
+Binary/Decimal/Hex Conversion Table</a></div>
+<div><a class = 'links' 
+href="cygwin.html">Instructions for installing the Cygwin C compiler</a></div>
+<div><a class = 'links'
+href = 'Compiling.html'>Compiling a C source file with Cygwin</a></div>
+</fieldset>
+</p>
+
+<p>
+<fieldset><legend class = 'legend'>Class handouts and code</legend>
+<div><a class = 'links' href = 'Class1.zip'>Class 1 materials</a></div>
+<div><a class = 'links' href = 'Class2.zip'>Class 2 materials</a></div>
+<div><a class = 'links' href = 'Class3.zip'>Class 3 materials</a></div>
+</fieldset>
+</p>
+
+<p>
+<fieldset><legend class = 'legend'>Homework 
+<span class = 'black'> (Submit to the CMS </span>
+<a class = 'links' href = 'https:col.cdm.depaul.edu'>https://col.cdm.depaul.edu</a>
+<span class = 'black'>or via email to </span>
+<a class = 'links' 
+   href = 'mailto:kalin@cs.depaul.edu'>kalin@cs.depaul.edu</a><span class = 'black'>.)</span>
+</legend>
+<div><a class = 'links' href = 'hwk1.zip'>Homework 1 (due June 25th before midnight)</a></div>
+</fieldset>
+</p>
+
+<p>
+<fieldset><legend class = 'legend'>Homework answers</legend>
+<div><a class = 'links' href = 'Ans1.txt'>Answers to Hwk1 (6-26-2013 at 12:55AM)</a></div>
+</fieldset>
+</p>
+</body>
+</html>
+
+
+
+
+
+

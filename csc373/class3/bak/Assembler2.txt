@@ -1,0 +1,299 @@
+/* fibonacci number N is defined recursively as
+
+               1 if n <= 2
+   Fib(n) =
+               Fib(n - 1) + Fib(n - 2) if n > 2
+
+   The sequence starts 1, 1, 2, 3, 5, 8, 13, 21, 34, 55,...
+*/
+int fib_recursive(int n) {
+  if (n <= 2) return 1;
+  return fib_recursive(n - 1) + fib_recursive(n - 2);
+}
+
+int fib_dw(int n) {
+  int i = 0;         /* loop counter */
+  int val = 0;   
+  int next = 1;  
+
+  /* Assembler for the loop:
+
+       ;; %eax holds temp
+       ;; %ebx holds val
+       ;; %edx holds next
+       ;; %ecx holds i
+       ;; %esi holds the parameter, n
+
+     .L6:
+         leal (%edx, %ebx), %eax  ;; temp = val + next
+	 movl %edx, %ebx          ;; val = next
+	 movl %eax, %edx          ;; next = temp
+         incl %ecx                ;; i += 1
+         cmpl %esi, %ecx          ;; (i < n) ?
+         jl .L6                   ;; if (i < n) goto .L6
+         movl %ebx, %eax          ;; return val
+  */
+  do {
+    int temp = val + next;
+    val = next;
+    next = temp;
+    i++;
+  } while(i < n);
+
+  return val;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int fib_w(int n) {
+  /* Assembler for fib_w:
+
+       ;; %eax holds n and then temp (after .L10)
+       ;; %ebx holds val
+       ;; %ecx holds next
+       ;; %edx holds i
+
+           movl 8(%ebp), %eax       ;; get parameter n
+	   movl $1, %ebx            ;; val = 1
+           movl $1, %ecx            ;; next = 1
+	   cmpl %eax, %ebx          ;; (val > n) ?
+           jge .L9                  ;; if (val >= n) return
+           leal -1(%eax), %edx      ;; i = n - 1
+     .L10:
+           leal (%ecx, %ebx), %eax  ;; temp = next + val
+           movl %ecx, %ebx          ;; val = next
+           movl %eax, %ecx          ;; next = temp
+	   decl %edx                ;; i--
+           jnz  .L10                ;; if (i != 0) goto .L10
+     .L9:       
+  */
+  int i = 1;
+  int val = 1;
+  int next = 1;
+
+  while (i < n) {
+    int temp = val + next;
+    val = next;
+    next = temp;
+    i++;
+  }
+  
+  return val;
+}
+
+int main() {
+  int i;
+  for (i = 1; i < 8; i++) {
+    printf("Fib(%i) == %i (recursive) and %i (dw) and %i (w)\n",
+	   i, fib_recursive(i), fib_dw(i), fib_w(i));
+  }
+
+  return 0;
+}
+/******************************************************************************/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <stdio.h>
+char* my_gets(char* buffer) {
+  int c;  /* getchar() returns the int value 0xffffffff on end-of-file */
+  char* dest = buffer;
+  
+  /* read until newline or end-of-file (Control-Z for the standard input) */
+  while ((c = getchar()) != '\n' && c != EOF)
+    *dest++ = c; /* store next character in buffer and move pointer */
+  
+  if (c == EOF) return NULL; /* NULL is 0, the invalid address */
+  return buffer; /* now filled with characters from getchar() */
+}
+
+int main() {
+  char buf[4];                   /* big trouble waiting to happen */
+  char* flag = my_gets(buf);     /* flag is NULL or non-NULL */
+  if (flag) printf("%s\n", buf); /* print if non-NULL */
+  
+  return 0;
+}
+/* output from sample runs:
+
+    $ ./stack_corrupt
+    a b 
+    a b
+
+    $ ./stack_corrupt
+    a b c d e
+    a b c d e
+    Segmentation fault
+
+   The problem:
+
+                +=======================+ <--- main's call frame
+                |        ...            |
+                |-----------------------| 
+                | return address        | <--- saved %eip for main
+                +=======================+ <--- my_gets's call frame
+                | saved stack pointer   | <--- saved %ebp for main
+                |-----------------------|
+                | [3] | [2] | [1] | [0] | <--- buffer in my_gets (LE)
+                |-----------------------|
+                |        ...            |
+                +=======================|
+
+   At the assembler level (assembler for main):
+
+     main:
+            pushl %ebp          ;; save main's call frame pointer
+            movl %esp, %ebp     ;; create call frame for my_gets
+            subl $20, %esp      ;; grow the call frame for my_gets
+            pushl %ebx          ;; save %ebx on the stack
+            addl $-12, %esp     ;; grow the call frame some more
+            leal -4(%ebp), %ebx ;; compute buf as %ebp - 4
+            pushl %ebx          ;; save new %ebx == buf on the stack
+            call my_gets        ;; transfer control to my_gets
+*/
+
+
+
+#include <stdio.h>
+
+unsigned find_ESP() {
+  asm("movl %esp, %eax");
+}
+
+unsigned find_EBP() {
+  asm("movl %ebp, %eax");
+}
+
+void dump_registers(const char* msg ) {
+  unsigned esp = find_ESP();
+  unsigned ebp = find_EBP();
+
+  printf("%s\nesp ==> %x\nebp ==> %x\n", msg, esp, ebp);
+}
+
+/* p. 146 in text */
+int arith(int x, int y, int z) {
+  dump_registers("\nstart of arith");
+  int t1 = x + y;   /* movl 12(%ebp), %eax        ;; %eax = y */
+                    /* addl  8(%ebp), %eax        ;; t1 = x + y */
+
+  dump_registers("\ninside arith");
+
+  int t2 = z * 48;  /* movl 16(%ebp), %edx        ;; %edx = z */
+                    /* leal means "load effective address," that is,
+                       load a memory address into a register. Howerver,
+                       it also can used as a hack to express basic arithmetic
+                       operations. In the example below, the expression
+                       leal (%edx, %edx, 2) means "add %edx to itself twice."
+                       Note that one copy of z is already in %edx so that, in
+                       effect, we're tripling z. The second operand is %edx, 
+                       the destination.
+                    /* leal (%edx, %edx, 2), %edx ;; z = z * 3 */
+
+                        /* sall $4, %edx  ;; t2 = z * 48 (sall is SHIFT LEFT) */
+
+  int t3 = t1 & 0xffff; /* andl $65535, %eax ;; 0xffff == 65,535 */
+
+  int t4 = t2 * t3;     /* imull %eax, %edx  ;; t4 = t2 * t3 */
+
+  dump_registers("\nend of arith");
+
+  return t4;            /* movl %edx, %eax   ;; %eax holds return value */
+}
+
+int main() {
+  dump_registers("\nstart of main");
+  int ans = arith(1, 2, 3);
+  dump_registers("\nmiddle of main");
+  printf("return from arith is %d\n", ans);  /* 432 */
+  dump_registers("\nend of main");
+
+  return 0;
+}
+
+
+
+
+/* output on a sample run (commas added for readability):
+start of main
+esp ==> bfe3caa8
+ebp ==> bfe3caa8
+
+start of arith
+esp ==> bfe3ca78
+ebp ==> bfe3ca78
+
+inside arith
+esp ==> bfe3ca78
+ebp ==> bfe3ca78
+
+end of arith
+esp ==> bfe3ca78
+ebp ==> bfe3ca78
+
+middle of main
+esp ==> bfe3caa8
+ebp ==> bfe3caa8
+return from arith is 432
+
+end of main
+esp ==> bfe3caa8
+ebp ==> bfe3caa8
+*/
+
+/********************************************************************************/
+
+;  hello.asm 
+;  (You'll need the NASM compiler if you want to run, which you
+;  can get from the URL below:
+;       http://sourceforge.net/project/showfiles.php?group_id=6208 
+;
+; assemble:	nasm -f elf -l hello.lst  hello.asm
+; link:		gcc -o hiASM  hello.o
+; run:	        hello 
+; output is:	Hello World 
+
+	SECTION .data                      ; data section
+msg:	db "Hello, world! (from asm)",10   ; the string to print, 10 is CR
+len:	equ $-msg		           ; "$" means "here"
+				           ; len is a value, not an address
+
+	SECTION .text	                   ; code section
+        global main	                   ; make label available to linker 
+main:			                   ; standard  gcc  entry point
+	
+	mov	edx,len	                   ; arg3, length of string to print
+	mov	ecx,msg	                   ; arg2, pointer to string
+	mov	ebx,1	                   ; arg1, where to write, screen
+	mov	eax,4	                   ; write command to int 80 hex
+	int	0x80	                   ; interrupt 80 hex, call kernel
+	
+	mov	ebx,0	                   ; exit code, 0 = normal
+	mov	eax,1	                   ; exit command to kernel
+	int	0x80	                   ; interrupt 80 hex, call kernel
+

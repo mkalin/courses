@@ -1,0 +1,240 @@
+     1	/** Producer
+     2	 *  Produces a random number of a randomly selected byte to a file.
+     3	 *  After producing MaxProducts, waits until consumer consumes at least one.
+     4	 *    Checks a flag file to see if consumer has consumed.
+     5	 *  Sleeps a random interval inbetween productions.
+     6	 *  Produces indefinitely.
+     7	 *  Logs productions to the standard output.
+     8	**/
+     9	
+    10	/* Invoke as: producer <data file> <flag file> 
+    11	
+    12	   producer and consumer can be started in either order.
+    13	*/
+    14	
+    15	#include <stdio.h>
+    16	#include <stdlib.h>
+    17	#include <time.h>
+    18	#include <string.h>
+    19	
+    20	/** globals **/
+    21	#define MaxFileName (200)
+    22	
+    23	const char* products = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    24	unsigned productsLen;
+    25	
+    26	const unsigned true = 1;
+    27	const unsigned false = 0;
+    28	
+    29	unsigned readCount = 0;
+    30	unsigned okToWrite;
+    31	char flagFile[MaxFileName + 1];
+    32	char outputFile[MaxFileName + 1];
+    33	
+    34	const unsigned NoSuchFile = -1;
+    35	const unsigned MaxZs = 4;
+    36	const unsigned MaxProducts = 10;
+    37	
+    38	/* Returns a named file's size in bytes, or
+    39	   NoSuchFile if the file does not exist.
+    40	*/
+    41	unsigned fileSize(const char name[ ]) {
+    42	   FILE* fptr = fopen(name, "rb");
+    43	   unsigned n = 0;
+    44	   if (!fptr) return NoSuchFile;
+    45	   while (fgetc( fptr ) != EOF) n++;
+    46	   fclose(fptr);
+    47	   return n;
+    48	}
+    49	
+    50	/* Returns a random integer in the range 1 to k */
+    51	unsigned ran(unsigned k) {
+    52	   return 1 + rand() * (k / (RAND_MAX + 1.0));
+    53	}
+    54	
+    55	/* Sleep for z ticks. */
+    56	void sleep(unsigned z) {
+    57	   time_t now = time( 0 );
+    58	   while (difftime(time(0), now) < z)
+    59	      ;
+    60	}
+    61	
+    62	/* Set okToWrite to true if consumer has consumed,
+    63	   else to false.
+    64	*/
+    65	void checkForReads() {
+    66	  unsigned n = fileSize(flagFile);
+    67	  if (readCount == n) /* any reads occur? */
+    68	    return;
+    69	  readCount = n;    /* there's been a read so update readCount */
+    70	  okToWrite = true; /* continue producing */
+    71	}
+    72	
+    73	int main(int argc, char* argv[ ]) {   
+    74	   /* locals */
+    75	   FILE* outfile;
+    76	   unsigned n = 0, i, count = 0;
+    77	   int byte;
+    78	
+    79	   /* See random number generator */
+    80	   srand(time(0));
+    81	
+    82	   /* Get file names from command line and store them. */
+    83	   if (argc < 3) {
+    84	     fprintf( stderr, "***** Invoke as: producer <write file> <flag file>\n" );
+    85	     exit(EXIT_FAILURE);
+    86	   }
+    87	   strcpy(outputFile, argv[1]);
+    88	   strcpy(flagFile, argv[2]);
+    89	
+    90	   okToWrite = true;
+    91	   productsLen = strlen(products);
+    92	   while (true) { /*** produce forever ***/
+    93	      do {
+    94	        outfile = fopen(outputFile, "ab"); /* append mode */
+    95	      } while (!outfile);
+    96	
+    97	      /* Is it OK to produce? */
+    98	      while (!okToWrite) {
+    99	        checkForReads();
+   100	        sleep(ran(MaxZs));
+   101	      }
+   102	
+   103	      /* Pick a byte to write and how many times */
+   104	      byte = products[ran(productsLen) - 1];
+   105	      n = ran(MaxProducts);
+   106	      for (i = 0; i < n; i++) {
+   107	        fputc(byte, outfile);
+   108	        fputc(byte, stdout); /* log to standard output */
+   109	        if (++count >= MaxProducts) {
+   110	          okToWrite = false;
+   111	          count = 0;
+   112	          break;
+   113	        }
+   114	      }
+   115	      fclose(outfile);
+   116	      fputc('\n', stdout);
+   117	      sleep(ran(MaxZs));
+   118	   }
+   119	   return 0;
+   120	}
+   121	
+   122	/** Consumer
+   123	 * Consumes bytes from a file created by the producer.
+   124	 *    Random number of bytes consumed at random intervals.
+   125	 *    Sleeps inbetween consumptions.
+   126	 *    Signals producer that it has consumed.
+   127	 *    Consumes indefinitely.
+   128	 *    In principle, consumes all bytes produced in the order of 
+   129	 *      their production.
+   130	 *    Logs consumptions to the standard output.
+   131	**/
+   132	
+   133	
+   134	/* Invoke as: consumer <data file from producer> <flag file> */
+   135	
+   136	#include <stdio.h>
+   137	#include <stdlib.h>
+   138	#include <time.h>
+   139	#include <string.h>
+   140	
+   141	/** globals **/
+   142	#define MaxFileName (200)
+   143	const unsigned true = 1;
+   144	const unsigned false = 0;
+   145	char flagFile[MaxFileName + 1];
+   146	char inputFile[MaxFileName + 1];
+   147	const unsigned NoSuchFile = -1;
+   148	const unsigned MaxZs = 4;
+   149	const unsigned MaxProducts = 10;
+   150	
+   151	/* Returns a named file's size in bytes, or
+   152	   NoSuchFile if the file does not exist.
+   153	*/
+   154	unsigned fileSize(const char name[]) {
+   155	   FILE* fptr = fopen(name, "rb");
+   156	   unsigned n = 0;
+   157	   if (!fptr) // NULL == does not exist
+   158	     return NoSuchFile;
+   159	   while (fgetc(fptr) != EOF)
+   160	     n++;
+   161	   fclose(fptr);
+   162	   return n;
+   163	}
+   164	
+   165	/* Returns a random integer in the range 1 to k */
+   166	unsigned ran(unsigned k) {
+   167	   return 1 + rand() * (k / (RAND_MAX + 1.0));
+   168	}
+   169	
+   170	/* Sleep for z ticks. */
+   171	void sleep(unsigned z) {
+   172	   time_t now = time(0);
+   173	   while (difftime(time(0), now) < z)
+   174	      ;
+   175	}
+   176	
+   177	
+   178	
+   179	
+   180	
+   181	
+   182	void setFlag() {
+   183	   FILE* fptr;
+   184	   do {
+   185	     fptr = fopen(flagFile, "a");
+   186	   } while (!fptr);
+   187	   fputc('!', fptr);
+   188	   fclose(fptr);
+   189	}
+   190	
+   191	int main(int argc, char* argv[]) {   
+   192	   /* locals */
+   193	   FILE* infile;
+   194	   unsigned n = 0, i, count;
+   195	   unsigned long readCount = 0, size;
+   196	   int byte;
+   197	
+   198	   /* See random number generator */
+   199	   srand(time(0));
+   200	
+   201	   /* Get file names from command line and store them. */
+   202	   if (argc < 3) {
+   203	     fprintf(stderr, "***** Invoke as: consumer <read file> <flag file>\n");
+   204	     exit(EXIT_FAILURE);
+   205	   }
+   206	   strcpy(inputFile, argv[1]);
+   207	   strcpy(flagFile, argv[2]);
+   208	
+   209	   while (true) { /*** consume forever ***/
+   210	      /* Anything to read? */
+   211	      do {
+   212	        infile = fopen(inputFile, "rb"); /* read mode */
+   213	        if (!infile)
+   214	          sleep(ran(MaxZs));
+   215	      } while (!infile);
+   216	    
+   217	      /* Read new bytes, if any. */
+   218	      size = fileSize(inputFile);      
+   219	      if (size > readCount) { /* anything new? */
+   220	        char buf[100];
+   221	        /* Move beyond bytes already read. */
+   222	        fseek(infile, readCount, SEEK_SET); 
+   223	        count = 0;
+   224	        n = ran(MaxProducts);
+   225	        while (count < n) {
+   226	          buf[count++] = fgetc(infile);
+   227	          readCount++;
+   228	          if (readCount >= size) 
+   229	            break;
+   230	        }
+   231	        setFlag();
+   232	        fclose(infile);
+   233	        buf[count] = '\0';
+   234	        fprintf(stdout, "%s\n", buf); /* log to standard output */
+   235	      } /* if(fileSize > readCount) */
+   236	      sleep(ran(MaxZs));
+   237	   }
+   238	   return 0;
+   239	}
+   240	

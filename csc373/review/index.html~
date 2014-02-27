@@ -1,0 +1,122 @@
+<html>
+<head>
+<style type = "text/css">
+    .body  {background-color: rgb(225, 225, 225);}
+    .links {text-decoration: none;}
+    .bullets {background-color: rgb(225, 225, 225); }
+    .raw {background-color: white; }
+    h3 { color: black; font-style: italic; }
+    a { color: #151b8d; text-decoration:none; }
+    a:visited { color: #151b8d; }
+    a:hover { color: #fff; background-color: #666; }
+    .legend {color: #990000;}
+    .black {color: black;}
+    fieldset {width: 800px;}
+</style>
+<TITLE>CSC373: Computer Systems 1</TITLE>
+</head>
+
+<body>
+<P>
+
+<H2>
+CSC373: Computer Systems 1
+</h2>
+
+<p>
+<div style = 'color:blue'>Final exam: Thursday, July 12th, 6:00PM to 8:30PM, CDM 218</div>
+<div>I'll email on-line students about the available dates for the final but July 11th, 12th,
+and 13th are certainly available. On-line students are welcome to take the final in-class.</div>
+</p>
+
+<p>
+<fieldset><legend class = 'legend'>Getting started</legend>
+<div><a class = 'links' 
+href="syl373.html">Syllabus</a></div>
+
+<div><a class = 'links' 
+href="Readings.html">Readings from the textbook</a></div>
+
+<div><a class = 'links' 
+href="TextConversion.html">
+Unpacking my ZIP files, etc.</a></div>
+<div><a class = 'links' 
+href="http://www.dewassoc.com/support/msdos/decimal_hexadecimal.htm">
+Binary/Decimal/Hex Conversion Table</a></div>
+<div><a class = 'links' 
+href="cygwin.html">Instructions for installing Cygwin C compiler</a></div>
+<div><a class = 'links'
+href = 'Compiling.html'>Compiling a C source file with Cygwin</a></div>
+</fieldset>
+</p>
+
+<p>
+<fieldset><legend class = 'legend'>Class handouts and code</legend>
+<div>
+<a href = 'Class1.zip'>Handouts/code for June 12</a>
+</div>
+<div>
+<a href = 'Class2.zip'>Handouts/code for June 14</a>
+</div>
+<div>
+<a href = 'Class3.zip'>Handouts/code for June 19</a>
+</div>
+<div>
+<a href = 'Class4.zip'>Handouts/code for June 21</a>
+</div>
+<div>
+<a href = 'Class5.zip'>Handouts/code for June 26</a>
+</div>
+<div>
+<a href = 'Class6.zip'>Handouts/code for June 28</a>
+</div>
+<div>
+<a href = 'Class7.zip'>Handouts/code for July 3</a>
+</div>
+<div>
+<a href = 'Class8.zip'>Handouts/code for July 5</a>
+</div>
+
+</fieldset>
+</p>
+
+<p>
+<fieldset><legend class = 'legend'>Homework 
+<span class = 'black'> (Submit to the CMS </span><a class = 'links' href = 'https:col.cdm.depaul.edu'>https://col.cdm.depaul.edu</a>
+<span class = 'black'>or via email to </span><a class = 'links' href = 'mailto:kalin@cs.depaul.edu'>kalin@cs.depaul.edu</a><span class = 'black'>.)</span>
+</legend>
+<div>
+<a href = 'hwk1.zip'>Hwk 1 (due Tuesday, June 19th, before midnight)</a>
+</div>
+<div>
+<a href = 'hwk2.txt'>Hwk 2 (due Tuesday, June 26th, before midnight)</a>
+</div>
+<div>
+<a href = 'hwk3.zip'>Hwk 3 (due Thursday, July 5th, before midnight)</a>
+</div>
+<div>
+<a href = 'hwk4.zip'>Hwk 4 (due Tuesday, July 10th, before midnight)</a>
+</div>
+<div>
+<a href = 'MakeupHwk.txt'>Makeup homework (due Saturday, July 14th, before midnight)</a>
+</div>
+</fieldset>
+</p>
+<p>
+<fieldset><legend class = 'legend'>Homework answers</legend>
+<div><a class = 'links'
+	href = 'hwk1Ans.txt'>Answers to homework 1 (posted on June 20th at 12:45 AM)</a></div>
+<div><a class = 'links'
+	href = 'Ans2.txt'>Answers to homework 2 (posted on June 27th at 9:25 AM)</a></div>
+<div><a class = 'links'
+	href = 'Ans3.txt'>Answers to homework 3 (posted on July 6th at 8:15 AM)</a></div>
+</fieldset>
+</p>
+</body>
+</html>
+
+
+
+
+
+

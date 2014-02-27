@@ -1,0 +1,475 @@
+     1	## C calling conventions and gotchas
+     2	
+     3	#include <stdio.h>
+     4	
+     5	int by_val(int n, int m) { 
+     6	  n += 1; /* arg changed, not original */
+     7	  m -= 1; /* ditto */
+     8	  return n * m;
+     9	}
+    10	
+    11	int by_ptr(int* n, int* m) {
+    12	  *n += 1; /* original changed */
+    13	  *m -= 1; /* ditto */
+    14	  return *n * *m;
+    15	}
+    16	
+    17	int by_ptr_ptr(int** p1, int** p2) {
+    18	  int n1 = **p1;
+    19	  int n2 = **p2;
+    20	  return (n1 + 1) * (n2 - 1);
+    21	}
+    22	
+    23	void dump(int a1, int a2, int a3) {
+    24	  printf("1st num: %i\n2nd num: %i\n3rd num: %i\n",
+    25		 a1, a2, a3);
+    26	}
+    27	
+    28	void dump_array(const int* p, unsigned len) {
+    29	  unsigned i;
+    30	  for (i = 0; i < len; i++) printf("%i ", p[i]);
+    31	  printf("\n");
+    32	}
+    33	
+    34	typedef struct Emp {
+    35	  char     fname[40 + 1];
+    36	  char     lname[40 + 1];
+    37	  char     dept[20 + 1];
+    38	  float    sal;
+    39	  char     address[120 + 1];
+    40	  char     boss[40 + 1];
+    41	  unsigned married;
+    42	} Emp;
+    43	
+    44	void pass_struct1(Emp e) { /* terrible */
+    45	  /* sizeof(Emp) == sizeof(e) */
+    46	  printf("%lu bytes passed to pass_struct1...\n", sizeof(e));
+    47	}
+    48	void pass_struct2(Emp* e) { /* now we're talking */
+    49	  printf("%lu bytes passed to pass_struct2...\n", sizeof(e));
+    50	}
+    51	
+    52	int main() {
+    53	  int n = 27, m = 10;
+    54	  int r = by_val(n, m);
+    55	  dump(n, m, r);
+    56	  printf("\n");
+    57	
+    58	  r = by_ptr(&n, &m);
+    59	  dump(n, m, r);
+    60	  printf("\n");
+    61	
+    62	  /* what you can't do in Java */
+    63	  int *p = &n;
+    64	  int *q = &m;
+    65	  r = by_ptr_ptr(&p, &q);
+    66	  dump(n, m, r);
+    67	  printf("\n");
+    68	
+    69	  /* arrays take care of themselves */
+    70	  unsigned array[ ] = {1, 2, 3, 4};
+    71	  dump_array(array, 4); /* address of array[0] is passed as argument */
+    72	  printf("\n");
+    73	
+    74	  Emp e;
+    75	  pass_struct1(e);  /* terrible */
+    76	  pass_struct2(&e);
+    77	  
+    78	  return 0;
+    79	}
+    80	/* Output:
+    81	1st num: 27
+    82	2nd num: 10
+    83	3rd num: 252
+    84	
+    85	1st num: 28
+    86	2nd num: 9
+    87	3rd num: 252
+    88	
+    89	1st num: 28
+    90	2nd num: 9
+    91	3rd num: 232
+    92	
+    93	1 2 3 4 
+    94	
+    95	276 bytes passed to pass_struct1...
+    96	8 bytes passed to pass_struct2...
+    97	 */
+    98	;;;
+    99	
+   100	## Sorting
+   101	
+   102	#include <stdio.h>
+   103	#include <stdlib.h>
+   104	
+   105	#define HowMany  (16)
+   106	#define Mod     (100)
+   107	
+   108	void dump(const char* msg, int a[], unsigned len) {
+   109	  printf("%s\n", msg);
+   110	
+   111	  unsigned i;
+   112	  for (i = 0; i < len; i++) printf("%i ", a[i]);
+   113	  printf("\n");
+   114	}
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	/* Assumed semantics for returned value:
+   123	   
+   124	   0   -- the compared values are equal
+   125	   < 0 -- the first precedes the second
+   126	   > 0 -- the second precedes the first
+   127	 */
+   128	int comp(const void* p1, const void* p2) {
+   129	  /* for clarity, break down casting/dereferncing */
+   130	  const int* pp1 = (const int*) p1;
+   131	  const int* pp2 = (const int*) p2;
+   132	  int n1 = *pp1;
+   133	  int n2 = *pp2;
+   134	
+   135	  /* sort in ascending order: reverse to sort
+   136	     in descending order
+   137	  */
+   138	  return n1 - n2; 
+   139	}
+   140	
+   141	int main() {
+   142	  /* seed random number generator with current time */
+   143	  srand(time(0)); 
+   144	  
+   145	  /* populate array with random ints */
+   146	  int a[HowMany];
+   147	  unsigned i;
+   148	  for (i = 0; i < HowMany; i++) a[i] = rand() % Mod;
+   149	  dump("Unsorted:", a, HowMany);
+   150	
+   151	  /* sort and dump again */
+   152	  qsort(a,           /* array to sort */
+   153		HowMany,     /* length */
+   154		sizeof(int), /* sizeof each element */
+   155		comp);       /* pointer to comparision function */
+   156	  dump("\nSorted:", a, HowMany);
+   157	
+   158	  /* binary-search array, which must be sorted in ascending order */
+   159	  int key = rand(); /* generate a random key */
+   160	  int* result = (int*) bsearch(&key,         /* key */
+   161				       a,            /* array */
+   162				       HowMany,      /* length */
+   163				       sizeof(int),  /* element size */
+   164				       comp);        /* comparer */
+   165	  if (result) printf("\n%i found in array.\n", key);
+   166	  else printf("\n%i not found in array.\n", key);
+   167	
+   168	  /* ensure a key that's in the array */
+   169	  key = a[2];
+   170	  result = (int*) bsearch(&key,         /* key */
+   171				  a,            /* array */
+   172				  HowMany,      /* length */
+   173				  sizeof(int),  /* element size */
+   174				  comp);        /* comparer */
+   175	  if (result) printf("\n%i found in array.\n", key);
+   176	  else printf("\n%i not found in array.\n", key);
+   177	  
+   178	  return 0;
+   179	}
+   180	
+   181	
+   182	/* output:
+   183	
+   184	   Unsorted:
+   185	   15 5 45 43 95 68 1 8 89 70 10 88 61 26 46 78 
+   186	
+   187	   Sorted:
+   188	   1 5 8 10 15 26 43 45 46 61 68 70 78 88 89 95 
+   189	   
+   190	   1212608186 not found in array.
+   191	   
+   192	   8 found in array.
+   193	*/
+   194	;;;
+   195	
+   196	## Interrupts
+   197	
+   198	#include <stdio.h>
+   199	#include <setjmp.h>
+   200	#include <stdlib.h>
+   201	#include <signal.h>
+   202	
+   203	/* output from a sample run:
+   204	
+   205	   SIGFPE is defined as 8
+   206	   Two integers: 100 10
+   207	   100 / 10 == 10
+   208	   Two integers: 100 0
+   209	        Control to jumper: signal status == 8.
+   210	   Two integers: 100 4
+   211	   100 / 4 == 25
+   212	   Two integers:  ;; I entered Control-C to terminate program
+   213	*/
+   214	
+   215	/* Define a jump buffer to handle error conditions.
+   216	   Data type jmp_buf defined in setjmp.h.
+   217	*/
+   218	static jmp_buf env;       /* file scope, type jmp_buf is defined in setjmp.h */
+   219	void jumper(int);         /* callback for SIGFPE errors */
+   220	void divisionInt(void);   /* alternative to void divisionInt() */
+   221	int guard(void);          /* guards divisonInt */
+   222	void trace_and_die(const char* msg) {
+   223	  fprintf(stderr, "%s", msg); /* stderr is harder to redirect than stdout */
+   224	  exit(EXIT_FAILURE);         /* -1 in stdlib.h */
+   225	}
+   226	
+   227	int main() {
+   228	  /* Trap signals generated by arithmetic errors such as 
+   229	     division by zero. The statement     
+   230	          signal(SIGINT, SIG_IGN);
+   231	
+   232	     would instruct the program to ignore (SIG_IGN) interrupts such
+   233	     as hitting Control-C while the program is in execution.
+   234	
+   235	     In this example, we want to suppress floating-point exceptions
+   236	     from the system and instead handle the matter ourselves.
+   237	
+   238	     Withtout this setup, the division of, say, 100 by 0 would generate
+   239	     a "floating-point exception" and terminate execution.
+   240	  */
+   241	
+   242	 
+   243	  printf("SIGFPE is defined as %i\n", SIGFPE);
+   244	
+   245	  signal(SIGFPE, jumper); /* enable a jump to jumper function on FPE */
+   246	  while (0 == guard())    /* loop until error occurs */
+   247	    ;                     /* empty statement follows call to guard() */
+   248	  return 0;
+   249	}
+   250	
+   251	/* Jump out of this function to the jump destination,
+   252	   which is the point after the call to setjmp. In
+   253	   our case, the jump point occurs right after the
+   254	   if-test in function guard.
+   255	*/
+   256	void jumper(int status) {
+   257	  printf("\t Control to jumper: signal status == %d.\n", status);
+   258	  longjmp(env, 1);  /* 1 indicates what setjmp would have returned.
+   259			       If successful, longjmp forces control to return
+   260			       to the next statement after setjmp, in this case
+   261			       a call to divisionInt.
+   262			     */
+   263	  /* Executed only if longjmp fails, which shouldn't happen. */
+   264	  trace_and_die("longjmp returned: trouble\n");
+   265	}
+   266	
+   267	/* Set a jump point for return from an error  condition, in this case 
+   268	   an error resulting from a floating-point operation. The function
+   269	   signal is invoked in main to trap such errors. Return 0 (ok) if the 
+   270	   floating-point operation succeeds; otherwise, the nonlocal jump
+   271	   triggered by longjmp intervenes.
+   272	*/
+   273	int guard(void) {
+   274	  /* Set jump point, which is right after the while-test. Here's
+   275	     a summary of what happens when the two integers are, say,
+   276	     12 and 0, which causes the FPE "division by zero" error. 
+   277	        
+   278	        -- the signal(SIGFPE, jumper) establishes the jumper 
+   279	           function as the callback (event handler) should a
+   280	           exception occur
+   281	
+   282	        -- the guard function (we're in it) is called from the
+   283	           infinitie while loop as a test. guard returns 0 to
+   284	           signal OK
+   285	
+   286	        -- right before calling divisionInt, guard saves the
+   287	           current environment, including all of the information
+   288	           about the error handling
+   289	
+   290	        -- if the divisionInt function triggers a division by zero
+   291	           exception, then jumper is called by the system
+   292	
+   293	        -- jumper invokes longjmp with the saved environment. the
+   294	           jump is "long" in that divisionInt does not return, as
+   295	           normal, to the printf statement at the bottom of guard;
+   296	           instead, control resumes immediately after the call to
+   297	           guard(), which is the empty statement that is the body
+   298	           of the while loop.
+   299	
+   300	
+   301	
+   302	     Here's output from a sample run to illustrate:
+   303	
+   304		Two integers: 12 5
+   305		12 / 5 == 2
+   306		Right after divisionInt()....
+   307	
+   308		Two integers: 12 4
+   309		12 / 4 == 3
+   310		Right after divisionInt()....
+   311	
+   312		Two integers: 12 0
+   313		Control to jumper: signal status == 8.
+   314	
+   315		Two integers: 12 2
+   316		12 / 2 == 6
+   317		Right after divisionInt()....
+   318		Two integers: ^C
+   319	  */
+   320	  setjmp(env);
+   321	  divisionInt();
+   322	  printf("Right after divisionInt()....\n");
+   323	  return 0;
+   324	}
+   325	
+   326	/* Scan the standard input for two floats and
+   327	   divide the first by the second.
+   328	*/
+   329	void divisionInt(void) {
+   330	  int n1, n2;
+   331	  printf("Two integers: ");
+   332	  scanf("%i %i", &n1, &n2);
+   333	  printf("%i / %i == %i\n", n1, n2, n1 / n2);
+   334	}
+   335	;;;;
+   336	
+   337	## Structures and pointers in networking
+   338	
+   339	#include <netinet/in.h>
+   340	#include <arpa/inet.h>
+   341	#include <netdb.h>
+   342	#include <sys/socket.h>
+   343	#include <stdio.h>
+   344	
+   345	typedef struct hostent host_info;
+   346	
+   347	void show_bytes(char* msg, unsigned char* ptr, int how_many) {
+   348	  printf("%s\n", msg);
+   349	  int i;
+   350	  for (i = 0; i < how_many; i++) printf(" %.2x", ptr[i]);
+   351	  printf("\n");
+   352	}
+   353	
+   354	
+   355	
+   356	
+   357	
+   358	
+   359	
+   360	
+   361	
+   362	void dump_host_aux(host_info* host_ptr) {
+   363	  if (host_ptr == NULL) return;
+   364	  /* Here's the hostent structure layout:
+   365	
+   366	     struct hostent {
+   367	        char*    h_name;       ;; official name
+   368	        char**   h_aliases;    ;; alias list
+   369	        int      h_addrtype;   ;; host address type 
+   370	        int      h_length;     ;; length of address 
+   371	        char**   h_addr_list;  ;; list of addresses 
+   372	     };
+   373	  */
+   374	  printf("\n");
+   375	  printf("Official name: %s\n", host_ptr->h_name);
+   376	
+   377	  printf("Aliases: ");
+   378	  int i = 0;
+   379	  while (host_ptr->h_aliases[i] != NULL) {
+   380	    printf("%.21s\n", host_ptr->h_aliases[i]);
+   381	    i++;
+   382	  }
+   383	  
+   384	  int type = host_ptr->h_addrtype;
+   385	  const char* type_str = (type == 2) ? "AF_INET" : "AF_INET6";
+   386	
+   387	  printf("Host type: %s\n", type_str);
+   388	
+   389	  printf("Address length: %i\n", host_ptr->h_length);
+   390	
+   391	  printf("Addresses: ");
+   392	  i = 0;
+   393	  while (host_ptr->h_addr_list[i] != NULL) {
+   394	    struct in_addr addr;
+   395	    addr.s_addr = *((unsigned int*) host_ptr->h_addr_list[i]);
+   396	    if (i > 0) printf("           ");
+   397	    printf("%.21s\n", inet_ntoa(addr));
+   398	    i++;
+   399	  }
+   400	  printf("\n");
+   401	}
+   402	
+   403	void dump_host(const char* host_name) {
+   404	  host_info* host = gethostbyname(host_name);
+   405	  dump_host_aux(host);
+   406	}
+   407	
+   408	int main() {
+   409	  /* host and network byte order */
+   410	  int n = 0xabcdef12;
+   411	  show_bytes("IA32 int:", (unsigned char*) &n, sizeof(int));
+   412	  unsigned u = htonl(n);
+   413	  show_bytes("htonl:", (unsigned char*) &u, sizeof(unsigned));
+   414	  u = ntohl(u);
+   415	  show_bytes("ntohl:", (unsigned char*) &n, sizeof(int));
+   416	  /* output:
+   417	
+   418	     IA32 int: 12 ef cd ab
+   419	     htonl:    ab cd ef 12
+   420	     ntohl:    12 ef cd ab  */
+   421	
+   422	  /* dotted-decimal addresses in network byte order */
+   423	  struct in_addr inet_address;
+   424	  int flag = inet_aton("140.192.1.6", &inet_address);
+   425	  if (flag) {
+   426	    unsigned long addr = inet_address.s_addr;
+   427	    show_bytes("inet_aton:", (unsigned char*) &addr, sizeof(unsigned long));
+   428	    /*
+   429	        inet_aton: 8c c0 01 06 ;; 140 192 1 6
+   430	    */
+   431	  }
+   432	
+   433	  /* some lookup stuff */
+   434	  dump_host("condor.depaul.edu");
+   435	  dump_host("www.google.com");
+   436	  dump_host("www.yahoo.com");
+   437	  dump_host("localhost");
+   438	  /* output:
+   439	
+   440	    Official name: condor.depaul.edu
+   441	    Aliases:
+   442	    Host type:AF_INET
+   443	    Address length: 4
+   444	    Addresses: 140.192.1.6
+   445	
+   446	    Official name: www.l.google.com
+   447	    Aliases: www.google.com
+   448	    Host type: AF_INET
+   449	    Address length: 4
+   450	    Addresses: 72.14.203.104
+   451	               72.14.203.99
+   452	
+   453	    Official name: www.yahoo.akadns.net
+   454	    Aliases: www.yahoo.com
+   455	    Host type: AF_INET
+   456	    Address length: 4
+   457	    Addresses: 68.142.197.66
+   458	               68.142.197.74
+   459	               68.142.197.79
+   460	               68.142.197.82
+   461	               68.142.197.84
+   462	               68.142.197.85
+   463	               68.142.197.87
+   464	               68.142.197.90
+   465	
+   466	    Official name: localhost.localdomain
+   467	    Aliases: localhost
+   468	    Host type: AF_INET
+   469	    Address length: 4
+   470	    Addresses: 127.0.0.1
+   471	  */
+   472	
+   473	  return 0;
+   474	}
+   475	

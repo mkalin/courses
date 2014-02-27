@@ -1,0 +1,56 @@
+     1	     1	#include <stdio.h>
+     2	     2	#include <setjmp.h>
+     3	     3	#include <stdlib.h>
+     4	     4	#include <signal.h>
+     5	     5	/* output from a sample run:
+     6	     6	
+     7	     7	      SIGFPE is defined as 8
+     8	     8	      Two integers: 100 10
+     9	     9	      100 / 10 == 10
+    10	    10	      Two integers: 100 0
+    11	    11	        Control to jumper: signal status == 8.
+    12	    12	      Two integers: 100 4
+    13	    13	      100 / 4 == 25
+    14	    14	      ... 
+    15	    15	*/
+    16	    16	static jmp_buf env;       /* file scope; type is defined in setjmp.h */
+    17	    17	void jumper(int);         /* callback for SIGFPE errors */
+    18	    18	void divisionInt(void);   /* alternative to void divisionInt() */
+    19	    19	int guard(void);          /* guards divisonInt */
+    20	    20	void trace_and_die(const char* msg) {
+    21	    21	  fprintf(stderr, msg);
+    22	    22	  exit(EXIT_FAILURE);
+    23	    23	}
+    24	    24	
+    25	    25	int main() {
+    26	    26	  signal(SIGFPE, jumper); /* trap floating-point errors */
+    27	    27	  printf("SIGFPE is defined as %i\n", SIGFPE);
+    28	    28	
+    29	    29	  /* Loop until error condition occurs. */
+    30	    30	  while (0 == guard()) ;
+    31	    31	  return 0;
+    32	    32	}
+    33	    33	
+    34	    34	/* Jump out to the jump destination, after the setjmp. */
+    35	    35	void jumper(int status) {
+    36	    36	  printf("\t Control to jumper: signal status == %d.\n", status);
+    37	    37	  /* 1 indicates with setjmp would have retured.
+    38	    38	     If successful, longjmp forces control to return to the next 
+    39	    39	     statement after setjmp, a call to divisionInt.  */
+    40	    40	  longjmp(env, 1);
+    41	    41	  trace_and_die("longjmp returned: trouble\n"); /* only if longjmp fails */
+    42	    42	}
+    43	    43	
+    44	    44	int guard(void) {
+    45	    45	  setjmp(env); /* set the jump point */
+    46	    46	  divisionInt();
+    47	    47	  return 0;
+    48	    48	}
+    49	    49	
+    50	    50	void divisionInt(void) {
+    51	    51	  int n1, n2;
+    52	    52	  printf("Two integers: ");
+    53	    53	  scanf("%i %i", &n1, &n2);
+    54	    54	  printf("%i / %i == %i\n", n1, n2, n1 / n2);
+    55	    55	}
+    56	    56	

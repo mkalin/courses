@@ -1,0 +1,46 @@
+                               Quick Guide to Compiling C
+
+Let's assume that you have the GNU compiler (gcc) installed and are ready to go
+and that nums.c, one of the files in the ZIP for the first class, is to be
+compiled.
+
+At the command line we type
+
+   % gcc nums.c
+
+and get a.out as the executable output. We then can execute a.out
+
+   % a.out
+
+This is inconvenient in that every compiled source file would wind up with the
+same name: a.out.
+
+We can specify the output file name. The command
+
+   % gcc -o nums nums.c
+
+now creates an executable named nums. The -o flag can go anywhere:
+
+   % gcc nums.c -o nums
+
+The make command can be used as shorthand for "gcc -o...". For example,
+
+   % make nums
+
+looks for an input file named nums.c and then compiles the file to produce
+nums as the executable.
+;;;
+
+On a Windows box, the gcc command will be 
+
+   % gcc-3
+
+or 
+
+   % gcc-4
+
+depending on which version you installed. The default output file will be named
+a.exe instead of a.out.
+
+
+

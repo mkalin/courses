@@ -1,0 +1,51 @@
+HTTP/1.1 200 OK
+Date: Wed, 20 Jun 2012 21:55:28 GMT
+Server: Apache/2.2.3 (Red Hat)
+Last-Modified: Tue, 12 Jun 2012 20:39:10 GMT
+ETag: "5820d3-a93-4c24c75699780"
+Accept-Ranges: bytes
+Content-Length: 2707
+Content-Type: text/html
+Connection: close
+
+<html>
+<title>Home page</title>
+
+<head>
+<style type = "text/css">
+    .body  {background-color: rgb(225, 225, 225);}
+    .links {text-decoration: none;}
+    .bullets {background-color: rgb(225, 225, 225); }
+    .raw {background-color: wheat; }
+    h3 { color: black;}
+    a { color: #151b8d; text-decoration:none; }
+    a:visited { color: #151b8d; }
+    a:hover { color: #fff; background-color: #666; }
+    .legend {color:#990000;}
+</style>
+<title>Textbook and Course Listings</title>
+</head>
+
+<body>
+
+<p>
+<fieldset><legend class = 'legend'>Basics</legend>
+<span>Martin Kalin</span><br/>
+<span>Professor and Associate Dean, College of Computing and Digital Media</span><br/>
+<span>DePaul University</span><br/>
+<span>1 East Jackson</span><br/>
+<span>Chicago, IL 60604</span><br/>
+<p>
+<span>PhD, Northwestern University</span>
+</p>
+</fieldset>
+</p>
+
+<p>
+<fieldset><legend class = 'legend'>Books</legend>
+
+<div><a href="http://oreilly.com/catalog/9780596521127/">
+  Java Web Services: Up and Running</a></div>
+<div><a HREF="ed3/">Applications Programming in ANSI C (3rd edition)</a><div>
+<div><a HREF="cse/">C for Scientists and Engineers</a><div>
+<div><a HREF="apc/">Applications Programming i

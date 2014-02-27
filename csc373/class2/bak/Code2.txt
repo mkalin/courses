@@ -1,0 +1,462 @@
+/* removeLNs.c */
+#include <stdio.h>
+#include <string.h>
+
+#define BuffSize (1000)
+#define MaxIndent (12)
+
+int main() {
+  
+  unsigned char buffer[BuffSize + 1];
+  while (fgets(buffer, BuffSize, stdin) != 0) {
+    unsigned char* ptr = buffer;
+    unsigned int n = 0;
+
+    while (isspace(*ptr)) ptr++;
+    while (isdigit(*ptr) && ++n < MaxIndent) ptr++;
+    if (*ptr == '\t') ptr++;
+    printf("%s", ptr);
+  }
+  return 0;
+}
+;;;
+
+/* arrays, structs, and alignment issues */
+
+#include <stdio.h>
+
+void array_stuff();     /* declaration */
+void struct_stuff();    /* declaration */
+void function_stuff();  /* declaration */
+
+int main() {
+  array_stuff();
+  struct_stuff();
+  function_stuff();
+  return 0;
+}
+
+void array_stuff() {
+  /* First, a quick look at how N-dimensional arrays are stored.
+     A "table" or "matrix" is a 2-dimensional array, whereas a
+     "vector" is a 1-dimensional array. However, at the implemenation
+     level 1-dimensional and multi-dimensional arrays are laid out the
+     same way --- as contiguous elements in memory. In C, a table or
+     matrix is stored in "row major" order. In this example, the first
+     row consists of 1 and 2 and the first column consists of 1, 3, and
+     5; hence, the C layout is 1 2 3 4 5 6 rather than 1 3 5 2 4 6.
+  */
+  int table[3][2] =
+    { {1, 2},
+      {3, 4},
+      {5, 6}
+    };
+  int i, j;
+
+  /* cast because table's type is "pointer to an array of arrays." */
+  int* ptr = (int*) table;
+
+
+
+			      
+  /* normal way to access elements: row-major order in IA32 */
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 2; j++)
+      printf("table[%i][%i] == %i\n", i, j, table[i][j]);
+  /* output:
+     
+     table[0][0] == 1
+     table[0][1] == 2
+     table[1][0] == 3
+     table[1][1] == 4
+     table[2][0] == 5
+     table[2][1] == 6
+  */
+
+  /* treating an N-dimensional array as a 1-dimensional array */
+  printf("\n");
+  for (i = 0; i < (3 * 2); i++) 
+    printf("table[%i] == %i\n", i, ptr[i]);
+   /* output:
+
+     table[0] == 1
+     table[1] == 2
+     table[2] == 3
+     table[3] == 4
+     table[4] == 5
+     table[5] == 6
+  */
+}
+
+void struct_stuff() {
+  struct Sample {
+    int n1;   /* 4 bytes */
+    char c;   /* 1 byte */
+    int n2;   /* 4 bytes */
+  };
+
+  /* code to illustrate use */
+  struct Sample* ptr_s1 = malloc(sizeof(struct Sample));
+  ptr_s1->n1 = 1;
+  ptr_s1->c = 'A';
+  ptr_s1->n2 = 2;
+  (*ptr_s1).n2 += 4; /* same as ptr_s1->n2 += 4 */
+  free(ptr_s1);
+
+  printf("A struct Sample instance requires %d bytes\n",
+	 sizeof(struct Sample));
+  /* Output on my Linux box: A struct Sample instance requires 12 bytes */
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /* layout issues:
+                              
+                      Bytes:     4       1      4
+     Minimalist possibility: +--------+----+--------+
+                             |  n1    |  c |   n2   |
+                             +--------+----+--------+
+
+     If you disassemble struct Sample, you'll likely see the pertinent 
+     assembler begins with the directive
+
+         .align 4
+
+     The directive means that the struct's fields are laid out in memory
+     on DW0RD (that is, 4-byte) boundaries. So the picture becomes
+
+                                4        4        4
+                            +--------+--------+--------+
+                            |   n1   |   c    |   n2   |
+                            +--------+--------+--------+
+
+     This layout "wastes" 3 bytes, as the char requires only 4; but the
+     resulting processing is simpler in that memory fetches are always from
+     addresses on DWORD boundaries.
+  */
+}
+
+int f(int n) {          /* definition */
+  return n * 2 + 1;
+}
+
+void function_stuff() {
+  int ans;
+  struct Object {
+    int id;
+    int (*method)(int);
+  };
+  typedef struct Object Obj;
+
+  Obj obj1;
+  obj1.id = 1234;
+  obj1.method = f;
+
+  ans = (*obj1.method)(25);  /* technically correct */
+  ans = obj1.method(27);     /* now allowed in standard C */
+  printf("%i\n", ans);  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <stdio.h>
+
+int main() {
+  int table[3][2] = { {1, 2}, {3, 4}, {5, 6} };
+
+  int i, j;
+  for (i = 0; i < 3; i++) {
+    printf("Address of indexed row %i is %p\n", 
+	   i, table[i]);
+    for (j = 0; j < 2; j++) {
+      printf("Address of indexed col % in row %i is %p\n", 
+	     j, i, &table[i][j]);
+      printf("\tContent is %i\n", table[i][j]);
+    }      
+  }
+  return 0;
+}
+/* output from sample run:
+Address of indexed row 0 is 0xbfe9ca60
+Address of indexed col  0n row 0 is 0xbfe9ca60
+        Content is 1
+Address of indexed col  1n row 0 is 0xbfe9ca64
+        Content is 2
+Address of indexed row 1 is 0xbfe9ca68
+Address of indexed col  0n row 1 is 0xbfe9ca68
+        Content is 3
+Address of indexed col  1n row 1 is 0xbfe9ca6c
+        Content is 4
+Address of indexed row 2 is 0xbfe9ca70
+Address of indexed col  0n row 2 is 0xbfe9ca70
+        Content is 5
+Address of indexed col  1n row 2 is 0xbfe9ca74
+        Content is 6
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* process.c */
+
+#include <unistd.h>     /* symbolic constants */
+#include <sys/types.h>  /* system data types */ 
+#include <errno.h>      /* error codes */
+#include <stdio.h>      /* printf, etc. */
+#include <sys/wait.h>   /* waiting on process termination */
+#include <stdlib.h>     /* utilities */
+ 
+int main() {
+  pid_t cpid;    /* process id (pid) of child or forked process */
+  int   retval;  /* user-supplied return code for child */
+  int   status;  /* child's exit status for parent process */
+  
+  /* Child process will "inherit" the three variables listed above so
+     that the parent and the child now have three distinct variables
+     that share the same names.
+  */
+  cpid = fork(); /* create the child process */
+  
+  /* fork succeeded */
+  if (cpid >= 0) {
+    printf("cpid after fork is:         %d\n\n", cpid);
+ 
+    /* Parent and child are executing the same code; hence,
+       we need to distinguish between the two. */
+
+    /* child code */
+    if (cpid == 0) { /* fork() returns 0 to the child */
+      printf("Child's pid (in child):   %d\n", getpid());
+      printf("Child's parent's pid:     %d\n\n", getppid());
+      printf("Child sleeping for 1 second...\n");
+      sleep(1); /* 1 second */
+      
+      printf("\nEnter an exit value (0 to 100): ");
+      scanf("%d", &retval);
+      printf("Child exiting...\n\n");    
+
+      exit(retval); /* child terminates and returns status code */
+    }
+    /* parent code */
+    else { /* fork() returns new pid to the parent process */
+      printf("Parent's pid:             %d\n", getpid());
+      printf("Child's  pid (in parent): %d\n", cpid);
+      printf("Waiting for child to exit...\n");
+      wait(&status); /* wait for child to exit and store its status code */
+      printf("Child's exit code is: %d\n", WEXITSTATUS(status)); /* macro ensures normal */
+      printf("Parent exiting...\n");             
+
+      exit(0); /* parent exits with normal termination */       
+    }
+  }
+  /* fork failed (-1 is status code) */
+  else { 
+    perror("fork"); /* display error message */
+    exit(0); 
+  }
+  return 0;
+}
+
+/* output from a sample run:
+
+   cpid after fork is:       2410
+
+   Parent's pid:             2408
+   Child's  pid (in parent): 2410
+   Waiting for child to exit...
+   cpid after fork is:          0
+   
+   Child's pid (in child):   2410
+   Child's parent's pid:     2408
+   
+   Child sleeping for 1 second...
+   
+   Enter an exit value (0 to 100): 99
+   Child exiting...
+   
+   Child's exit code is: 99
+   Parent exiting...
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* signalsJumps.c */
+
+#include <stdio.h>
+#include <setjmp.h>
+#include <stdlib.h>
+#include <signal.h>
+
+/* output from a sample run:
+
+   SIGFPE is defined as 8
+   Two integers: 100 10
+   100 / 10 == 10
+   Two integers: 100 0
+        Control to jumper: signal status == 8.
+   Two integers: 100 4
+   100 / 4 == 25
+   Two integers:  ;; I entered Control-C to terminate program
+*/
+
+/* Define a jump buffer to handle error conditions.
+   Data type jmp_buf defined in setjmp.h.
+*/
+static jmp_buf env;       /* file scope; type is defined in setjmp.h */
+
+void jumper(int);         /* callback for SIGFPE errors */
+void divisionInt(void);   /* alternative to void divisionInt() */
+int guard(void);          /* guards divisonInt */
+
+void trace_and_die(const char* msg) {
+  fprintf(stderr, msg);
+  exit(EXIT_FAILURE);
+}
+
+int main() {
+  /* Trap signals generated by arithmetic errors such as 
+     division by zero. The statement
+     
+     signal(SIGINT, SIG_IGN);
+
+     would instruct the program to ignore (SIG_IGN) interrupts such
+     as hitting Control-C while the program is in execution.
+
+     In this example, we want to suppress floating-point exceptions
+     from the system and instead handle the matter ourselves.
+
+     Withtout this setup, the division of, say, 100 by 0 would generate
+     a "floating-point exception" and terminate execution.
+  */
+  signal(SIGFPE, jumper); 
+  printf("SIGFPE is defined as %i\n", SIGFPE);
+
+  /* Loop until error condition occurs. */
+  while (0 == guard())
+    ;
+  return 0;
+}
+
+
+
+
+/* Jump out of this function to the jump destination,
+   which is the point after the call to setjmp. In
+   our case, the jump point occurs right after the
+   if-test in function guard.
+*/
+void jumper(int status) {
+  printf("\t Control to jumper: signal status == %d.\n", status);
+  longjmp(env, 1);  /* 1 indicates with setjmp would have returned.
+		       If successful, longjmp forces control to return
+		       to the next statement after setjmp, in this case
+		       a call to divisionInt.
+		     */
+  /* This code is executed only if longjmp fails. Normally, longjmp
+     does not return.
+  */
+  trace_and_die("longjmp returned: trouble\n");
+}
+
+/* Set a jump point for return from an error  condition, in this case 
+   an error resulting from a floating-point operation. The function
+   signal is invoked in main to trap such errors. Return 0 (ok) if the 
+   floating-point operation succeeds; otherwise, the nonlocal jump
+   of longjmp intervenes.
+*/
+int guard(void) {
+  /* Set jump point, which is right after the if-test */
+  setjmp(env);
+  divisionInt();
+  return 0;
+}
+
+/* Scan the standard input for two floats and
+   divide the first by the second.
+*/
+void divisionInt(void) {
+  int n1, n2;
+  printf("Two integers: ");
+  scanf("%i %i", &n1, &n2);
+  printf("%i / %i == %i\n", n1, n2, n1 / n2);
+}
+

@@ -1,0 +1,55 @@
+<html>
+<head>
+<style type = "text/css">
+    .body  {background-color: rgb(225, 225, 225);}
+    .links {text-decoration: none;}
+    .bullets {background-color: rgb(225, 225, 225); }
+    .raw {background-color: wheat; }
+    h3 { color: black; font-style: italic; }
+</style>
+<TITLE>CSC373: Computer Systems 1</TITLE>
+</head>
+
+<body BGCOLOR = "#C4E4FF">
+<P>
+
+<H1>
+CSC373: Computer Systems 1
+</h1>
+<hr/>
+<H3>
+
+<div><a class = 'links' 
+href="syl373.html">Syllabus</a></div>
+<div><a class = 'links' 
+href="http://www.cti.depaul.edu/resources/nix.asp">How to access the Linux machines</a></div>
+<div><a class = 'links' 
+href="http://www.dewassoc.com/support/msdos/decimal_hexadecimal.htm">
+Binary/Decimal/Hex Conversion Table</a></div>
+<div><a class = 'links' 
+href="CYGWIN_INSTALL.txt">Instructions for installing Cygwin C compiler</a></div>
+<div><a class = 'links' 
+href="Class1.zip">Code and handouts from class 1</a></div>
+</H3>
+<P>
+
+<HR>
+
+<H2>Homework Assignments
+<h3>
+</h3>
+
+
+<HR>
+<h2>Instructor's E-mail Address</h2>
+<H3>
+<div><a class = 'links' href="mailto:kalin@cs.depaul.edu">kalin@cs.depaul.edu</a></div>
+</H3>
+</body>
+</html>
+
+
+
+
+
+

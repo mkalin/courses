@@ -1,0 +1,23 @@
+6. Here's a structure with mixed types
+
+          struct Emp {
+             char[70]       lname;      /* 70 bytes */
+             char[70]       fname;      /* 70 bytes
+             unsigned char  married;    /* 1 byte */
+             unsigned short age;        /* 2 bytes */
+             unsigned int   dept_code;  /* 4 bytes */
+             float          sal;        /* 4 bytes */
+             long           benefits;   /* 8 bytes */
+          };
+
+   In C, there is no guarantee that the memory layout will reflect the
+   source layout; that  is, the char array lname could come before or
+   after, for instance, the unsigned short called age. The only guarantee
+   is that all of the fields will be laid out in memory.
+
+   Assume that the compiler does 32-bit alignment; that is, each field
+   starts on a 32-bit boundary on a byte-addressable machine. Assume
+   that the memory layout starts, for simplicity, at address 0. So the
+   next 32-bit boundary is at address 4, then 8, then 12, and so on.
+
+   Give an aligned layout that uses as little memory as possible.

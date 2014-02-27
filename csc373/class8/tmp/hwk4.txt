@@ -1,0 +1,292 @@
+     1	                                     Systems 1
+     2	                                     Homework 4
+     3	Points: 100
+     4	Due:    Before midnight, July 16
+     5	
+     6	Grading rubric:
+     7	
+     8	There are seven problems, each worth 14 points (with 2 points
+     9	thrown in). The key to question 1 is to show how the bytes in
+    10	the int n and the float f are coodinated; and the way to do that
+    11	is to trace how the float is formatted, step by step: the more
+    12	detail, the better. Question 2 is straightforward: What does the
+    13	compiler do to make the comparision come out as true? Question 3
+    14	requires an explanation of why two values that print out as zero
+    15	nonetheless fail the == test. Question 4 shows typical system 
+    16	code in which a loop terminates when a value equals NULL. Yet
+    17	NULL, apparantely an integer, sits in an array of strings. How is
+    18	this possible if array elements must be of the same type? Question 5
+    19	returns to the matter of non-local variables. Why does this program
+    20	use an extern rather than a local buffer? Questions 6 and 7 are
+    21	challenging. Question 6 is a well-intentioned experiment. What is the
+    22	experiment trying to establish? Does the experiment succeed? This 
+    23	question is more about thinking than about coding. Question 7 is
+    24	a slice of advanced C and requires an answer about data types together
+    25	with documentation.
+    26	
+    27	1. Consider this code segment
+    28	
+    29	         int n   = 1234;
+    30	         float f = 1234.0f;
+    31	
+    32	   Here's the internal representation of each in big endian, with the
+    33	   most significant byte to the left:
+    34	
+    35	         n: 00 00 04 d2
+    36	   
+    37	         f: 44 9a 40 00
+    38	
+    39	   Show how the bits in the integer variable n and the floating-point variable
+    40	   f are correlated. The most straightforward way is to start with n's 
+    41	   internal representation and then show how f's single-precision representation
+    42	   derives from n.
+    43	
+    44	   You can work in big-endian or little-endian; just be consistent. 
+    45	
+    46	2. Consider this code segment:
+    47	
+    48	         int n   = 1234;
+    49	         float f = 1234.0f;
+    50	
+    51		 if (n == f) printf("They're equal.\n");
+    52		 else printf("They're not equal.\n");
+    53	
+    54	   When executed, the output is
+    55	
+    56	         They're equal.
+    57	
+    58	   What must the compiler be doing in order to reach this result? We know from 
+    59	   Question 1, by inspecting the hex values, that n and f differ at the bit level;
+    60	   and the equality operator == simply checks if the bit patterns are the same.
+    61	
+    62	3. Here's a short C program:
+    63	
+    64	   #include <stdio.h>
+    65	   #include <math.h>
+    66	
+    67	   /* function pow raises the 1st arg to the 2nd */
+    68	   int main() {
+    69	     double d1 = 1.0 / 10.0;
+    70	  
+    71	     double d2 = pow(2.0, -20.0) * d1;
+    72	     printf("d2 == %f\n", d2);
+    73	     double d3 = 9.54 * pow(10.0, -8.0);
+    74	     printf("d3 == %f\n", d3);
+    75	  
+    76	     printf("\n");
+    77	     if (d2 == d3) printf("d2 == d3\n");
+    78	     else printf("d2 != d3\n");
+    79	  
+    80	     return 0;
+    81	   }
+    82	
+    83	   Here's the output:
+    84	
+    85	       d2 == 0.000000
+    86	       d3 == 0.000000
+    87	
+    88	       d2 != d3
+    89	
+    90	   The printf statements for d2 and d3 suggest that each is equal
+    91	   to zero but the comparison at the end shows them not to be 
+    92	   equal. What's going on? In particular, is the comparison operator 
+    93	   == to blame? Explain.
+    94	
+    95	4. In the web_client.c program (included in the ZIP), 
+    96	   there's a call to gethostbyname, which takes a string and returns a
+    97	   pointer to a struct hostent. Here's a code segment to illustrate:
+    98	
+    99	      struct hostent* host_ptr = gethostbyname("condor.depaul.edu");
+   100	
+   101	   This pointer is passed to the function dump_host_aux, which prints 
+   102	   information about the host with the given name. In the case of
+   103	   www.yahoo.com, for instance, here's the output:
+   104	
+   105	          Official name: www.yahoo.akadns.net
+   106	          Aliases: www.yahoo.com
+   107	          Host type: AF_INET
+   108	          Address length: 4
+   109	          Addresses: 68.142.197.86
+   110	                     68.142.197.87
+   111	                     68.142.197.90
+   112	                     68.142.197.67
+   113	                     68.142.197.69
+   114	                     68.142.197.75
+   115	                     68.142.197.77
+   116	                     68.142.197.84
+   117	
+   118	
+   119	
+   120	
+   121	 
+   122	   The C structure itself looks like this:
+   123	
+   124	     struct hostent {
+   125	        char*    h_name;       ;; official name
+   126	        char**   h_aliases;    ;; alias list
+   127	        int      h_addrtype;   ;; host address type 
+   128	        int      h_length;     ;; length of address 
+   129	        char**   h_addr_list;  ;; list of addresses 
+   130	     };
+   131	
+   132	
+   133	   Of interest here is the second field in the structure, h_aliases, which
+   134	   is a list of alternative names. (The official name for yahoo is not
+   135	   www.yahoo.com but rather www.yahoo.akadns.net; hence, www.yahoo.com is an
+   136	   alias for this official name.) Here's the loop that prints the aliases:
+   137	
+   138	
+   139	         printf("Aliases: ");
+   140	         int i = 0;
+   141	         while (host_ptr->h_aliases[i] != NULL) {
+   142	            printf("%.21s\n", host_ptr->h_aliases[i]);
+   143	            i++;
+   144	         }
+   145	
+   146	   So the loop terminates when the ith entry is NULL, which is defined as zero
+   147	   in the header file stdlib.h. 
+   148	   
+   149	   Why is the compiler willing to accept an array of strings that includes
+   150	   an integer at the end?
+   151	
+   152	5. Here's a short program, echo.c, that prompts the user to enter a string 
+   153	   from the standard input and then echos the string back to the standard
+   154	   output:
+   155	       
+   156	      #include <stdio.h>
+   157	      #include <stdlib.h>
+   158	
+   159	      char buffer[1024 + 1];
+   160	
+   161	      char* prompt_and_read() {
+   162	         printf("\nPlease enter a string (-1 to exit): ");
+   163	         fgets(buffer, 1024, stdin);
+   164	         return buffer;
+   165	      }
+   166	
+   167	      int main() {
+   168	         while (1) {
+   169	           char* ptr = prompt_and_read();
+   170	           int flag = atoi(ptr);    /* converts string to int */
+   171	           if (flag < 0) break;     /* break out of the loop */
+   172	           printf("You entered: %s\n", ptr);
+   173	         }
+   174	         return 0;
+   175	      }
+   176	
+   177	   Note that array named buffer is not a local variable in 
+   178	   prompt_and_read but rather is defined outside of all functions.
+   179	   (In C jargon, buffer is an extern variable.) Why is buffer
+   180	   extern rather than auto?
+   181	
+   182	6. Here's a program (included in the ZIP) that conducts an experiment:
+   183	
+   184	#include <stdio.h>
+   185	
+   186	int push_test() {
+   187	  int ret_val;
+   188	  /* movl %esp, %eax    ;; save stack pointer
+   189	     pushl %esp         ;; push stack pointer onto stack
+   190	     popl %edx          ;; pop the stack into %edx
+   191	     subl %edx, %eax    ;; subtract the two values
+   192	     movl %eax, ret_val ;; set up the return value
+   193	  */
+   194	  asm("movl %%esp, %%eax; pushl %%esp; popl %%edx; subl %%edx, %%eax; movl %%eax, %0"
+   195	      : "=r" (ret_val)
+   196	      : /* no input */
+   197	      : "%edx", "%eax");
+   198	  return ret_val;
+   199	}
+   200	
+   201	int pop_test() {
+   202	  int ret_val = 0xffffffff;  /* -1 in decimal */
+   203	  /* pushl ret_val       ;; save ret_val on the stack
+   204	     movl %esp, %edx     ;; save the stack pointer
+   205	     popl %esp           ;; pop stack into the stack pointer
+   206	     movl %esp, ret_val  ;; set the popped value as the return value
+   207	     movl %edx, %esp     ;; restore original stack pointer
+   208	  */
+   209	  asm("pushl %1; movl %%esp, %%edx; popl %%esp; movl %%esp, %0; movl %%edx, %%esp"
+   210	      : "=r" (ret_val)
+   211	      : "r" (ret_val)
+   212	      : "%edx");
+   213	  return ret_val;
+   214	}
+   215	
+   216	int main() {
+   217	  printf("push test: %d\n", push_test()); 
+   218	  printf("pop test: %d\n", pop_test()); 
+   219	}
+   220	/* Output:
+   221	
+   222	  push test: 0
+   223	  pop test: -1
+   224	
+   225	*/
+   226	
+   227	;;;
+   228	
+   229	In the two functions push_test and pop_test, I've documented the assembler in the 
+   230	asm calls. You should assume that the documentation is correct: no tricks here.
+   231	
+   232	You can compile and run the program to inspect the output on your system; but the
+   233	output should be the same as what's shown here: 0 for the push test and -1 for 
+   234	the pop test.
+   235	
+   236	
+   237	
+   238	
+   239	
+   240	
+   241	
+   242	There are two parts to this question, which is hard because it requires careful
+   243	thinking:
+   244	
+   245	    (1) What is the experiment attempting to deterine? Assume that the experiment
+   246	        is well intentioned and is designed to discover something. What is that
+   247	        something?
+   248	
+   249	    (2) Does the experiment succeed? That is, does the experiment discover what 
+   250	        it's meant to discover?
+   251	
+   252	7. Here is a C program that should compile and run. The questions are
+   253	included as documentation.
+   254	
+   255	#include <string.h>
+   256	#include <stdio.h>
+   257	
+   258	#define MAX_STRING (500)
+   259	
+   260	int main() {
+   261	  const char* g1 = "Hello, world!";
+   262	  const char* g2 = "Goodbye, cruel world?";
+   263	
+   264	  char s[MAX_STRING + 1];
+   265	
+   266	  /* Document in as much detail as you can. At the least, please
+   267	     explain:
+   268	     
+   269	     1. What is the data type of str_stuff?
+   270	     2. What do the function calls labeled A, B, and C do?
+   271	     3. Pick one of A, B, or C and explain the syntax in detail.
+   272	
+   273	  */
+   274	  char* (*str_stuff[ ])(char*, const char*) = {strcat, strcpy, strtok}; 
+   275	  
+   276	  str_stuff[1](s, g1);   /* A */
+   277	  str_stuff[0](s, g2);   /* B */
+   278	  str_stuff[2](s, ",");  /* C */
+   279	  return 0;
+   280	}
+   281	
+   282	One final part to this question. The C string library includes the
+   283	function
+   284	
+   285	    size_t strcspn(char *s1, const char *s2)
+   286	
+   287	returns the length (size_t is an integer type defined in string.h) of
+   288	the longest substring in s1 that contains none of the characters 
+   289	in s2. Explain why strcspn could not be included in the above list
+   290	(currently consisting of strcat, strcpy, and strtok) within this
+   291	example.
+   292	

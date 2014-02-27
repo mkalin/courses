@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" 
+	              "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <title>CSC 373: Computer Systems 1</title>
+    <style type = "text/css">
+      .body  {background-color: rgb(225, 225, 225);}
+      .links {text-decoration: none;}
+      .bullets {background-color: rgb(225, 225, 225); }
+      .raw {background-color: white; }
+      h3 { color: black; font-style: italic; }
+    </style>
+  </head>
+<body>
+<center>
+<h2>CSC 373: Computer Systems 1</h2><br/>
+</center>
+
+<h3>Course Overview</h3>
+<p>
+This course covers the concepts underlying all computer systems and how they affect the 
+correctness, performance, and utility of application programming. 
+The course topics include machine-level programming and architecture and their relevance for 
+application programming; information representations; assembly language and debuggers; 
+processor architecture; program optimization; and memory hierarchy and caching. 
+If time permits, basic system-level I/O and network programming also will be covered.
+</p>
+
+<h3>Textbook</h3>
+<p>
+Bryan & O'Hallaron, <i>Computer Systems: A Programmer's Perspective</i>, 
+Prentice Hall, 2003.  ISBN: 0-13-034074-X
+<br/>
+The book is recently out in 2nd edition, which is worth getting if you don't have the original already.							
+<br/>
+The text readings are: Chapters 1 through 3, parts of Chapters 4 and 5, most of
+Chapter 6. Time permitting, parts of Chapter 11 and Chapter 12. 
+</p>
+
+
+<h3>Prerequisites</h3>
+<p>
+The firm prequisite is programming experience. For CDM students, the second course
+in the basic Java sequence (CSC 212) or the Java for Programmers course (CSC 224) would
+be sufficient. In general, a student should have completed at least two basic programming
+courses in a modern language such as Java. The course relies heavily on coding examples 
+written in C and several assignments involve the compilation and execution of C programs.
+(Students will not be required to write any C programs from scratch but may need to modify
+existing programs.) Although no knowledge of C in particular is assumed, the ability to program 
+is assumed. (A README document on the course homepage explains how to get C for a Windows 
+machine and how to use the CTI-provided Linux machines, which have a standard C compiler.)
+</p>
+
+<h3>Grading</h3>
+<p>
+Because Summer courses are only five weeks long, there will not be a midterm exam.  
+The final exam is a quality control exam with material drawn from and, therefore, closely 
+related to material from the homework exercises. The single best preparation for the final exam is to 
+do the homeworks as well as possible. There will be one homework assignment per week, with a week to 
+complete the assignment. All homework must be submitted on time so that the material then can be discussed in class. 
+Answers to the homework will
+be posted shortly after the deadline submission; so, of course, homework cannot be submitted after the deadline. 
+Near the end of the course, there will be one makeup homework that can be submitted in place of a regular homework. 
+(If you submit all regular homeworks and the makeup, I'll substitute the makeup homework grade for the lowest 
+of the regular homeworks, if the makeup grade is higher.)<br/>
+<br/>
+The grading will be determined as follows:
+<ul>
+<li><b>Homework:</b> 75%
+<li><b>Final Exam:</b> 25%
+</ul>
+A student must pass the final exam to pass the course. 
+<br/><br/>
+Homework assignments will be worth 100 points and graded as follows:
+<table>
+<tr><td>93-100</td><td>A</td></tr>
+<tr><td>90-92</td><td>A-</td></tr>
+<tr><td>87-89</td><td>B+</td></tr>
+<tr><td>83-36</td><td>B</td></tr>
+<tr><td>80-82</td><td>B-</td></tr>
+<tr><td>77-79</td><td>C+</td></tr>
+<tr><td>73-76</td><td>C</td></tr>
+<tr><td>70-72</td><td>C-</td></tr>
+<tr><td>67-69</td><td>D+</td></tr>
+<tr><td>60-66</td><td>D</td></tr>
+<tr><td>0 - 59</td><td>F</td></tr>
+</table>
+</p>
+
+<p><h3>Instructor</h3>
+<a class = 'links' href = "mailto:kalin@cs.depaul.edu">kalin@cs.depaul.edu</a><br/>
+Office: 901 CDM building<br/>
+Hours: 4:00PM to 6:00PM, T/Th and by arrangment <br/>
+</p>
+</body>
+</html>
+

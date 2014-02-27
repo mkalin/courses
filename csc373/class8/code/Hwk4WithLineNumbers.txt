@@ -1,0 +1,400 @@
+     1	                                CSC373: Computer Systems 1
+     2	                                        Homework 4
+     3	Points: 100
+     4	Due:    Before midnight, July 16 (that's Friday, not Thursday)
+     5	
+     6	1. Consider this code segment
+     7	
+     8	         int   n = 1234;
+     9	         float f = 1234.0f;
+    10	
+    11	   Here's the internal representation of each in big endian, with the
+    12	   most significant byte to the left:
+    13	
+    14	         n: 00 00 04 d2
+    15	   
+    16	         f: 44 9a 40 00
+    17	
+    18	   Explain how the bits in the integer variable n and the floating-point variable
+    19	   f are correlated. It may be easiest to show how to derive f from n.
+    20	
+    21	2. Consider this code segment:
+    22	
+    23	         int   n = 1234;
+    24	         float f = 1234.0f;
+    25		 if (n == f) printf("They're equal.\n");
+    26		 else printf("They're not equal.\n");
+    27	
+    28	   When executed, the output is
+    29	
+    30	         They're equal.
+    31	
+    32	   The == operator simply checks that the bit patterns are the same.
+    33	   What must the compiler be doing so that the program produces the
+    34	   output that it does?
+    35	
+    36	3. Here's a short C program:
+    37	
+    38	/* This program uses the pow function, which is part of the run-time
+    39	        math library. To enable its use, this file (fpointHwk.c) was
+    40	        compiled/linked as follows:
+    41		
+    42		gcc -o fpointHwk -lm fpointHwk.c
+    43		
+    44	        In "-lm", that's a lowercase L rather than a one.
+    45	*/
+    46	
+    47	#include <stdio.h>
+    48	#include <math.h>
+    49	
+    50	int main() {
+    51	  /* first printf statements */
+    52	  double d1 = 1.0 / 10.0;
+    53	  printf("d1 == %f\n", d1);
+    54	  
+    55	  double d2 = pow(2.0, -20.0) * d1;
+    56	  printf("d2 == %f\n", d2);
+    57	  
+    58	  double d3 = 9.54 * pow(10.0, -8.0);
+    59	  printf("d3 == %f\n", d3);
+    60	  printf("\n");
+    61	  
+    62	  /* second printf statements */
+    63	  if (d1 == d2) printf("d1 == d2\n");
+    64	  else printf("d1 != d2\n");
+    65	  
+    66	  if (d1 == d3) printf("d1 == d3\n");
+    67	  else printf("d1 != d3\n");
+    68	  
+    69	  if (d2 == d3) printf("d2 == d3\n");
+    70	  else printf("d2 != d3\n");
+    71	
+    72	  return 0;
+    73	}
+    74	
+    75	    Here's the output:
+    76	
+    77	    d1 == 0.100000
+    78	    d2 == 0.000000
+    79	    d3 == 0.000000
+    80	
+    81	    d1 != d2
+    82	    d1 != d3
+    83	    d2 != d3
+    84	
+    85	    Explain what's going on. In particular, the first printf statements give the
+    86	    same value for d2 and d3: 0.000000. However, the comparisons using ==
+    87	    all evaluate to false, as shown in the second group of printf statements.
+    88	    Explain, then, why the system thinks that d2 != d3.
+    89	
+    90	
+    91	
+    92	
+    93	
+    94	
+    95	
+    96	
+    97	
+    98	
+    99	4. In the net.c program (included in Class8.zip on the home site), 
+   100	   there's a call to gethostbyname, which takes a string and returns a
+   101	   pointer to a struct hostent. Here's a code segment to illustrate:
+   102	
+   103	      struct hostent* host_ptr = gethostbyname("condor.depaul.edu");
+   104	
+   105	   This pointer is passed to the function dump_host_aux, which prints 
+   106	   information about the host with the given name. In the case of
+   107	   www.yahoo.com, for instance, here's the output:
+   108	
+   109	 
+   110	
+   111	
+   112	
+   113	
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	          Official name: www.yahoo.akadns.net
+   123	          Aliases: www.yahoo.com
+   124	          Host type: AF_INET
+   125	          Address length: 4
+   126	          Addresses: 68.142.197.86
+   127	                     68.142.197.87
+   128	                     68.142.197.90
+   129	                     68.142.197.67
+   130	                     68.142.197.69
+   131	                     68.142.197.75
+   132	                     68.142.197.77
+   133	                     68.142.197.84
+   134	 
+   135	   The structure itself looks like this:
+   136	
+   137	     struct hostent {
+   138	        char*    h_name;       ;; official name
+   139	        char**   h_aliases;    ;; alias list
+   140	        int      h_addrtype;   ;; host address type 
+   141	        int      h_length;     ;; length of address 
+   142	        char**   h_addr_list;  ;; list of addresses 
+   143	     };
+   144	
+   145	
+   146	   Of interest here is the second field in the structure, h_aliases, which
+   147	   is a list of alternative names. (The official name for yahoo is not
+   148	   www.yahoo.com but rather www.yahoo.akadns.net; hence, www.yahoo.com is an
+   149	   alias for this official name.) Here's the loop that prints the aliases:
+   150	
+   151	         printf("Aliases: ");
+   152	         int i = 0;
+   153	         while (host_ptr->h_aliases[i] != NULL) {
+   154	            printf("%.21s\n", host_ptr->h_aliases[i]);
+   155	            i++;
+   156	         }
+   157	
+   158	   So the loop terminates when the ith entry is NULL, which is defined as 0
+   159	   in the header file stdlib.h. 
+   160	
+   161	   Here's a simpler example of what's going on. The data type of strings
+   162	   is char**, that is, strings points to an array of strings. Note that the
+   163	   last entry in the list is NULL, which is 0. (Putting the integer 0 in there
+   164	   works the same.) If you put, say, -1 in place of NULL, you get a 
+   165	   compiler warning. Explain why the compiler is willing to accept an
+   166	   array initialization in which the last element is not a string, like the
+   167	   others, but rather an integer. 
+   168	
+   169	
+   170	
+   171	 
+   172	
+   173	
+   174	
+   175	
+   176	
+   177	
+   178	
+   179	
+   180	
+   181	
+   182	         /* output from this program:
+   183	
+   184	               foo
+   185	               bar
+   186	               baz
+   187	          */
+   188	          #include <stdlib.h>
+   189	          #include <stdio.h>
+   190	
+   191	          int main() {
+   192	            char* strings[ ] = { "foo", "bar", "baz", NULL };
+   193	            int i = 0;
+   194	            while (strings[i] != NULL)
+   195	               printf("%s\n", strings[i++]);
+   196	            return 0;
+   197	          }
+   198	
+   199	
+   200	5. Here's a short program, echo.c, that prompts the user to enter a string 
+   201	   from the standard input and then echos the string back to the standard
+   202	   output:
+   203	       
+   204	      #include <stdio.h>
+   205	      #include <stdlib.h>
+   206	
+   207	      char buffer[1024 + 1];
+   208	
+   209	      char* prompt_and_read() {
+   210	         printf("\nPlease enter a string (-1 to exit): ");
+   211	         fgets(buffer, 1024, stdin);
+   212	         return buffer;
+   213	      }
+   214	
+   215	      int main() {
+   216	         while (1) {
+   217	           char* ptr = prompt_and_read();
+   218	           int flag = atoi(ptr);    /* converts string to int */
+   219	           if (flag < 0) break;     /* break out of the loop */
+   220	           printf("You entered: %s\n", ptr);
+   221	         }
+   222	         return 0;
+   223	      }
+   224	
+   225	   Note that array named buffer is not a local variable in 
+   226	   prompt_and_read but rather is defined outside of all functions.
+   227	   (In C jargon, buffer is an extern variable.) Why? In particular,
+   228	   what's the problem with defining buffer inside of prompt_and_read,
+   229	   as show here?
+   230	
+   231	     char* prompt_and_read() {
+   232	         char buffer[1024 + 1];
+   233	         printf("\nPlease enter a string (-1 to exit): ");
+   234	         fgets(buffer, 1024, stdin);
+   235	         return buffer;
+   236	      }
+   237	
+   238	
+   239	
+   240	
+   241	
+   242	6. Here is a C program. For review, the malloc function takes one argument,
+   243	   the number of bytes to allocate dynamically from the heap (as opposed to
+   244	   the stack) and returns a pointer to the first byte of allocated storage
+   245	   or NULL (0) if the requested storage cannot be allocated.
+   246	
+   247	   The program compiles and runs. Answer the questions
+   248	   below the program. (The code itself is in the ZIP file so you don't have
+   249	   to extract it from this handout.)
+   250	
+   251	#include <stdio.h>
+   252	#include <stdlib.h>
+   253	
+   254	void f1(int** arg, int n1, int n2) {
+   255	  int i;
+   256	  for (i = 0; i < n1; i++) {
+   257	    int j;
+   258	    for (j = 0; j < n2; j++)
+   259	      *(*(arg + i) + j) = rand() % 100;
+   260	  }
+   261	}
+   262	
+   263	int** f2(int** arg, int n) {
+   264	  int** t = malloc(n * sizeof(int*));
+   265	  int i, k = 0;
+   266	  for (i = n - 1; i >= 0; i--)
+   267	    t[k++] = arg[i];
+   268	  
+   269	  return t;
+   270	}
+   271	
+   272	int main() {
+   273	  int n = 0xffffffff;
+   274	
+   275	  do {
+   276	    printf("Enter a positive integer: ");
+   277	    scanf("%i", &n);
+   278	  } while (n < 0);
+   279	  
+   280	  int** q = malloc(n * sizeof(int*));
+   281	  
+   282	  int i;
+   283	  for (i = 0; i < n; i++)
+   284	    *(q + i) = malloc(n * sizeof(int));
+   285	  f1(q, n, n);
+   286	
+   287	  int** r = f2(q, n);
+   288	  
+   289	  for (i = 0; i < n; i++)
+   290	    free(*(q + i));
+   291	  free(q);
+   292	
+   293	  return 0;
+   294	}
+   295	
+   296	
+   297	
+   298	
+   299	
+   300	
+   301	
+   302	1. Draw a diagram that depicts what q points to after the first for
+   303	   loop in main executes.
+   304	
+   305	2. Explain what f1 does and how it does it. You can do so by documenting
+   306	   the code. Of particular interest is anything having to do with
+   307	   pointers.
+   308	
+   309	3. Are q and q[0] of the same type? Explain.
+   310	
+   311	4. Explain what f2 does and how it does it.
+   312	;;;;;
+   313	
+   314	7. Answer the questions posed in the documentation:
+   315	
+   316	#include <stdio.h>
+   317	#include <stdlib.h>
+   318	#include <time.h>
+   319	
+   320	#define D1 (3)
+   321	#define D2 (2)
+   322	#define D3 (3)
+   323	#define UB (100)
+   324	
+   325	/* Output from a sample run:
+   326	
+   327	     24 9 24 98 39 21 29 56 59 21 86 6 76 93 44 21 37 58 
+   328	*/
+   329	
+   330	
+   331	/* Explain, in words and/or pictures, how this loop works. 
+   332	   The syntax is correct and the loop does what it should.
+   333	
+   334	   Why does the compiler need D2 and D3 in the argument
+   335	   but not D1?
+   336	*/
+   337	void dump_array(int a[][D2][D3]) {
+   338	  int i, j, k;
+   339	  for (i = 0; i < D1; i++)
+   340	    for (j = 0; j < D2; j++)
+   341	      for (k = 0; k < D3; k++)
+   342	      printf("%i ", a[i][j][k]);
+   343	  printf("\n");
+   344	}
+   345	
+   346	int main() {
+   347	  /* Uncomment the next line if you'd prefer different output every time. */
+   348	  /* srand(time(0)); */
+   349	
+   350	  /* What is sizeof(d3)?
+   351	     What is sizeof(d3[1])?
+   352	     What is sizeof(d3[1][0]?
+   353	     What is sizeof(d3[1][1][1]?
+   354	  */
+   355	  int d3[D1][D2][D3];
+   356	
+   357	  /* 
+   358	     In words, what is the data type of d3?
+   359	     In words, what is the data type of *d3?
+   360	     In words, what is the data type of **d3?
+   361	     In words, what is the data type of ***d3?
+   362	
+   363	     In words, what is the data type of ptr?
+   364	  */
+   365	  int* ptr = (int*) d3;
+   366	
+   367	  /* 
+   368	     Your compiler should not issue any warning/error on the line above.
+   369	     What not?
+   370	
+   371	     What if the line changes to:
+   372	
+   373	     int* ptr = d3;
+   374	
+   375	     What happens then with the compiler and why?
+   376	  */
+   377	
+   378	  
+   379	  int n =  D1 * D2 * D3 * sizeof(int) - sizeof(int);
+   380	
+   381	  /* What does this next C statement do? In particular, why is d3 cast to an int? */
+   382	  /* Why, in the initialization of n above, do I subtract sizeof(int) at the end? */
+   383	  int* foo = (int*) ((int) d3 + n);
+   384	
+   385	  /* Explain, in words and/or pictures, what this loop does. */
+   386	  while (foo >= ptr) {
+   387	    *foo = rand() % UB; /* generate and assign a 1-digit or 2-digit integer */
+   388	    foo--;              /* Explain in words or pictures what's going on here. */
+   389	  }
+   390	  /* What would happen if the while test were changed to
+   391	 
+   392	          while (foo > ptr)
+   393	  */
+   394	  
+   395	  dump_array(d3); /* Could I call dump_array(ptr) here? Explain. */
+   396	
+   397	  return 0;
+   398	}
+   399	
+   400	

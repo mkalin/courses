@@ -1,0 +1,452 @@
+     1	                                CSC373: Computer Systems 1
+     2	                                        Homework 3
+     3	Points: 100
+     4	Due:    By midnight on Tuesday, July 9
+     5	
+     6	Grading rubric:
+     7	
+     8	The homework has two parts: one involves a C program, the
+     9	other involves cache organization. The C-program part has
+    10	three questions; the Cache part has seven questions--for a
+    11	total of ten questions. Each question is worth 10 points.
+    12	
+    13	Question 2 in the Cache part requires you to write a C 
+    14	program, which must compile for any credit. (I'll use the gcc
+    15	command with no flags to compile.) I've provided some
+    16	coding hints for the program. If you've confidence in your
+    17	program, it can be used to answer questions 1, 2, and 3 in the
+    18	Cache part; but the program is required only for Question 2 in
+    19	the Cache part.
+    20	
+    21	Question 7 in the Cache part requires a discursive answer. Be
+    22	as precise, clear, and terse as possible.
+    23	
+    24	-- C: The questions are in the documentation. This program, empSort.c, can
+    25	be compiled and run. It's in the ZIP. There's no requirement to change any
+    26	of the code but you're free to experiment as you like.
+    27	
+    28	#include <stdio.h>
+    29	#include <string.h>
+    30	#include <stdlib.h>
+    31	
+    32	#define MaxName     (80)
+    33	#define BuffSize   (280)
+    34	
+    35	typedef unsigned int bool;
+    36	enum {false, true}; 
+    37	
+    38	typedef struct Emp {
+    39	  unsigned char  lname[MaxName + 1]; /* + 1 for '\0' */
+    40	  unsigned char  fname[MaxName + 1];
+    41	  unsigned char  nickname[MaxName + 1];
+    42	  unsigned int   id;
+    43	  unsigned char  dept;
+    44	  bool           married;
+    45	} Emp;
+    46	
+    47	void set_name(char* target, char* source) {
+    48	  if (strlen(source) > MaxName) return;
+    49	  strcpy(target, source);
+    50	}
+    51	
+    52	void set_id(unsigned int* id_ptr) {
+    53	  *id_ptr = rand();
+    54	}
+    55	
+    56	void set_dept(unsigned char* dept_ptr, unsigned char code) {
+    57	  *dept_ptr = code;
+    58	}
+    59	
+    60	
+    61	
+    62	void set_married(unsigned int* married, unsigned int status) {
+    63	  *married = status;
+    64	}
+    65	
+    66	void to_string(Emp* this, char* buffer) {
+    67	  unsigned char temp[32];
+    68	
+    69	  printf("\n** Employee information **");
+    70	  
+    71	  strcpy(buffer, "");
+    72	  strcat(buffer, "\nLast name:   "); 
+    73	  strcat(buffer, this->lname);
+    74	  strcat(buffer, "\nFirst name:  ");
+    75	  strcat(buffer, this->fname);  
+    76	  strcat(buffer, "\nNickname:    ");
+    77	  strcat(buffer, this->nickname);
+    78	
+    79	  sprintf(temp, "%i", this->id);
+    80	  strcat(buffer, "\nEmployee id: ");
+    81	  strcat(buffer, temp);
+    82	
+    83	  sprintf(temp, "%c", this->dept);
+    84	  strcat(buffer, "\nDepartment:  ");
+    85	  strcat(buffer, temp);
+    86	
+    87	  strcat(buffer, "\nMarried?:    ");
+    88	  if (this->married) 
+    89	    strcat(buffer, "yes");
+    90	  else
+    91	    strcat(buffer, "no");
+    92	}
+    93	
+    94	/** Homework: documentation assignment starts here 
+    95	    Specific issues:
+    96	
+    97	    (1) Why are there two dump_emps functions rather than
+    98	        just one? How do they differ?
+    99	
+   100	    (2) Same for the compA and compB functions, the callbacks
+   101	        for the two qsorts.
+   102	
+   103	    (3) I do two qsorts. In each case, as the output shows,
+   104	        the Emps are printed in the same sorted order.
+   105	        Which approach (the first qsort or the second) is better 
+   106	        and why? Explain, in particular, how the two qsorts
+   107	        differ.
+   108	
+   109	    You can ignore the const business in the compare functions. What 
+   110	
+   111	        const Emp* ptr;
+   112	
+   113	    means is that the object to which ptr points cannot be changed. 
+   114	    (I'm using "object" here in a generic sense to mean "thing in memory" not in 
+   115	    the object-oriented sense.)
+   116	*/
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	void dump_emps1(Emp a[ ], unsigned n) {
+   123	  int i;
+   124	  char buffer[BuffSize + 1];
+   125	  for (i = 0; i < n; i++) {
+   126	    to_string(&a[i], buffer);
+   127	    printf("%s\n", buffer);
+   128	  }  
+   129	}
+   130	
+   131	void dump_emps2(Emp* a[ ], unsigned n) {
+   132	  int i;
+   133	  char buffer[BuffSize + 1];
+   134	  for (i = 0; i < n; i++) {
+   135	    to_string(a[i], buffer);
+   136	    printf("%s\n", buffer);
+   137	  }
+   138	}
+   139	
+   140	/* void* is the generic pointer type; that is, any
+   141	   pointer type (such as Emp*) can be cast to or
+   142	   from void*. In object-oriented languages such as
+   143	   Java and C#, the Object type is the counterpart 
+   144	   of C's void* type.
+   145	
+   146	   The fourth argument to qsort must be a pointer to
+   147	   a function that (1) returns an int and (2) takes
+   148	   two arguments of type const void*.
+   149	
+   150	   The returned int has the following "qsort semantics,"
+   151	   which are used by virtually every sort routine in
+   152	   every modern programming language. Here are the
+   153	   semantics, explained with reference to the pointers
+   154	   item1 and item2:
+   155	
+   156	      return 0 if item1->object and item2->object are
+   157	      equal with respect to sorted order
+   158	
+   159	      return a negative integer if item1->object precedes
+   160	      item2->object in sorted order
+   161	
+   162	      return a positive integer if item1->object succeeds
+   163	      item2->object in sorted order
+   164	*/
+   165	int compA(const void* item1, const void* item2) {
+   166	  const Emp* emp1 = (const Emp*) item1;
+   167	  const Emp* emp2 = (const Emp*) item2;
+   168	  
+   169	  unsigned char buff1[BuffSize + 1];
+   170	  unsigned char buff2[BuffSize + 1];
+   171	
+   172	  strcpy(buff1, emp1->lname);
+   173	  strcat(buff1, emp1->fname);
+   174	  strcpy(buff2, emp2->lname);
+   175	  strcat(buff2, emp2->fname);
+   176	
+   177	  return strcmp(buff1, buff2);
+   178	}
+   179	
+   180	
+   181	
+   182	int compB(const void* item1, const void* item2) {
+   183	  const Emp** emp1 = (const Emp**) item1;
+   184	  const Emp** emp2 = (const Emp**) item2;
+   185	
+   186	  unsigned char buff1[BuffSize + 1];
+   187	  unsigned char buff2[BuffSize + 1];
+   188	
+   189	  strcpy(buff1, (*emp1)->lname);
+   190	  strcat(buff1, (*emp1)->fname);
+   191	  strcpy(buff2, (*emp2)->lname);
+   192	  strcat(buff2, (*emp2)->fname);
+   193	
+   194	  return strcmp(buff1, buff2);
+   195	}
+   196	
+   197	void create_emps(Emp emps[ ]) {
+   198	 /* populate the array: don't bother to document this */
+   199	  set_name(emps[0].lname, "Ruble");
+   200	  set_name(emps[0].fname, "Barney");
+   201	  set_name(emps[0].nickname, "The Animal");
+   202	  set_id(&emps[0].id);
+   203	  set_dept(&emps[0].dept, 'Q');
+   204	  set_married(&emps[0].married, true);
+   205	
+   206	  set_name(emps[1].lname, "Ruble");
+   207	  set_name(emps[1].fname, "Betty");
+   208	  set_name(emps[1].nickname, "The Princess");
+   209	  set_id(&emps[1].id);
+   210	  set_dept(&emps[1].dept, 'R');
+   211	  set_married(&emps[1].married, true);
+   212	
+   213	  set_name(emps[2].lname, "Flintstone");
+   214	  set_name(emps[2].fname, "Pebbles");
+   215	  set_name(emps[2].nickname, "The Child Prodigy");
+   216	  set_id(&emps[2].id);
+   217	  set_dept(&emps[2].dept, 'C');
+   218	  set_married(&emps[2].married, false);
+   219	
+   220	  set_name(emps[3].lname, "Flintstone");
+   221	  set_name(emps[3].fname, "Wilma");
+   222	  set_name(emps[3].nickname, "The Boss");
+   223	  set_id(&emps[3].id);
+   224	  set_dept(&emps[3].dept, 'A');
+   225	  set_married(&emps[3].married, true);
+   226	
+   227	  set_name(emps[4].lname, "Flintstone");
+   228	  set_name(emps[4].fname, "Baby Puss");
+   229	  set_name(emps[4].nickname, "The Child from Hell");
+   230	  set_id(&emps[4].id);
+   231	  set_dept(&emps[4].dept, 'C');
+   232	  set_married(&emps[4].married, false);
+   233	
+   234	  set_name(emps[5].lname, "Flintstone");
+   235	  set_name(emps[5].fname, "Fred");
+   236	  set_name(emps[5].nickname, "The Man");
+   237	  set_id(&emps[5].id);
+   238	  set_dept(&emps[5].dept, 'Z');
+   239	  set_married(&emps[5].married, true);
+   240	}
+   241	
+   242	int main() {
+   243	  /* Seed the pseudo-random number generator with the current time. 
+   244	     An Emp's id is set to a pseudo-random number. */
+   245	  srand(time(0)); 
+   246	
+   247	  const int n = 6;
+   248	  Emp emps[n];
+   249	  create_emps(emps);
+   250	
+   251	  /* emps before any sorting */
+   252	  printf("**** Before sorting:\n");
+   253	  dump_emps1(emps, n);
+   254	
+   255	  int i;
+   256	  Emp* emps_a[n];
+   257	  for (i = 0; i < n; i++) emps_a[i] = emps + i;
+   258	
+   259	  /* 1st qsort: better or worse approach than 2nd? why? */
+   260	  qsort(emps_a, n, sizeof(Emp*), compB);
+   261	  printf("\n**** After 1st sort:\n");
+   262	  dump_emps2(emps_a, n);
+   263	
+   264	  /* 2nd qsort: better or worse approach than 1st? why? */
+   265	  qsort(emps, n, sizeof(Emp), compA);
+   266	  printf("\n**** After 2nd sort:\n");
+   267	  dump_emps1(emps, n);
+   268	
+   269	  return 0;
+   270	}
+   271	
+   272	-- Cache
+   273	
+   274	Sections 6.2 and especially 6.3 and 6.4 in the book cover this material.
+   275	Terminology: Suppose that process P is executing instructions such as
+   276	               x = y + z
+   277	for three int variables, x, y, and z. Each of these variable names is, in 
+   278	effect, the symbolic name of a memory address:
+   279	           
+   280	                0x12A    ;; &x
+   281	               +-----+
+   282	               |     |
+   283	               +-----+
+   284	                  x      ;; x, symbolic name for &n
+   285	
+   286	Let's say x is at 0x12A, y is at 0x13A, and z is at 0x14A. These addresses are
+   287	all virtual addresses rather than physical ones. The run-time system needs to
+   288	map these virtual addresses into physical memory locations (e.g., on the stack).
+   289	Now we generalize. A string of memory references such as
+   290	                      1, 4, 8, 5,...,9, 17
+   291	is called a "reference string" and indicates the (virtual) memory addresses that an 
+   292	executing process generates. The string is read from left to right: 1 is the first 
+   293	address, 4 is the second, and so on. For purposes of this exercise, we don't care 
+   294	whether the addresses are of (a) data or (b) instructions; we care only about the 
+   295	reference string and its impact upon a cache. For example, there's a reference to 
+   296	address 17 at the end: it could be the address of data or an instruction. If you 
+   297	like, you can think of all addresses as addresses of instructions to fetch to the CPU 
+   298	for execution. What's important are the addresses, not what's at the addressed location.
+   299	
+   300	
+   301	
+   302	Now back to address 17 at the end. The L1 cache will be searched to see if the word 
+   303	with (virtual) address 17 occurs in the cache. A "word" is just a bunch of bits, 
+   304	say, 32 bits. In the questions, a virtual-address-to-cache-address translation 
+   305	scheme will be given. 
+   306	
+   307	For simplicity, we assume that every memory word (data or instructions) is 8 bits
+   308	and that addresses are of words (that is, 8-bit words). The addresses are 32 bits.
+   309	
+   310	
+   311	In summary: -- every word is 8 bits in size
+   312	            -- every address of a word is 32 bits in size
+   313	
+   314	For a set-associative cache, the sets should be numbered starting with 0.
+   315	For example, if there are 16 sets, they are numbered Set0, Set1,...,Set15 (or, if
+   316	you prefer, Set[0], Set[1],...,Set[15]).
+   317	
+   318	Throughout this document, a "line" is the same as a "block" in a set: a collection
+   319	of words.
+   320	
+   321	In this homework, there are various simplifying assumptions, in particular the 
+   322	assumption that a line or block contains only one word. Please read the 
+   323	questions carefully to make sure you understand these assumptions.
+   324	
+   325	Please answer each of the following and show your reasoning.
+   326	
+   327	 1. Cache C has 16 sets and is direct mapped, that is, it has
+   328	    one block per set. Assume that the block holds only 1 word. In short,
+   329	    we have 16 sets, each with one 8-bit block (or, if you like, one word
+   330	    per block). Process P generates this reference string, each a word address:
+   331	
+   332		1, 4, 8, 5, 20, 17, 19, 56, 9, 11, 4, 43, 5, 6, 9, 17, 9, 56, 9
+   333	
+   334	    C is initially empty. For each memory reference above, label it as a
+   335	    Hit or a Miss. Show C's contents after the last memory reference.
+   336	
+   337	    Assume that a word's cache address is its memory address modulo the
+   338	    cache's size in sets (for example, the word at address 1 has cache address 
+   339	    1 % 16 = 1; the word at address 19 has cache address 19 % 16 = 3; etc.)
+   340	    So the word at address 1 goes into set 1, and so on.
+   341	
+   342	 2. Use the same reference string as in question (1). However, this time 
+   343	    assume that there are 4 sets and that C is 4-way set associative: there
+   344	    are 4 sets, each with 4 blocks. A block still holds 1 word. The set address
+   345	    is now the reference string number modulus 4. For instance, the first
+   346	    number in the reference string is 1; hence, the word at address 1 goes into
+   347	    set 1 % 4 == set 1. Here's a depiction of what a set looks like:
+   348	
+   349	            Si +----+----+----+----+
+   350	               |    |    |    |    |
+   351	               +----+----+----+----+
+   352	                [0]  [1]   [2]  [3]
+   353	
+   354	    Each set is like an array of four elements, with element one of the words.
+   355	    Now suppose a set is full and that a new element needs to come into the set.
+   356	    Which element should be overwritten? Here are the rules:
+   357	
+   358	     -- Fill the set in left-to-right order, that is, index 0, then 1, then 2, then 3.
+   359	
+   360	
+   361	
+   362	     -- Keep track of the last entry. Suppose, for instance, that the set has been
+   363	        full for some time and that the last entry was into [2]. The next entry would 
+   364	        go into [3]. The next after that into [0]; and so on.
+   365	
+   366	    Write a program that simulates what happens to the cache with the reference string
+   367	    from question (1). Here's a start:
+   368	 
+   369	    #define Empty (-1)
+   370	    #define SetCount (4)
+   371	    #define WordCount (4)
+   372	
+   373	    int sets[SetCount][WordCount];
+   374	    int main() {
+   375	       int reference_string[ ] = 
+   376	         { 1, 4, 8, 5, 20, 17, 19, 56, 9, 11, 4, 43, 5, 6, 9, 17, 9, 56, 9, Empty };
+   377	       char* set_names[ ] = {"S0", "S1", "S2", "S3"};
+   378	       ...
+   379	
+   380	    You're free to work on the above code or create your own solution from scratch.
+   381	    The program should output a running account of what happens for each address in the
+   382	    reference string. For example, the output might begin as follows:
+   383	
+   384	   Miss for word 1 in Set 1
+   385	   Word 1 inserted into Set 1 at position 0
+   386	
+   387	   Miss for word 4 in Set 0
+   388	   Word 4 inserted into Set 0 at position 0
+   389	   ...
+   390	
+   391	 3. Use the same reference string as in question (1). Assume 
+   392	    that cache C is 2-way set associative with 8 sets. Each block holds 1 word. 
+   393	    Replacement is LRU (least recently used). A memory reference's cache set is the 
+   394	    memory address modulus 8 (for example, the word at address 8 goes into set 0; 
+   395	    the word at  address 11 goes into set 3; etc.) Do the same as in (1) and use the 
+   396	    same assumptions for replacement as in (2). If you've confidence in your program,
+   397	    you could use it; otherwise, a hand trace is fine.
+   398	
+   399	 4. Computer system S uses 32-bit virtual addresses as cache addresses. The cache 
+   400	    address has three fields, left to right:
+   401	
+   402	                tag bits    set identifier    word offset
+   403	
+   404	    So how many bits are used in each field given 1,024 sets each with 8 lines. 
+   405	    Each line contains 32 8-bit words. (A "line" is the same as a "block.")
+   406	
+   407	 5. A cache's total bit size is partitioned into "data bits" (that is, data or 
+   408	    instructions) and "overhead bits" (bits for directory tags, the valid bit, 
+   409	    the LRU bits, if used, and so on). For now, the only "overhead bits" of 
+   410	    interest are the directory or tag bits. Consider two set-associative caches 
+   411	    with the same data capacity:
+   412	
+   413		C1: 2048 sets, 8 blocks per set, 32 words per block, 8 bits per word
+   414	        C2: 4096 sets, 4 blocks per set, 32 words per block, 8 bits per word
+   415	
+   416	    Contrast the difference between "data bit" capacity and "overhead bit" size
+   417	    for the two caches. Assume that the word offset is log(M) low-order 
+   418	    (rightmost) bits, where M is the number of words per block; and that set 
+   419	    address is the middle log(N) low-order bits, where N is the number of sets. 
+   420	    The remaining bits are directory tags. Each set uses 32-bit addresses.
+   421	
+   422	 6.  Consider the 32-bit virtual address 
+   423	
+   424	                   11110000 11110000 11110000 11110000
+   425	
+   426	     for an L2 cache with 4 blocks per set, 2048 sets, and 128 words per block. 
+   427	     The address's low-order bits are on the right. Assume standard formatting for 
+   428	     a cache address. (I've broken the address into four chunks of 8 bits apiece 
+   429	     for readability only.)
+   430	
+   431	
+   432	       1.  Mark the bits that give the word offset in the line.
+   433	       2.  Mark the bits that specify the set.
+   434	       3.  Mark the bits that constitute the tag or key.
+   435	       4.  How many tags are in the directory as a whole?
+   436	       5.  How many directory tags must be compared against this addrese's tag bits 
+   437	           when a cache lookup occurs?
+   438	
+   439	 7. Some cache designers are abandoning LRU as replacement policy and going instead
+   440	    to random replacement. To see the problem, consider a fully associative
+   441	    cache (that is, one set) with six blocks, each of which holds 1 word. 
+   442	    Now consider this reference string for a code segment in a loop:
+   443	
+   444	      1, 4, 7, 8, 9, 11, 13, 1, 4, 7, 8, 9, 11, 13, 1, 4, 7, 8, 9, 11, 13,...
+   445	
+   446	    Assume that the blocks are used in order, which gives LRU replacement.  For 
+   447	    example, when the cache is empty, the word at address 1 goes into block[0], the 
+   448	    word at address 4 goes into block[1], and so on.
+   449	   
+   450	    What problems does LRU cause given this reference string and our cache
+   451	    capacity? Make the case that random replacement would yield better performance than
+   452	    does LRU for this reference string.

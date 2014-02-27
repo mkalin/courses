@@ -1,0 +1,38 @@
+                             Proposal to Change CSC373/CSC374 Division of Topis
+
+# Overview
+
+CSC373/374 currently require two textbooks:
+
+    Hoover, System Programming with C and Unix
+    Bryant/O'Hallaron, Computer Systems: A Programmer's Perspective
+
+My proposal is to retain both books but to make CSC373 mostly a Hoover-based course
+and CSC374 mostly a Bryant/O'Hallaron-based course.
+
+# Motivation
+
+I've taught CSC373, in Summer I, using these texts for several years. What's become clear is
+that our DePaul students struggle mightily with programming in general and with C in particular.
+In the current format, CSC373 introduces C and covers what, for most students, is the 
+radically new material of Chapters 2 (internal representation), 3 (assembly language), and
+6 (cache memory) in Bryant/O'Hallaron. 
+
+I think that our students would be better served with a different focus in each course.
+Under this proposal, CSC373 would cover:
+
+   -- all of Hoover, with plenty of opportunity for instructive and interesting
+      programs.
+
+   -- Chapters 1 (overview) and 3 (assembly language) from Bryant/O'Hallaron.
+
+Of course, the very nature of C would require some discussion of internal representation. 
+For example, CSC373 might explain why shift operations are not allowed on floating-point
+types, given the 3-field format of such types; but CSC373 would not go into the details
+of IEEE 754, which instead would be covered in CSC374. 
+
+In effect, CSC373 would become a systems programming course in C, including the full
+preprocessing/compiling/linking phases of code translation. The course would introduce
+debugging in C and assembly language, including assembly embedded in C programs. In CSC374,
+C would be the programming language of choice but the emphasis would be on the material in
+Bryant/O'Hallaron rather than on the programming issues and techniques in Hoover.

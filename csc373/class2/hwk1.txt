@@ -1,0 +1,283 @@
+     1	                                   CSC 373: Systems 1
+     2	                                       Homework 1
+     3	Points: 100
+     4	Due: Tuesday, June 25th, before midnight
+     5	
+     6	Grading rubric:
+     7	
+     8	  There are six questions in all. The first four, all of
+     9	  which are in the first C function, are worth 20 points
+    10	  each. Each of the "mystery" functions is worth 10 points.
+    11	  Points are deducted in the graded copy. At the end of 
+    12	  course, the points per homework are added and mapped to 
+    13	  a letter grade.
+    14	
+    15	  For each question, there are two parts: (1) the answer
+    16	  and (2) the reasons in support of the answer. The answer
+    17	  is worth 10% and the reasons are worth 90%.
+    18	
+    19	  Sample question and answer:
+    20	
+    21	  C has an addition operator +. In arithmetic, the sum of
+    22	  any two positive integers is greater than either:
+    23	
+    24	   (n + m) > n for n, m > 0
+    25	   (n + m) > m for n, m > 0
+    26	
+    27	  Is this the case in C? Justify your answer.
+    28	
+    29	  Answer: 
+    30	  No. Assume that m and n are unsigned ints, each greater 
+    31	  than 0 in value. There are two cases to consider:
+    32	
+    33	  Case 1: (m + n) <= UINT_MAX
+    34	  Case 2: (m + n) >  UINT_MAX
+    35	
+    36	  For Case 1, (m + n) > m and (m + n) > n. The smallest
+    37	  value for m or n would be 1, by assumption; and the
+    38	  largest value for the other then would be UINT_MAX - 1 to
+    39	  ensure that the sum is less than or equal to UINT_MAX.
+    40	  For Case 2, however, m > (m + n) and n > (m + n) because
+    41	  "overflow" occurs: sizeof(unsigned) is not big enough to
+    42	  represent the arithmetic value (m + n).
+    43	
+    44	  The following program illustrates, with m set to UINT_MAX
+    45	  and n set to 1. In this case, (m + n) is 0. If m is held
+    46	  constant at UINT_MAX and n > 0, then 
+    47	
+    48	    (m + n) = n - 1.
+    49	
+    50	#include <stdio.h>
+    51	#include <limits.h>
+    52	
+    53	int main() {
+    54	  unsigned m = UINT_MAX;
+    55	  unsigned n = 1;  
+    56	  printf("m = %u\n", m);
+    57	  printf("n = %u\n", n);
+    58	  printf("m + n = %u\n", m + n);
+    59	  return 0;
+    60	}
+    61	
+    62	/* Output (formatted for readability):
+    63	
+    64	m     = 4,294,967,295
+    65	n     =             1
+    66	m + n =             0
+    67	
+    68	*/
+    69	
+    70	This answer would get full credit and, because of the code,
+    71	probably bonus points as well.
+    72	;;;;;;;;;  
+    73	
+    74	/* Answer the questions below. For each answer, explain whether
+    75	   the expression shown evaluates to true (non-zero) or false (zero). For example,
+    76	   you'd say that 
+    77	
+    78	     (n1 < n2) == (-n1 > -n2)
+    79	
+    80	   always evaluates to true or, for some values, might evaluate to false. 
+    81	
+    82	   A perfect score requires the right answer with a solid explanation.
+    83	   The right answer without a solid explanation is worth very little: 10%. 
+    84	   The emphasis, in other words, is on the explanation.
+    85	
+    86	   The code can be compiled and executed, of course. */
+    87	
+    88	#include <stdio.h>
+    89	#include <limits.h>
+    90	int main() {
+    91	  int n1 = -1;
+    92	  int n2 = 2;
+    93	
+    94	  unsigned int u1 = (unsigned int) n1;  
+    95	  unsigned int u2 = (unsigned int) n2;
+    96	
+    97	  /* Is result always 1? Explain. */
+    98	  int result = (n1 < n2) == (-n1 > -n2);
+    99	  printf("(%d < %d) == (-%d > -%d) evaluates to %d\n", 
+   100		 n1, n2, n1, n2, result);
+   101	
+   102	  /* Is result always 0? Explain. */
+   103	  result = ~n1 + ~n2 == ~(n1 + n2);
+   104	  printf("(~%d + ~%d) == ~(%d + %d) evaluates to %d\n", 
+   105		 n1, n2, n1, n2, result);
+   106	
+   107	  /* Is result always 1? Explain. */
+   108	  result = ((n1 >> 1) << 1) <= n1;
+   109	  printf("((%d >> 1) << 1) <= %d evaluates to %d\n",
+   110		 n1, n1, result);
+   111	
+   112	
+   113	
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	  /* Is result always 1? Explain. */
+   123	  /** On left hand side, the expression (int) (u1 - u2) means that
+   124	      the subtraction of u2 from u1 is done and then this result is
+   125	      cast to an int, that is, a signed int.
+   126	  **/
+   127	  result = ((int) (u1 - u2)) == -(n2 - n1);
+   128	  printf("((int) (%u - %u)) == -(%d - %d) evaluates to %d\n",
+   129		 u1, u2, n2, n1, result);
+   130	
+   131	  return 0;
+   132	}
+   133	
+   134	/* What does the function mystery do? 
+   135	
+   136	   To get the idea of what constitutes a good explanation, consider
+   137	   the simpler function
+   138	
+   139	       int mys(int n) { 
+   140	          int ans = n * 2; 
+   141	          ans += 1;
+   142	       }
+   143	
+   144	   The function is needlessly long for emphasis. A perfectly good
+   145	   explanation of what the function does is:
+   146	
+   147	       The function mys doubles its argument, adds 1, and 
+   148	       returns the result.
+   149	
+   150	       The argument and return value are signed integers.
+   151	
+   152	       For example, given 4 as the argument, mys returns 9;
+   153	       given -3 as the argument, mys returns -5; and so on.
+   154	
+   155	   For more complicated examples, as the one below, you can 
+   156	   explain in more detail. The goal is to explain (a) what the
+   157	   function does in general and (b) how the function does what
+   158	   it does.
+   159	*/
+   160	
+   161	#include <stdio.h>
+   162	unsigned int mystery1(unsigned int  a,       
+   163			      unsigned int  b,      
+   164			      unsigned char c) {    /* a char is 8 bits */
+   165	  unsigned char* ptr = (unsigned char*) &a; /* make ptr point to a */
+   166	  unsigned int ret_val;
+   167	  if (b >= sizeof(unsigned int)) b = 0;
+   168	  *(ptr + b) = c;  /* In general, if ptr is a pointer, then *ptr is the
+   169	                      value pointed at. So, for example, if 
+   170	
+   171	                        int n = 27;
+   172	                        int* ptr = &n;
+   173	
+   174	                                    0x1234
+   175	                                    +----+
+   176	                          ptr ----->| 27 |
+   177	                                    +----+
+   178	                                      n
+   179	                      
+   180	                      with 0x1234 as the address of n, then *ptr is 27.  */
+   181	
+   182	  /* ptr is of type unsigned char*, that is, pointer to unsigned char; but
+   183	     the function is supposed to return an int. So, first, we cast ptr's
+   184	     value to unsigned int* (pointer to unsigned int):
+   185	
+   186	              (unsigned int*) ptr
+   187	
+   188	     However, we need to return an unsigned int, not a pointer to an 
+   189	     unsigned int. So we dereference the pointer:
+   190	
+   191	             *((unsigned int*) ptr)
+   192	
+   193	     If we just did
+   194	
+   195	             *ptr
+   196	
+   197	     we'd get an unsigned char rather than the unsigned int that we want.
+   198	  */
+   199	  ret_val = *((unsigned int*) ptr);
+   200	  return ret_val; /* return an unsigned int */
+   201	}
+   202	  
+   203	int main() {
+   204	  /* sample run */
+   205	  unsigned int n = 305419896;
+   206	  unsigned char c = 171;
+   207	  unsigned result = mystery1(n, 2, c);
+   208	  printf("%u ===> %u\n", n, result);
+   209	  return 0;
+   210	}
+   211	
+   212	
+   213	/* Output from a sample run:
+   214	     305419896 ===> 313218680
+   215	*/
+   216	;;;
+   217	
+   218	
+   219	/* What does the function mystery2 do?
+   220	   You should answer at two levels. First, explain in general what it 
+   221	   does by giving some sample inputs and outputs. For example, on a 
+   222	   sample run I got
+   223	
+   224	            1234 ===> -771489792
+   225	
+   226	   as my output. How did the function mystery map 1234 to -771489792?
+   227	   If you know how the function works, you might also suggest a better
+   228	   name for it.
+   229	
+   230	   Second, document the lines of code in the function. There are four
+   231	   such lines, involving shifts and logical-ands. What do they do?
+   232	*/
+   233	
+   234	
+   235	
+   236	
+   237	
+   238	
+   239	
+   240	
+   241	
+   242	#include <stdio.h>
+   243	
+   244	unsigned int mystery2(unsigned int n) {
+   245	  /* >> is the right-shift operator. The shift is logical, not arithmetic,
+   246	     because the data type is unsigned. (P. 50 in the textbook.)
+   247	     << is the left-shift operator.
+   248	     & is the bitwise logical-and operator.
+   249	     | is the bitwise logical-or operator.
+   250	  */
+   251	  unsigned int temp = 
+   252	    (n >> 24) | 
+   253	    ((n << 8) & 0x00FF0000) |
+   254	    ((n >> 8) & 0x0000FF00) |
+   255	    (n << 24);
+   256	  
+   257	  return temp;
+   258	}
+   259	
+   260	unsigned int prompt_and_read() {
+   261	  unsigned int next;
+   262	  printf("\nprompt> Please enter an integer (0 to exit): ");
+   263	  scanf("%u", &next);
+   264	  if (next == 0) exit(0);
+   265	  return next;
+   266	}
+   267	
+   268	int main() {
+   269	  while (1) {
+   270	    unsigned int next = prompt_and_read();
+   271	    unsigned int result = mystery(next);
+   272	    printf("%d ===> %d\n", next, result);
+   273	  }
+   274	  return 0;
+   275	}
+   276	
+   277	/* Output from a sample run:
+   278	
+   279	$ ./mystery2
+   280	
+   281	prompt> Please enter an integer (0 to exit): 10
+   282	10 ===> 167772160
+   283	*/

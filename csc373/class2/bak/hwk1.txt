@@ -1,0 +1,239 @@
+                                 CSC 373: Computer Systems 1
+                                        Homework 1
+Points: 100
+Due: Tuesday, June 19th, before midnight
+
+/* Answer the questions below. For each answer, explain whether
+   the expression shown evaluates to true (non-zero) or false (zero). For example,
+   you'd say that 
+
+     (n1 < n2) == (-n1 > -n2)
+
+   always evaluates to true or, for some values, might evaluate to false. 
+
+   A perfect score requires the right answer with a solid explanation.
+   The right answer without a solid explanation is worth very little. 
+   The emphasis, in other words, is on the explanation.
+
+   The code can be compiled and executed, of course. */
+
+#include <stdio.h>
+#include <limits.h>
+int main() {
+  int n1 = -1;
+  int n2 = 2;
+
+  unsigned int u1 = (unsigned int) n1;  
+  unsigned int u2 = (unsigned int) n2;
+
+  /* Is result always 1? Explain. */
+  int result = (n1 < n2) == (-n1 > -n2);
+  printf("(%d < %d) == (-%d > -%d) evaluates to %d\n", 
+	 n1, n2, n1, n2, result);
+
+  /* Is result always 0? Explain. */
+  result = ~n1 + ~n2 == ~(n1 + n2);
+  printf("(~%d + ~%d) == ~(%d + %d) evaluates to %d\n", 
+	 n1, n2, n1, n2, result);
+
+  /* Is result always 1? Explain. */
+  result = ((n1 >> 1) << 1) <= n1;
+  printf("((%d >> 1) << 1) <= %d evaluates to %d\n",
+	 n1, n1, result);
+
+  /* Is result always 1? Explain. */
+  /** On left hand side, the expression (int) (u1 - u2) means that
+      the subtraction of u2 from u1 is done and then this result is
+      cast to an int, that is, a signed int.
+  **/
+  result = ((int) (u1 - u2)) == -(n2 - n1);
+  printf("((int) (%u - %u)) == -(%d - %d) evaluates to %d\n",
+	 u1, u2, n2, n1, result);
+
+  return 0;
+}
+/* Output from a sample run:
+(-1 < 2) == (--1 > -2) evaluates to 1
+(~-1 + ~2) == ~(-1 + 2) evaluates to 0
+((-1 >> 1) << 1) <= -1 evaluates to 1
+((int) (4294967295 - 2)) == -(2 - -1) evaluates to 1
+*/
+
+/* What does the function mystery do? 
+
+   To get the idea of what constitutes a good explanation, consider
+   the simpler function
+
+       int mys(int n) { 
+          int ans = n * 2; 
+          ans += 1;
+       }
+
+   The function is needlessly long for emphasis. A perfectly good
+   explanation of what the function does is:
+
+       The function mys doubles its argument, adds 1, and 
+       returns the result.
+
+       The argument and return value are signed integers.
+
+       For example, given 4 as the argument, mys returns 9;
+       given -3 as the argument, mys returns -5; and so on.
+
+   For more complicated examples, as the one below, you can 
+   explain in more detail. The goal is to explain (a) what the
+   function does in general and (b) how the function does what
+   it does.
+
+*/
+
+#include <stdio.h>
+
+unsigned int mystery1(unsigned int  a,       
+		     unsigned int  b,      
+		     unsigned char c) {     /* a char is 8 bits */
+  unsigned char* ptr = (unsigned char*) &a; /* make ptr point to a */
+  unsigned int ret_val;
+
+  if (b >= sizeof(unsigned int)) b = 0;
+
+  *(ptr + b) = c;  /* In general, if ptr is a pointer, then *ptr is the
+                      value pointed at. So, for example, if 
+
+                        int n = 27;
+                        int* ptr = &n;
+
+                                    0x1234
+                                    +----+
+                          ptr ----->| 27 |
+                                    +----+
+                                      n
+                      
+                      with 0x1234 as the address of n, then *ptr is 27.
+		   */
+
+
+
+
+
+
+
+
+  /* ptr is of type unsigned char*, that is, pointer to unsigned char; but
+     the function is supposed to return an int. So, first, we cast ptr's
+     value to unsigned int* (pointer to unsigned int):
+
+              (unsigned int*) ptr
+
+     However, we need to return an unsigned int, not a pointer to an 
+     unsigned int. So we dereference the pointer:
+
+             *((unsigned int*) ptr)
+
+     If we just did
+
+             *ptr
+
+     we'd get an unsigned char rather than the unsigned int that we want.
+  */
+  ret_val = *((unsigned int*) ptr);
+  return ret_val; /* return an unsigned int */
+}
+  
+int main() {
+  /* sample run */
+  unsigned int n = 305419896;
+  unsigned char c = 171;
+  unsigned result = mystery1(n, 2, c);
+  printf("%u ===> %u\n", n, result);
+  return 0;
+}
+
+
+/* Output from a sample run:
+
+305419896 ===> 313218680
+*/
+;;;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* What does the function mystery2 do?
+   You should answer at two levels. First, explain in general what it 
+   does by giving some sample inputs and outputs. For example, on a 
+   sample run I got
+
+            1234 ===> -771489792
+
+   as my output. How did the function mystery map 1234 to -771489792?
+   If you know how the function works, you might also suggest a better
+   name for it.
+
+   Second, document the lines of code in the function. There are four
+   such lines, involving shifts and logical-ands. What do they do?
+*/
+
+#include <stdio.h>
+
+unsigned int mystery2(unsigned int n) {
+  /* >> is the right-shift operator. The shift is logical, not arithmetic,
+     because the data type is unsigned. (P. 50 in the textbook.)
+     << is the left-shift operator.
+     & is the bitwise logical-and operator.
+     | is the bitwise logical-or operator.
+  */
+  unsigned int temp = 
+    (n >> 24) | 
+    ((n << 8) & 0x00FF0000) |
+    ((n >> 8) & 0x0000FF00) |
+    (n << 24);
+  
+  return temp;
+}
+
+unsigned int prompt_and_read() {
+  unsigned int next;
+  printf("\nprompt> Please enter an integer (0 to exit): ");
+  scanf("%u", &next);
+  if (next == 0) exit(0);
+  return next;
+}
+
+int main() {
+  while (1) {
+    unsigned int next = prompt_and_read();
+    unsigned int result = mystery(next);
+    printf("%d ===> %d\n", next, result);
+  }
+  return 0;
+}
+
+/* Output from a sample run:
+
+$ ./mystery2
+
+prompt> Please enter an integer (0 to exit): 10
+10 ===> 167772160
+*/
+

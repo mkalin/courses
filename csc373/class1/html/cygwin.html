@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head/>
+<body>
+<center><h3>Installing the Cygwin Compiler</h3></center>
+<p>
+The URL <a href = 'http://www.cygwin.com'>www.cygwin.com</a> provides standard Unix utilities for Windows. Included
+in the distribution is the so-called GNU C compiler, gcc. The Cygwin site
+has a startup file that you can download and execute. This, in turn, will
+install the Cygwin utilities on your computer.
+</p>
+<p>
+However, the gcc compiler is not part of the standard or default install.
+During the install, you'll get a list of packages. Expand the Devel (for
+Development) tab and pick gcc, the C compiler, as one of the packages to
+include. Also include the debugger, gdb. Once installed (for example, in C:\cygin), the directory
+</p>
+<p>
+C:\cygwin\bin
+</p>
+<p>
+will contain the executables, including gcc.exe. It's easiest to set your
+system path to include C:\cywin\bin so that you can, for example, do
+</p>
+<p>
+gcc hello.c
+</p>
+<p>
+from any command-line prompt. For Windows, the installed executable 
+may include the version. For instance:
+</p>
+<p>
+gcc-4 hello.c
+</p>
+<p>
+Try the versionless gcc first and the versioned one if that should fail.
+</p>
+<p>
+Cygwin includes a "cygwin command-prompt," which simulates a Unix bash shell.
+</p>
+</body>
+</html>
+
+

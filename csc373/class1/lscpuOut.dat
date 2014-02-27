@@ -1,0 +1,62 @@
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                4
+On-line CPU(s) list:   0-3
+Thread(s) per core:    1
+Core(s) per socket:    4
+Socket(s):             1
+NUMA node(s):          1
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 23
+Stepping:              10
+CPU MHz:               2826.378
+BogoMIPS:              5652.42
+Virtualization:        VT-x
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              6144K
+NUMA node0 CPU(s):     0-3
+
+-- Core
+
+Since the advent of multi-core technology, such as dual-cores and quad-cores, the term "processor" is 
+used to describe both a logical execution unit and a physical chip. A multi-core chip has more than
+one core in either sense. A core, in turn, comprises a logical execution unit containing an L1 cache and 
+the functional units that do the computing. A core executes statements in some program, statements grouped 
+into "threads of execution".
+
+-- Chip
+
+A chip is a physical integrated circuit (IC) on a computer. 
+
+-- Socket
+
+A socket, in this context, is a physical connection on a computer motherboard to one or more chips (ICs).
+A motherboard may have multiple sockets, each of which can connect to multi-core chips. 
+
+-- Process
+
+A process is a "program in execution", which has its own address space: the address space comprises the
+addresses that the executing program is allowed to touch through any combination of reads and writes. Any two
+processes are (normally) independent in that each has its own indepedent address space and its own state.
+ 
+-- Thread
+
+A thread is a sequence of executable statements within a process. All threads in the same process share the same
+address space.
+
+-- N-way Node
+
+Multi-core computing nodes have execution units, each a core. A computer with 8 cores would be described as an 8-way node. 
+This machine could have 8 independent processes running simultaneously. A 32-core system is a 32-way node; and so on.
+
+-- L1 and L2 cache
+
+A cache is a copy of (main) memory. An L1 cache is on the same chip (IC) as the processor that the node supports. 
+L1 caches typically come in two flavors: L1i (instruction cache) and L1d (data cache). L1 caches, on everyday machines,
+are typically in the K range with respect to size.
+
+An L2 cache typically is "off chip" rather than "on chip" and usually is shared among processors. L2 caches are 
+usually in the M range with respect to size; and these caches typically share data and instructions.

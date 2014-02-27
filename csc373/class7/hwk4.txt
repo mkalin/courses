@@ -1,0 +1,334 @@
+                              CSC373: Computer Systems 1
+                                     Homework 4
+Points: 100
+Due:    Before midnight, July 10
+
+1. Consider this code segment
+
+         int n   = 1234;
+         float f = 1234.0f;
+
+   Here's the internal representation of each in big endian, with the
+   most significant byte to the left:
+
+         n: 00 00 04 d2
+   
+         f: 44 9a 40 00
+
+   Show how the bits in the integer variable n and the floating-point variable
+   f are correlated. The most straightforward way is to start with n's 
+   internal representation and then show how f's single-precision representation
+   derives from n.
+
+   You can work in big-endian or little-endian; just be consistent. 
+
+2. Consider this code segment:
+
+         int n   = 1234;
+         float f = 1234.0f;
+
+	 if (n == f) printf("They're equal.\n");
+	 else printf("They're not equal.\n");
+
+   When executed, the output is
+
+         They're equal.
+
+   What must the compiler be doing in order to reach this result? We know from 
+   Question 1, by inspecting the hex values, that n and f differ at the bit level;
+   and the equality operator == simply checks whether the bit
+   patterns are the same.
+
+3. Here's a short C program:
+
+   /* This program uses the pow function, which is part of the run-time
+        math library. To enable its use, this file (fpointHwk.c) was
+        compiled/linked as follows:
+
+             gcc -o fpointHwk -lm fpointHwk.c
+
+        In "-lm", that's a lowercase L rather than a one.
+     */
+
+
+
+
+
+
+
+
+
+
+     #include <stdio.h>
+     #include <math.h>
+
+     int main() {
+        /* first printf statements */
+        double d1 = 1.0 / 10.0;
+        printf("d1 == %f\n", d1);
+
+        double d2 = pow(2.0, -20.0) * d1;
+        printf("d2 == %f\n", d1);
+
+        double d3 = 9.54 * pow(10.0, -8.0);
+        printf("d3 == %f\n", d1);
+
+        printf("\n");
+
+        /* second printf statements */
+        if (d1 == d2) printf("d1 == d2\n");
+        else printf("d1 != d2\n");
+
+        if (d1 == d3) printf("d1 == d3\n");
+        else printf("d1 != d3\n");
+
+        if (d2 == d3) printf("d2 == d3\n");
+        else printf("d2 != d3\n");
+
+        return 0;
+     }
+
+    Here's the output:
+
+     d1 == 0.000000
+     d2 == 0.000000
+     d3 == 0.000000
+
+     d1 != d2
+     d1 != d3
+     d2 != d3
+
+    Explain what's going on. In particular, the first printf statements give the
+    same value for d1, d2, and d3: 0.000000. However, the comparisons using ==
+    all evaluate to false, as shown in the second group of printf statements.
+    Explain, then, why the system thinks that d1 != d2 and so on.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4. In the web_client.c program (included in the ZIP), 
+   there's a call to gethostbyname, which takes a string and returns a
+   pointer to a struct hostent. Here's a code segment to illustrate:
+
+      struct hostent* host_ptr = gethostbyname("condor.depaul.edu");
+
+   This pointer is passed to the function dump_host_aux, which prints 
+   information about the host with the given name. In the case of
+   www.yahoo.com, for instance, here's the output:
+
+          Official name: www.yahoo.akadns.net
+          Aliases: www.yahoo.com
+          Host type: AF_INET
+          Address length: 4
+          Addresses: 68.142.197.86
+                     68.142.197.87
+                     68.142.197.90
+                     68.142.197.67
+                     68.142.197.69
+                     68.142.197.75
+                     68.142.197.77
+                     68.142.197.84
+ 
+   The C structure itself looks like this:
+
+     struct hostent {
+        char*    h_name;       ;; official name
+        char**   h_aliases;    ;; alias list
+        int      h_addrtype;   ;; host address type 
+        int      h_length;     ;; length of address 
+        char**   h_addr_list;  ;; list of addresses 
+     };
+
+
+   Of interest here is the second field in the structure, h_aliases, which
+   is a list of alternative names. (The official name for yahoo is not
+   www.yahoo.com but rather www.yahoo.akadns.net; hence, www.yahoo.com is an
+   alias for this official name.) Here's the loop that prints the aliases:
+
+
+         printf("Aliases: ");
+         int i = 0;
+         while (host_ptr->h_aliases[i] != NULL) {
+            printf("%.21s\n", host_ptr->h_aliases[i]);
+            i++;
+         }
+
+   So the loop terminates when the ith entry is NULL, which is defined as 0
+   in the header file stdlib.h. 
+   
+   Why is the compiler willing to accept an array of strings that includes
+   an integer at the end?
+
+
+
+
+
+
+
+
+5. Here's a short program, echo.c, that prompts the user to enter a string 
+   from the standard input and then echos the string back to the standard
+   output:
+       
+      #include <stdio.h>
+      #include <stdlib.h>
+
+      char buffer[1024 + 1];
+
+      char* prompt_and_read() {
+         printf("\nPlease enter a string (-1 to exit): ");
+         fgets(buffer, 1024, stdin);
+         return buffer;
+      }
+
+      int main() {
+         while (1) {
+           char* ptr = prompt_and_read();
+           int flag = atoi(ptr);    /* converts string to int */
+           if (flag < 0) break;     /* break out of the loop */
+           printf("You entered: %s\n", ptr);
+         }
+         return 0;
+      }
+
+   Note that array named buffer is not a local variable in 
+   prompt_and_read but rather is defined outside of all functions.
+   (In C jargon, buffer is an extern variable.) Why is buffer
+   extern rather than auto?
+
+6. Here's a program (included in the ZIP) that conducts an experiment:
+
+#include <stdio.h>
+
+int push_test() {
+  int ret_val;
+  /* movl %esp, %eax    ;; save stack pointer
+     pushl %esp         ;; push stack pointer onto stack
+     popl %edx          ;; pop the stack into %edx
+     subl %edx, %eax    ;; subtract the two values
+     movl %eax, ret_val ;; set up the return value
+  */
+  asm("movl %%esp, %%eax; pushl %%esp; popl %%edx; subl %%edx, %%eax; movl %%eax, %0"
+      : "=r" (ret_val)
+      : /* no input */
+      : "%edx", "%eax");
+  return ret_val;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+int pop_test() {
+  int ret_val = 0xffffffff;  /* -1 in decimal */
+  /* pushl ret_val       ;; save ret_val on the stack
+     movl %esp, %edx     ;; save the stack pointer
+     popl %esp           ;; pop stack into the stack pointer
+     movl %esp, ret_val  ;; set the popped value as the return value
+     movl %edx, %esp     ;; restore original stack pointer
+  */
+  asm("pushl %1; movl %%esp, %%edx; popl %%esp; movl %%esp, %0; movl %%edx, %%esp"
+      : "=r" (ret_val)
+      : "r" (ret_val)
+      : "%edx");
+  return ret_val;
+}
+
+int main() {
+  printf("push test: %d\n", push_test()); 
+  printf("pop test: %d\n", pop_test()); 
+}
+/* Output:
+
+  push test: 0
+  pop test: -1
+
+*/
+
+;;;
+
+In the two functions push_test and pop_test, I've documented the assembler in the 
+asm calls. You should assume that the documentation is correct: no tricks here.
+
+You can compile and run the program to inspect the output on your system; but the
+output should be the same as what's show here: 0 for the push test and -1 for 
+the pop test.
+
+There are two parts to this question, which is hard because it requires careful
+thinking:
+
+    (1) What is the experiment attempting to deterine? Assume that the experiment
+        is well intentioned and is designed to discover something. What is that
+        something?
+
+    (2) Does the experiment succeed? That is, does the experiment discover what 
+        it's meant to discover?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7. Here is a C program that should compile and run. The questions are
+included as documentation.
+
+#include <string.h>
+#include <stdio.h>
+
+#define MAX_STRING (500)
+
+int main() {
+  const char* g1 = "Hello, world!";
+  const char* g2 = "Goodbye, cruel world?";
+
+  char s[MAX_STRING + 1];
+
+  /* Document in as much detail as you can. At the least, please
+     explain:
+     
+     1. What is the data type of str_stuff?
+     2. What do the function calls labeled A, B, and C do?
+     3. Pick one of A, B, or C and explain the syntax in detail.
+
+  */
+  char* (*str_stuff[ ])(char*, const char*) = {strcat, strcpy, strtok}; 
+  
+  str_stuff[1](s, g1);   /* A */
+  str_stuff[0](s, g2);   /* B */
+  str_stuff[2](s, ",");  /* C */
+  printf("%s\n", s);
+  return 0;
+}
+
+
+

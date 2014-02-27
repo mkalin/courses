@@ -1,0 +1,217 @@
+     1	## The compilation process
+     2	
+     3	Consider the command
+     4	
+     5	   % gcc -o test test.c
+     6	
+     7	that generates an executable named test if there are no
+     8	fatal compile-time errors.
+     9	
+    10	The gcc command is actually shorthand for three separate
+    11	translation steps, each with its own command:
+    12	
+    13	-- cpp: C preprocessor, whose main job is to process
+    14	        macros such as
+    15	
+    16	        #define TOTAL_EMPS (100)
+    17	        #define MIN(x, y)  (y) ^ ((x ^ y) & -(x < y))
+    18	        #define MAX(x, y)  (x) ^ ((x ^ y) & -(x < y))
+    19	
+    20	   These macros MIN and MAX are ok and better than 
+    21	   more common ones such as 
+    22	
+    23	        #define MAX(a, b) ((a) > (b) ? a : b)
+    24	        #define MIN(a, b) ((a) < (b) ? a : b)
+    25	
+    26	   that cause problems in invocations such as
+    27	 
+    28	        int x = MIN(a++, --b);
+    29	
+    30	   The C preprocessor also handles #include directives.
+    31	   The command
+    32	
+    33	     % cpp test.c
+    34	
+    35	   outputs the results of the preprocessor.
+    36	
+    37	-- gcc -c: Compile but do not link
+    38	
+    39	   For example, the command
+    40	 
+    41	     % gcc -c test.c
+    42	
+    43	   generates the object module test.o but does not link this
+    44	   module to required libraries (see below).
+    45	
+    46	   There are hundreds of possible compile-time flags, many of
+    47	   which impact code optimization.
+    48	
+    49	-- ln: link files such as object modules to generate an 
+    50	       executable
+    51	
+    52	   By default, modern gcc automatically links in required files.
+    53	   Here's an overview, however, of how the linking phase works.
+    54	
+    55	
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	   Consider the command
+    63	
+    64	     % gcc -o mathExample mathExample.c -lm
+    65	
+    66	   with a link flag, -l, at the end. Assume that mathExample.c 
+    67	   has the directive
+    68	
+    69	     #include <math.h>
+    70	
+    71	   On a standard Unixy system, the directory
+    72	
+    73	     /usr/include
+    74	
+    75	   has the so-called header files, including math.h. (The are
+    76	   usually subdirectories of header files as well in order to
+    77	   avoid clutter.) Recall that math.h, like any header file, is
+    78	   essentially an interface of function declarations together with
+    79	   various macros.
+    80	
+    81	   Where is the implementation? Again on a standard Unixy system, 
+    82	   the directory
+    83	
+    84	     /usr/lib
+    85	
+    86	   that includes library modules such as libm.a (or libm.so or some
+    87	   variation thereof). The naming convention is
+    88	
+    89	    lib + 1st letter from the corresponding #include, in this case m
+    90	
+    91	   The link flag -lm tells the linker to link the compiled mathExample
+    92	   object module to the routines in /usr/lib/libm. (Modern gcc will
+    93	   do this automatically for the math library.)
+    94	
+    95	
+    96	## Makefile example
+    97	
+    98	At the command line, the command
+    99	
+   100	   % make
+   101	
+   102	looks for a file named Makefile, which in turn has instructions for
+   103	compiling. Here's a sample for the servers on my home page:
+   104	
+   105	
+   106	all: servers
+   107	
+   108	servers: iterative_server forking_server threading_server polling_server 
+   109	
+   110	iterative_server: iterative_server.c utils.c utils.h
+   111		gcc -o iterative_server iterative_server.c utils.c -I.
+   112	forking_server: forking_server.c utils.c utils.h
+   113		gcc -o forking_server forking_server.c utils.c -I.
+   114	threading_server: threading_server.c utils.c utils.h
+   115		gcc -o threading_server threading_server.c utils.c -lpthread -I.
+   116	polling_server: polling_server.c utils.c utils.h
+   117		gcc -o polling_server polling_server.c utils.c -I.
+   118	
+   119	
+   120	
+   121	
+   122	The format is
+   123	
+   124	   <name of object>: <dependencies>
+   125	        <1 tab> command to generate dependencies
+   126	
+   127	For example, 
+   128	
+   129	   all depends on servers
+   130	   servers depends on three objects (iterative_server, etc.)
+   131	
+   132	   iterative_server depends on two *.c files and one *.h files
+   133	   and the command 
+   134	
+   135	     gcc -o iterative_server iterative_server.c utils.c -I.
+   136	
+   137	   The -I. at the end means to search the current directory for
+   138	   header files, in this case "utils.h".  
+   139	 
+   140	
+   141	## Formatting
+   142	
+   143	#include <stdio.h>
+   144	#include <stddef.h> /* for wide characters */
+   145	
+   146	/* formatting summary: 
+   147	     sizeof(char) is defined to be 1
+   148	     all other sizes must be >= sizeof(char)
+   149	
+   150	     The sizes shown here (Intel 32-bit machine run Linux)
+   151	     are common.
+   152	 */
+   153	int main() {
+   154	  /* character strings */
+   155	   char    *message  = "Printing different data types";
+   156	   wchar_t *wmessage = L"Wide character string";
+   157	
+   158	   /* characters */
+   159	   char ca     = 'A';
+   160	   wchar_t wca = L'A';
+   161	   printf("sizeof(char) == %li\n", sizeof(char));       /* 1 */
+   162	   printf("sizeof(wchar_t) == %li\n", sizeof(wchar_t)); /* 4 */
+   163	   printf("\n");
+   164	
+   165	   /* integers */
+   166	   unsigned short         usa  = 65535; 
+   167	   signed short           ssb  = -32768;
+   168	   unsigned int           usi  = 4294967295; 
+   169	   signed int             ssi  = -2147483648;
+   170	   unsigned long long int ulli = 4294967295L;
+   171	   long long int          lli  = -2147483647L;
+   172	   printf("sizeof(short)         == %li\n", sizeof(short));         /* 2 */
+   173	   printf("sizeof(int)           == %li\n", sizeof(int));           /* 4 */
+   174	   printf("sizeof(long)          == %li\n", sizeof(long));          /* 8 */
+   175	   printf("sizeof(long long int) == %li\n", sizeof(long long int)); /* 8 */
+   176	   printf("\n");
+   177	
+   178	
+   179	
+   180	
+   181	
+   182	   /* floating-point types */
+   183	   float        fa  = 1e+37,  fb = 1e-37;
+   184	   double       da = 1e+37,   db = 1e-37;
+   185	   long double lda = 1e+37L, ldb = 1e-37L;
+   186	   printf("sizeof(float)       == %li\n", sizeof(float));       /*  4 */
+   187	   printf("sizeof(double)      == %li\n", sizeof(double));      /*  8 */
+   188	   printf("sizeof(long double) == %li\n", sizeof(long double)); /* 16 */
+   189	   printf("\n");
+   190	
+   191	   /* pointers */
+   192	   int* p = &ssi;
+   193	   printf("sizeof(int*) == %li\n", sizeof(int*));    /* 4 */
+   194	   printf("sizeof(void*) == %li\n", sizeof(void*));  /* 4 */
+   195	   printf("\n");
+   196	
+   197	   /* shorts */
+   198	   printf("%hu %hi\n", usa, ssb); 
+   199	   printf("%hx %hx\n\n", usa, ssb);
+   200	   
+   201	   /* ints and long ints */
+   202	   printf("%u %i\n", usi, ssi); 
+   203	   printf("%x %x\n\n", usi, ssi);
+   204	
+   205	   printf("%llu %lli\n", ulli, lli);
+   206	   printf("%llx %llx\n\n", ulli, lli);
+   207	
+   208	   printf("%f %f\n", fa, fb); 
+   209	
+   210	   printf("%f %f\n", da, db);
+   211	   printf("%e %e\n\n", da, db);
+   212	
+   213	   printf("%Lf %Lf\n", lda, ldb);
+   214	   printf("%Le %Le\n\n", lda, ldb);
+   215	
+   216	   return 0;
+   217	}

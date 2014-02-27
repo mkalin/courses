@@ -1,0 +1,4 @@
+gcc  -o libnativelib.so -shared -Wl,-soname,libnative.so  \
+     -I/export/home/jdk1.2/include \
+     -I/export/home/jdk1.2/include/linux nativelib.c  \
+     -static -lc

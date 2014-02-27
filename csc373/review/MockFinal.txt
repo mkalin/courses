@@ -1,0 +1,419 @@
+     1	                               Mock final 
+     2	
+     3	(1) 
+     4	
+     5	#include <stdio.h>
+     6	#include <stdlib.h>
+     7	#include <time.h>
+     8	
+     9	#define N (100)
+    10	
+    11	/* What's good?
+    12	   What's bad?
+    13	   What's pointless in this example but useful in general?
+    14	*/
+    15	
+    16	typedef struct Array {
+    17	  int array[N];
+    18	} Array;
+    19	
+    20	int sum1(int* a) {
+    21	  int sum = 0;
+    22	  unsigned i;
+    23	  for (i = 0; i < N; i++) sum += *(a + i);
+    24	
+    25	  return sum;
+    26	}
+    27	
+    28	int sum2(int** ptr) {
+    29	  int sum = 0;
+    30	  unsigned i;
+    31	  int* a = *ptr;
+    32	  for (i = 0; i < N; i++) sum += *(a + i);
+    33	
+    34	  return sum;
+    35	}
+    36	
+    37	int sum3(Array a) {
+    38	  int sum = 0;
+    39	  unsigned i;
+    40	  for (i = 0; i < N; i++) sum += a.array[i];
+    41	
+    42	  return sum;
+    43	}
+    44	
+    45	int sum4(Array* a) {
+    46	  int sum = 0;
+    47	  unsigned i;
+    48	  for (i = 0; i < N; i++) sum += a->array[i];
+    49	
+    50	  return sum;
+    51	}
+    52	
+    53	
+    54	
+    55	
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	int main() {
+    63	  srand(time(0));
+    64	
+    65	  int array[N];   /* array */
+    66	  Array structA;  /* structure with array as member */
+    67	
+    68	  unsigned i;
+    69	  for (i = 0; i < N; i++) {
+    70	    array[i] = structA.array[i] = rand();
+    71	  }
+    72	 
+    73	  int*  ptr1 = array;
+    74	  int** ptr2 = &ptr1;
+    75	
+    76	  int ans1 = sum1(ptr1);      /* same as sum1(array) */
+    77	  int ans2 = sum2(ptr2); 
+    78	  int ans3 = sum3(structA);
+    79	  int ans4 = sum4(&structA);
+    80	
+    81	  printf("The four sums (should be the same):\n");
+    82	  printf("sum1: %i\n", ans1);
+    83	  printf("sum2: %i\n", ans2);
+    84	  printf("sum3: %i\n", ans3);
+    85	  printf("sum4: %i\n", ans4);
+    86	  return 0;
+    87	}
+    88	/* 
+    89	   The four sums (should be the same):
+    90	   sum1: 1878631935
+    91	   sum2: 1878631935
+    92	   sum3: 1878631935
+    93	   sum4: 1878631935
+    94	*/
+    95	;;;;
+    96	
+    97	(2)
+    98	
+    99	#include <stdio.h>
+   100	#include <stdlib.h>
+   101	#include <limits.h>
+   102	#include <string.h>
+   103	
+   104	#define MaxBuffer (1024)
+   105	
+   106	typedef struct List {
+   107	  char         data[MaxBuffer + 1];
+   108	  struct List* next;
+   109	} List;
+   110	
+   111	typedef List* Link;
+   112	
+   113	Link make_node() {
+   114	  return malloc(sizeof(List));
+   115	}
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	Link add_node(Link node, char* content) {
+   123	  Link t = make_node();
+   124	  if (!t) return;
+   125	
+   126	  node->next = t;
+   127	  strncpy(t->data, content, MaxBuffer);
+   128	  t->next = 0;
+   129	  return t;
+   130	}
+   131	
+   132	void traverse_list(Link node) {
+   133	  while (node) {
+   134	    printf("%s\n", node->data);
+   135	    node = node->next;
+   136	  }
+   137	}
+   138	
+   139	int main() {
+   140	  /* basics of internal representation and operations */
+   141	  int n = 0xffffffff; /* -1 */
+   142	  
+   143	  printf("n     ==> %i\n", n);
+   144	  printf("!n    ==> %i\n", !n);
+   145	  printf("-n    ==> %i\n", -n);
+   146	  printf("~n    ==> %i\n", ~n);
+   147	  printf("n ^ n ==> %i\n", n ^ n);
+   148	  printf("n & n ==> %i\n", n & n);
+   149	
+   150	  printf("~n + 1 == -n: %i\n", -n == (~n + 1));
+   151	
+   152	  /* Computing what? */
+   153	  int k = 1;
+   154	  while ((n = (n << 1)) < 0) {
+   155	    printf("n: %i\n", n);
+   156	    k++;
+   157	  }
+   158	  printf("k == %i\n", k);
+   159	
+   160	  /* Computing what? */
+   161	  n = 1;
+   162	  while (n > 0) n = n << 1;
+   163	  printf("n + 1 == %i\n", -(n + 1));
+   164	
+   165	  printf("\n");
+   166	  int d3[2][3][2];
+   167	  int* p = (int*) d3;
+   168	  int i = 1;
+   169	  while (i < 13) *p++ = i++;
+   170	
+   171	  i = 0;
+   172	  while (i < 12) printf("%i ", ((int*) d3)[i++]);
+   173	  printf("\n");
+   174	
+   175	  /* What's printed? */
+   176	  int h = sizeof(d3) / 12;
+   177	  *(((int*) d3) + h) = 0xffffffff;
+   178	  i = 0;
+   179	  while (i < 12) printf("%i ", ((int*) d3)[i++]);
+   180	  printf("\n");
+   181	
+   182	  Link head = make_node();
+   183	  Link node;
+   184	  node = add_node(head, "Hello, world!");
+   185	  node = add_node(node, "This is an intermediate node.");
+   186	  node = add_node(node, "That's all, folks!");
+   187	
+   188	  traverse_list(head);
+   189	  return 0;
+   190	}
+   191	/*
+   192	  n     ==> -1
+   193	  !n    ==>  0
+   194	  -n    ==>  1
+   195	  ~n    ==>  0
+   196	
+   197	  n ^ n  ==>  0
+   198	  n & n  ==> -1
+   199	
+   200	  ~n + 1 == -n: 1
+   201	
+   202	  n: -2
+   203	  n: -4
+   204	  n: -8
+   205	  n: -16
+   206	  n: -32
+   207	  n: -64
+   208	  n: -128
+   209	  n: -256
+   210	  n: -512
+   211	  n: -1024
+   212	  n: -2048
+   213	  n: -4096
+   214	  n: -8192
+   215	  n: -16384
+   216	  n: -32768
+   217	  n: -65536
+   218	
+   219	
+   220	  n: -131072
+   221	  n: -262144
+   222	  n: -524288
+   223	  n: -1048576
+   224	  n: -2097152
+   225	  n: -4194304
+   226	  n: -8388608
+   227	  n: -16777216
+   228	  n: -33554432
+   229	  n: -67108864
+   230	  n: -134217728
+   231	  n: -268435456
+   232	  n: -536870912
+   233	  n: -1073741824
+   234	  n: -2147483648
+   235	
+   236	  k == 32
+   237	  n + 1 == 2147483647
+   238	
+   239	
+   240	
+   241	  
+   242	  1 2 3 4  5 6 7 8 9 10 11 12 
+   243	  1 2 3 4 -1 6 7 8 9 10 11 12 
+   244	  
+   245	  Hello, world!
+   246	  This is an intermediate node.
+   247	  That's all, folks!
+   248	*/
+   249	;;;;
+   250	
+   251	(3)
+   252	
+   253	#include <stdio.h>
+   254	
+   255	#define SetCount (4)
+   256	#define WordCount (16)
+   257	#define Empty (-1)
+   258	#define True (1)
+   259	#define False (0)
+   260	
+   261	int sets[SetCount][WordCount];
+   262	int lru[SetCount];
+   263	
+   264	int already_in_p(int word, int set_index) {
+   265	  int w = 0;
+   266	  while (w < WordCount) 
+   267	    if (word == sets[set_index][w]) return True;
+   268	    else w++;
+   269	  return False;
+   270	}
+   271	
+   272	int main() {
+   273	  int reference_string[ ] = 
+   274	    {1, 4, 8, 5, 20, 17, 19, 56, 9, 11, 4, 43, 5, 6, 9, 17, 9, 56, 9, Empty};
+   275	  char* set_names[ ] = {"S0", "S1", "S2", "S3"};
+   276	
+   277	  int i, j;
+   278	  /* Initialize the cache to Empty. */
+   279	  for (i = 0; i < SetCount; i++) 
+   280	    for (j = 0; j < WordCount; j++)
+   281	      sets[i][j] = Empty;
+   282	
+   283	  /* Initialize the LRU pointers to Empty */
+   284	  for (i = 0; i < SetCount; i++) lru[i] = Empty;
+   285	
+   286	
+   287	
+   288	
+   289	
+   290	
+   291	
+   292	
+   293	
+   294	
+   295	
+   296	
+   297	
+   298	
+   299	
+   300	
+   301	
+   302	  /* Iterate through the reference string. */
+   303	  i = 0;
+   304	  while (reference_string[i] != Empty) {
+   305	    int next_word = reference_string[i];
+   306	    int set_index = next_word % SetCount;
+   307	    if (already_in_p(next_word, set_index))
+   308	      printf("Hit for word %i in Set %i\n\n", next_word, set_index);
+   309	    else {
+   310	      printf("Miss for word %i in Set %i\n", next_word, set_index);
+   311	      lru[set_index] = (lru[set_index] + 1) % SetCount;
+   312	      sets[set_index][lru[set_index]] = next_word;
+   313	      printf("Word %i inserted into Set %i at position %i\n\n",
+   314		     next_word, set_index, lru[set_index]);
+   315	    }
+   316	    i++;
+   317	  }
+   318	  return 0;
+   319	}
+   320	/* output:
+   321	
+   322	Miss for word 1 in Set 1
+   323	Word 1 inserted into Set 1 at position 0
+   324	
+   325	Miss for word 4 in Set 0
+   326	Word 4 inserted into Set 0 at position 0
+   327	
+   328	Miss for word 8 in Set 0
+   329	Word 8 inserted into Set 0 at position 1
+   330	...
+   331	;;;;
+   332	
+   333	
+   334	
+   335	
+   336	
+   337	
+   338	
+   339	
+   340	
+   341	
+   342	
+   343	
+   344	
+   345	
+   346	
+   347	
+   348	
+   349	
+   350	
+   351	
+   352	
+   353	
+   354	
+   355	
+   356	
+   357	
+   358	
+   359	
+   360	
+   361	
+   362	int main() {                   +===========+
+   363	  no_op(777, 333);             |           |<=== main's %ebp, <=== %esp: (c)
+   364	  /*...*/                      +-----------+
+   365	}                                    ...       
+   366	                               +-----------+
+   367	void no_op(int a, int b) {     |    333    | ;; call to no_op(..., 333) 
+   368	    int y = 5;                 +-----------+ 
+   369	    int z = 9;                 |    777    | ;; call to no_op(777, ...)
+   370	    y += b;                    +--- -------+
+   371	    z += a;                    |main's %eip| ;; call to no_op, <=== %esp: (c)     
+   372	    return;                    +===========+
+   373	}                              |main's %ebp|<=== no_op's %ebp & %esp: (1), (2), (c)
+   374	                               +-----------+
+   375	                               | 5, 338    | -4(%ebp): (4), (8)
+   376	                               +-----------+
+   377	                               | 9, 876    |<=== %esp: (3), (b)
+   378	                               +-----------+
+   379	         +-------------+                       +--------------------+
+   380	         | 333, 777    | :(6), (9)             | ptr to 5, ptr to 9 | :(7), (a)
+   381	         +-------------+                       +--------------------+
+   382	            %edx                                      %eax
+   383	_no_op:
+   384	 pushl %ebp (1)            ;; save the base pointer (call frame pointer) from
+   385	                           ;; the caller, in this case main
+   386	                      
+   387	 movl %esp, %ebp (2)       ;; create a new call frame by setting %ebp to TOP
+   388	 
+   389	 subl $8, %esp (3)         ;; move the stack pointer 8 bytes, which means the
+   390	                           ;; new TOP is now 2 DWORDs from the pushed (saved) %ebp
+   391	
+   392	 movl $5, -4(%ebp) (4)     ;; store constant 5 one DWORD into current call frame
+   393	                           ;; in effect: y = 5
+   394	
+   395	 movl $9, -8(%ebp) (5)     ;; store constant 9 two DWORDs into current call frame
+   396	                           ;; in effect: z = 9
+   397	
+   398	 movl 12(%ebp), %edx (6)   ;; copy parameter b's value into %edx
+   399	
+   400	 leal -4(%ebp), %eax (7)   ;; copy y's location, at -4(%ebp), into %eax
+   401	                           ;; in effect: %eax points to y
+   402	
+   403	 addl %edx, (%eax) (8)     ;; y += b: %edx holds b and (%eax) points to y, which
+   404	                           ;; is 5; and y is stored at -4(%ebp)
+   405	                           ;; The sum is stored where (%eax) points.
+   406	
+   407	 movl 8(%ebp), %edx (9)    ;; copy parameter a's value into %edx
+   408	
+   409	 leal -8(%ebp), %eax (a)   ;; copy z's location into %eax
+   410	                           ;; in effect: %eax points to z
+   411	
+   412	 addl %edx, (%eax) (b)     ;; z += a: %edx holds a and (%eax) points to z
+   413	                           ;; the sum is stored where %eax points
+   414	
+   415	 leave (c)       ;;  movl %ebp, %esp  ;; set TOP to start of this call frame
+   416	                 ;;  popl %ebp        ;; restore the saved %ebp, thereby setting
+   417	                                      ;; TOP to the end of the caller's call frame. 
+   418	
+   419	 ret (d)         ;; return control to the caller of no_op

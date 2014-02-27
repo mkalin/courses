@@ -1,0 +1,659 @@
+     1	;; My commands are not indented; system messages are indented for readability.
+     2	;; I've added comments above the commands.
+     3	
+     4	;; Use telnet utility to open a connection to machine condor on port 80
+     5	telnet condor.depaul.edu 80     
+     6	   
+     7	   Trying 140.192.1.6...
+     8	   Connected to condor.depaul.edu.
+     9	   Escape character is '^]'.
+    10	
+    11	;; Enter an HTTP request: a  "first line" (the GET) and header fields
+    12	;; Two CRLFs ("\n" in C) terminate the request
+    13	GET /~mkalin/index.html HTTP/1.1
+    14	host: condor.depaul.edu
+    15	
+    16	
+    17	;; Part of HTTP response that Apache generates. Some points of interest:
+    18	;;          Status code  ==> 200 means OK
+    19	;;          Etag         ==> version identifier
+    20	;;          Content-type ==> MIME type/subtype
+    21	;;          charset      ==> Latin-1 (8-bit codes for European languages)
+    22	HTTP/1.1 200 OK
+    23	Date: Mon, 03 Jul 2006 11:18:34 GMT
+    24	Server: Apache/2.0.39 (Unix) PHP/4.2.1
+    25	Last-Modified: Tue, 03 Jul 2006 20:30:06 GMT
+    26	ETag: "c9c5-321-9dc08f80"
+    27	Accept-Ranges: bytes
+    28	Content-Length: 801
+    29	Content-Type: text/html; charset=ISO-8859-1
+    30	X-Pad: avoid browser bug
+    31	
+    32	<title>Course Listings</title>
+    33	<head><title>Textbook and Course Listings</title></head>
+    34	<p><hr>
+    35	<h2>WWW Pages for Textbooks</h2>
+    36	<h3>
+    37	<body>
+    38	<p>
+    39	<ul>
+    40	<li><a HREF="ed3/">Applications Programming in ANSI C (3rd edition)</a><p>
+    41	<li><a HREF="cse/">C for Scientists and Engineers</a><p>
+    42	<li><a HREF="apc/">Applications Programming in C++</a><p>
+    43	<li><a HREF="oop2/">Object-Oriented Programming in C++ (2nd edition)</a><p>
+    44	<li><a HREF="oopj/">Object-Oriented Programming in Java</a><p>
+    45	</h3>
+    46	</ul>
+    47	<p><hr>
+    48	<h2>Graph Generation Program
+    49	<h3>
+    50	<ul>
+    51	<li><a href="http://condor.depaul.edu/~rjohnson/source/graph_ge.c">graph_ge.c</a>
+    52	</ul>
+    53	<p><hr>
+    54	<h2>WWW Pages for Courses: Summer 1, 2006</h2>
+    55	...
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	;; Message syntax
+    63	
+    64	Request:
+    65	
+    66	start-line:       <method> <request-URL> <version>
+    67	optional headers: <headers>
+    68	CRLF
+    69	CRLF
+    70	optional body:    <entity-body>
+    71	
+    72	Sample Request                           Sample Response
+    73	
+    74	GET /my_dir/doc.htm HTTP/1.1             HTTP/1.0 200 OK
+    75	Accept: text/*                           Context-type: text/plain
+    76	Host: www.foobar.org                     Content-length: 17
+    77	
+    78	                                         Hi! Hello, world!
+    79	
+    80	;; Query Strings 
+    81	http://foo.bar.org/check-horseracingbets.cgi?horse=badbaz&jockey=fred
+    82	
+    83	;; Common Schemes
+    84	http, https (443), mailto, ftp, rtsp (rtspu), file, news, telnet
+    85	
+    86	;; Common Methods
+    87	GET, HEAD, POST, PUT, TRACE, OPTIONS, DELETE
+    88	
+    89	;; Status codes (only small defined ranges for each, e.g.,
+    90	;;       200-206 for OK and 500-505 for server error)
+    91	100-199: Informational
+    92	200-299: OK
+    93	300-399: Redirection
+    94	400-499: Client error
+    95	500-599: Server error
+    96	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    97	
+    98	
+    99	
+   100	
+   101	
+   102	
+   103	
+   104	
+   105	
+   106	
+   107	
+   108	
+   109	
+   110	
+   111	
+   112	
+   113	
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	/* net.c: some basic networking functions */
+   122	#include <netinet/in.h>
+   123	#include <arpa/inet.h>
+   124	#include <netdb.h>
+   125	#include <sys/socket.h>
+   126	#include <stdio.h>
+   127	
+   128	typedef struct hostent host_info;
+   129	
+   130	void show_bytes(char* msg, unsigned char* ptr, int how_many) {
+   131	  printf("%s\n", msg);
+   132	  int i;
+   133	  for (i = 0; i < how_many; i++) printf(" %.2x", ptr[i]);
+   134	  printf("\n");
+   135	}
+   136	
+   137	void dump_host_aux(host_info* host_ptr) {
+   138	  if (host_ptr == NULL) return;
+   139	  /* Here's the hostent structure layout:
+   140	
+   141	     struct hostent {
+   142	        char*    h_name;       ;; official name
+   143	        char**   h_aliases;    ;; alias list
+   144	        int      h_addrtype;   ;; host address type 
+   145	        int      h_length;     ;; length of address 
+   146	        char**   h_addr_list;  ;; list of addresses 
+   147	     }
+   148	  */
+   149	  printf("\n");
+   150	  printf("Official name: %s\n", host_ptr->h_name);
+   151	
+   152	  printf("Aliases: ");
+   153	  int i = 0;
+   154	  while (host_ptr->h_aliases[i] != NULL) {
+   155	    printf("%.21s\n", host_ptr->h_aliases[i]);
+   156	    i++;
+   157	  }
+   158	  
+   159	  int type = host_ptr->h_addrtype;
+   160	  const char* type_str = (type == 2) ? "AF_INET" : "AF_INET6";
+   161	
+   162	  printf("Host type: %s\n", type_str);
+   163	
+   164	  printf("Address length: %i\n", host_ptr->h_length);
+   165	
+   166	  printf("Addresses: ");
+   167	  i = 0;
+   168	  while (host_ptr->h_addr_list[i] != NULL) {
+   169	    struct in_addr addr;
+   170	    addr.s_addr = *((unsigned int*) host_ptr->h_addr_list[i]);
+   171	    if (i > 0) printf("           ");
+   172	    printf("%.21s\n", inet_ntoa(addr));
+   173	    i++;
+   174	  }
+   175	  printf("\n");
+   176	}
+   177	
+   178	
+   179	
+   180	
+   181	
+   182	void dump_host(const char* host_name) {
+   183	  host_info* host = gethostbyname(host_name);
+   184	  dump_host_aux(host);
+   185	}
+   186	
+   187	int main() {
+   188	
+   189	  /* host and network byte order */
+   190	  int n = 0xabcdef12;
+   191	  show_bytes("IA32 int:", (unsigned char*) &n, sizeof(int));
+   192	  unsigned u = htonl(n);
+   193	  show_bytes("htonl:", (unsigned char*) &u, sizeof(unsigned));
+   194	  u = ntohl(u);
+   195	  show_bytes("ntohl:", (unsigned char*) &n, sizeof(int));
+   196	  /* output:
+   197	
+   198	     IA32 int: 12 ef cd ab
+   199	     htonl:    ab cd ef 12
+   200	     ntohl:    12 ef cd ab
+   201	  */
+   202	
+   203	  /* dotted-decimal addresses in network byte order */
+   204	  struct in_addr* inet_address;
+   205	  int flag = inet_aton("140.192.1.6", inet_address);
+   206	  if (flag) {
+   207	    unsigned long addr = inet_address->s_addr;
+   208	    show_bytes("inet_aton:", (unsigned char*) &addr, sizeof(unsigned long));
+   209	    /*
+   210	        inet_aton: 8c c0 01 06 ;; 140 192 1 6
+   211	    */
+   212	  }
+   213	
+   214	  /* some lookup stuff */
+   215	  dump_host("condor.depaul.edu");
+   216	  dump_host("www.google.com");
+   217	  dump_host("www.yahoo.com");
+   218	  dump_host("localhost");
+   219	  /* output:
+   220	
+   221	    Official name: condor.depaul.edu
+   222	    Aliases:
+   223	    Host type:AF_INET
+   224	    Address length: 4
+   225	    Addresses: 140.192.1.6
+   226	
+   227	    Official name: www.l.google.com
+   228	    Aliases: www.google.com
+   229	    Host type: AF_INET
+   230	    Address length: 4
+   231	    Addresses: 72.14.203.104
+   232	               72.14.203.99
+   233	
+   234	
+   235	
+   236	
+   237	
+   238	
+   239	
+   240	
+   241	
+   242	    Official name: www.yahoo.akadns.net
+   243	    Aliases: www.yahoo.com
+   244	    Host type: AF_INET
+   245	    Address length: 4
+   246	    Addresses: 68.142.197.66
+   247	               68.142.197.74
+   248	               68.142.197.79
+   249	               68.142.197.82
+   250	               68.142.197.84
+   251	               68.142.197.85
+   252	               68.142.197.87
+   253	               68.142.197.90
+   254	
+   255	    Official name: localhost.localdomain
+   256	    Aliases: localhost
+   257	    Host type: AF_INET
+   258	    Address length: 4
+   259	    Addresses: 127.0.0.1
+   260	  */
+   261	
+   262	  return 0;
+   263	}
+   264	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   265	
+   266	
+   267	
+   268	
+   269	
+   270	
+   271	
+   272	
+   273	
+   274	
+   275	
+   276	
+   277	
+   278	
+   279	
+   280	
+   281	
+   282	
+   283	
+   284	
+   285	
+   286	
+   287	
+   288	
+   289	
+   290	
+   291	
+   292	
+   293	
+   294	
+   295	
+   296	
+   297	
+   298	
+   299	
+   300	
+   301	
+   302	/* server.c
+   303	
+   304	   A simple server in the internet domain using TCP. The port number
+   305	   is passed in as a command-line argument 
+   306	
+   307	   To execute on a standalone machine, do the following:
+   308	
+   309	   (1) Start the server with a specified port number (e.g., 9876):
+   310	
+   311	            server 9876
+   312	
+   313	   (2) Start the client. A sample start:
+   314	
+   315	            client localhost 9876
+   316	
+   317	       where the 1st command-line argument is the server's name
+   318	       and the second is the port number.
+   319	*/
+   320	#include <stdio.h>
+   321	#include <sys/types.h> 
+   322	#include <sys/socket.h>
+   323	#include <netinet/in.h>
+   324	#include <string.h>
+   325	
+   326	#define BuffSize (2048)
+   327	#define MaxClients (100)
+   328	
+   329	void error_msg(const char* msg, int halt_flag) {
+   330	  perror(msg);
+   331	  if (halt_flag) exit(-1);
+   332	}
+   333	
+   334	int main(int argc, char** argv) {
+   335	  /* usage */
+   336	  if (argc < 2) {
+   337	    fprintf(stderr,"Usage: %s <port number>\n.", argv[0]);
+   338	    return -1;
+   339	  }
+   340	
+   341	  int sock, client_sock, port, client, len, n;
+   342	  char buffer[BuffSize + 1];
+   343	  struct sockaddr_in serv_addr, client_addr;
+   344	
+   345	  /* create socket descriptor */
+   346	  sock = socket(AF_INET, SOCK_STREAM, 0);
+   347	  if (sock < 0) 
+   348	    error_msg("Can't create socket.", 1);
+   349	  
+   350	  /* fill in the server address information */
+   351	  bzero((char *) &serv_addr, sizeof(serv_addr));
+   352	  port = atoi(argv[1]);
+   353	  serv_addr.sin_family = AF_INET;
+   354	  serv_addr.sin_addr.s_addr = INADDR_ANY;
+   355	  serv_addr.sin_port = htons(port);
+   356	
+   357	
+   358	
+   359	
+   360	
+   361	
+   362	  /* bind the socket, that is, assign a local protocol address; in
+   363	     particular, associate the s_addr in the server's address structure
+   364	     with the socket descriptor.
+   365	  */
+   366	  if (bind(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+   367	    error_msg("Can't bind socket.", 1);
+   368	  
+   369	  while (1) {
+   370	    /* listen for client connections */
+   371	    listen(sock, MaxClients);
+   372	    
+   373	    /* when accepting a client connection, get a pointer to the client 
+   374	       socket that initiated the connection */
+   375	    len = sizeof(client_addr);
+   376	    client_sock = accept(sock, (struct sockaddr *) &client_addr, &len);
+   377	    if (client_sock < 0) error_msg("Can't accept connection.", 1);
+   378	    
+   379	    /* read from the client */
+   380	    bzero(buffer, BuffSize + 1);
+   381	    n = read(client_sock, buffer, BuffSize);
+   382	    if (n < 0) error_msg("Can't read from socket.", 1);
+   383	    printf("Client message: %s\n", buffer);
+   384	    
+   385	    /* respond to client */
+   386	    char return_buffer[BuffSize + 100];
+   387	    bzero(return_buffer, BuffSize + 100);
+   388	    strcpy(return_buffer, "Echo of your message: ");
+   389	    strcat(return_buffer, buffer);
+   390	    
+   391	    n = write(client_sock, return_buffer, strlen(return_buffer));
+   392	    if (n < 0) error_msg("Can't write to socket.", 0);
+   393	    
+   394	    /* close the socket */
+   395	    if (close(client_sock) < 0) error_msg("Can't close client socket.", 0);
+   396	  }
+   397	  return 0; 
+   398	}
+   399	;;;;;
+   400	
+   401	
+   402	
+   403	
+   404	
+   405	
+   406	
+   407	
+   408	
+   409	
+   410	
+   411	
+   412	
+   413	
+   414	
+   415	
+   416	
+   417	
+   418	
+   419	
+   420	
+   421	
+   422	/* client.c
+   423	
+   424	   To execute on a standalone machine, do the following:
+   425	
+   426	   (1) Start the server with a specified port number (e.g., 9876).
+   427	
+   428	   (2) Start the client (this compiled file). A sample start:
+   429	
+   430	            client localhost 9876
+   431	
+   432	       where the 1st command-line argument is the server's name
+   433	       and the second is the port number.
+   434	*/
+   435	#include <stdio.h>
+   436	#include <sys/types.h>
+   437	#include <sys/socket.h>
+   438	#include <netinet/in.h>
+   439	#include <netdb.h> 
+   440	
+   441	#define BuffSize (2048)
+   442	
+   443	void error_msg(const char* msg, int halt_flag) {
+   444	    perror(msg);
+   445	    if (halt_flag) exit(-1);
+   446	}
+   447	
+   448	int main(int argc, char** argv) {
+   449	  /* usage */
+   450	  if (argc < 3) {
+   451	    fprintf(stderr, "Usage: %s <hostname> <port>.\n", argv[0]);
+   452	    return -1;
+   453	  }
+   454	  
+   455	  int sock, port, n;
+   456	  struct sockaddr_in serv_addr;
+   457	  struct hostent* server;
+   458	  char buffer[BuffSize + 1];
+   459	  
+   460	  /* get the server information */
+   461	  server = gethostbyname(argv[1]);
+   462	  if (server == NULL) error_msg("No such host.", 1);
+   463	  port = atoi(argv[2]);
+   464	
+   465	  /* create socket descriptor */
+   466	  sock = socket(AF_INET,           /* address family */
+   467			  SOCK_STREAM,     /* type: in this case, TCP based */
+   468			  0);              /* protocol: 0 means get from 2nd arg */
+   469	  if (sock < 0) error_msg("Can't get socket descriptor.", 1);
+   470	
+   471	  /* fill in the fields of the server's address structure */
+   472	  bzero(&serv_addr, sizeof(serv_addr));  /* zero everything out to begin */
+   473	  serv_addr.sin_family = AF_INET;        /* address family */
+   474	  /* copy from the hostent structure into the server address structure */
+   475	  bcopy((unsigned char*) server->h_addr, 
+   476		(unsigned char*) &serv_addr.sin_addr.s_addr,
+   477		server->h_length);
+   478	  serv_addr.sin_port = htons(port); /* host endian to network endian */
+   479	
+   480	
+   481	
+   482	  /* try to connect to the server */
+   483	  if (connect(sock, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) 
+   484	    error_msg("Can't connect.", 1);
+   485	
+   486	  /* prompt user for a message to send to server */
+   487	  printf("Enter a message: ");
+   488	  /* note that the buffer is of size BuffSize + 1, where the + 1
+   489	     accommodates the null terminator. in the call to fgets, the
+   490	     second argument is BuffSize, thereby ensuring enough room that
+   491	     a buffer overflow won't occur. 
+   492	  */
+   493	  bzero(buffer, BuffSize + 1);     /* zero out the buffer */
+   494	  fgets(buffer, BuffSize, stdin);  /* read from the standard input */
+   495	
+   496	  /* write to the socket */
+   497	  n = write(sock, buffer, strlen(buffer));
+   498	  if (n < 0) error_msg("Can't write to socket.", 0);
+   499	
+   500	  /* read from the socket and print what comes back from server */
+   501	  bzero(buffer, BuffSize + 1);
+   502	  n = read(sock, buffer, BuffSize);
+   503	  if (n < 0)  error_msg("Can't read from socket.", 0);
+   504	  printf("%s\n", buffer);
+   505	
+   506	  if (close(sock) < 0) error_msg("Can't close socket.", 0);
+   507	
+   508	  return 0;
+   509	}
+   510	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   511	
+   512	
+   513	
+   514	
+   515	
+   516	
+   517	
+   518	
+   519	
+   520	
+   521	
+   522	
+   523	
+   524	
+   525	
+   526	
+   527	
+   528	
+   529	
+   530	
+   531	
+   532	
+   533	
+   534	
+   535	
+   536	
+   537	
+   538	
+   539	
+   540	
+   541	
+   542	#include <stdio.h>
+   543	#include <sys/types.h>
+   544	#include <sys/socket.h>
+   545	#include <netinet/in.h>
+   546	#include <netdb.h> 
+   547	
+   548	#define BuffSize (4096)
+   549	
+   550	void error_msg(const char* msg, int halt_flag) {
+   551	    perror(msg);
+   552	    if (halt_flag) exit(-1);
+   553	}
+   554	
+   555	int main() {
+   556	  
+   557	  const int port = 80;  /* default port for a Web server */
+   558	
+   559	  /* a very simple GET request */
+   560	  const char* request = 
+   561	    "GET /~mkalin/index.html HTTP/1.1\nhost: condor.depaul.edu\n\n";
+   562	  /* GET /~mkalin/index.html   ;; first-line in request
+   563	     host: condor.depaul.edu   ;; first and only line of header, a hash
+   564	     <newline>                 ;; two newlines signal end of header
+   565	     <newline>
+   566	                               ;; a GET request has no body
+   567	  */
+   568	  
+   569	  int sock, n;
+   570	  struct sockaddr_in serv_addr;
+   571	  struct hostent* server;
+   572	  char buffer[BuffSize + 1];
+   573	 
+   574	  /* get the server information */
+   575	  server = gethostbyname("condor.depaul.edu");
+   576	  if (server == NULL) error_msg("No such host.", 1);
+   577	
+   578	  /* create socket descriptor */
+   579	  sock = socket(AF_INET,        /* address family */
+   580			SOCK_STREAM,    /* type: in this case, TCP based */
+   581			0);             /* protocol: 0 means get from 2nd arg */
+   582	  if (sock < 0) error_msg("Can't get socket descriptor.", 1);
+   583	
+   584	  /* fill in the fields of the server's address structure */
+   585	  bzero(&serv_addr, sizeof(serv_addr));  /* zero everything out to begin */
+   586	  serv_addr.sin_family = AF_INET;        /* address family */
+   587	  /* copy from the hostent structure into the server address structure */
+   588	  bcopy((unsigned char*) server->h_addr, 
+   589		(unsigned char*) &serv_addr.sin_addr.s_addr,
+   590		server->h_length);
+   591	  serv_addr.sin_port = htons(port); /* host endian to network endian */
+   592	
+   593	  /* try to connect to the server */
+   594	  if (connect(sock, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) 
+   595	    error_msg("Can't connect.", 1);
+   596	
+   597	  /* write to the socket */
+   598	  n = write(sock, request, strlen(request));
+   599	  if (n < 0) error_msg("Can't write to socket.", 0);
+   600	
+   601	
+   602	  /* read from the socket and print what comes back from server */
+   603	  bzero(buffer, BuffSize + 1);
+   604	  n = read(sock, buffer, BuffSize);
+   605	  if (n < 0)  error_msg("Can't read from socket.", 0);
+   606	  printf("%s\n", buffer);
+   607	
+   608	  if (close(sock) < 0) error_msg("Can't close socket.", 0);
+   609	
+   610	  return 0;
+   611	}
+   612	/* output
+   613	
+   614	HTTP/1.1 200 OK
+   615	Date: Fri, 30 Jun 2006 19:34:43 GMT
+   616	Server: Apache/2.0.53  HP-UX_Apache-based_Web_Server (Unix) PHP/4.3.8
+   617	Last-Modified: Mon, 12 Jun 2006 21:39:27 GMT
+   618	ETag: "edf4-35a-c8daa1c0"
+   619	Accept-Ranges: bytes
+   620	Content-Length: 858
+   621	Content-Type: text/html
+   622	
+   623	
+   624	<title>Course Listings</title>
+   625	<head>
+   626	<title>Textbook and Course Listings</title>
+   627	</head>
+   628	<p>
+   629	<hr>
+   630	<h2>WWW Pages for Textbooks</h2>
+   631	<h3>
+   632	<body>
+   633	<p>
+   634	<ul>
+   635	<li><a HREF="ed3/">Applications Programming in ANSI C (3rd edition)</a><p>
+   636	<li><a HREF="cse/">C for Scientists and Engineers</a><p>
+   637	<li><a HREF="apc/">Applications Programming in C++</a><p>
+   638	<li><a HREF="oop2/">Object-Oriented Programming in C++ (2nd edition)</a><p>
+   639	<li><a HREF="oopj/">Object-Oriented Programming in Java</a><p>
+   640	</h3>
+   641	</ul>
+   642	<p>
+   643	<hr>
+   644	<h2>Graph Generation Program
+   645	<h3>
+   646	<ul>
+   647	<li><a href="http://condor.depaul.edu/~rjohnson/source/graph_ge.c">graph_ge.c</a>
+   648	</ul>
+   649	<p>
+   650	<hr>
+   651	<h2>WWW Pages for Courses: Summer 1, 2006</h2>
+   652	...
+   653	*/
+   654	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   655	
+   656	
+   657	
+   658	
+   659	

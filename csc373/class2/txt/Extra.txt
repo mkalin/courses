@@ -1,0 +1,166 @@
+     1	/* more on arrays: locality.c */
+     2	
+     3	#include <stdio.h>
+     4	#include <stdlib.h>
+     5	#include <time.h>
+     6	
+     7	#define M  (5)
+     8	#define N  (4)
+     9	
+    10	/* sumTable1 has good "spatial locality" because the access order
+    11	   is the same as the memory layout, that is, "row major" order.
+    12	*/
+    13	int sumTable1(int a[M][N]) {
+    14	  int i, j, sum = 0;
+    15	  for (i = 0; i < M; i++)
+    16	    for (j = 0; j < N; j++)
+    17	      sum += a[i][j];
+    18	  return sum;
+    19	}
+    20	
+    21	/* sumTable2 has poor spatial locality because the access order
+    22	   is "column major," which is not the memory layout 
+    23	*/
+    24	int sumTable2(int a[M][N]) {
+    25	  int i, j, sum = 0;
+    26	  for (i = 0; i < N; i++)
+    27	    for (j = 0; j < M; j++)
+    28	      sum += a[j][i];
+    29	  return sum;
+    30	}
+    31	
+    32	int my_rand() {
+    33	  return rand() % 100;
+    34	}
+    35	
+    36	int main() {
+    37	  int array[M][N];
+    38	
+    39	  srand(time(0));  /* seed the random number generator */
+    40	
+    41	  /* populate array with random ints */
+    42	  int i, j;
+    43	  for (i = 0; i < M; i++)
+    44	    for (j = 0; j < N; j++)
+    45	      array[i][j] = my_rand();
+    46	
+    47	  printf("Sum from sumTable1 is %i\n", sumTable1(array));
+    48	  printf("Sum from sumTable2 is %i\n", sumTable2(array));
+    49	  return 0;
+    50	}
+    51	/* output from sample run:
+    52	
+    53	   Sum from sumTable1 is 991
+    54	   Sum from sumTable2 is 991
+    55	*/
+    56	
+    57	;;;
+    58	
+    59	
+    60	
+    61	
+    62	/* a first look at assembly language: loopFib.c */
+    63	
+    64	/* fibonacci number N is defined recursively as
+    65	
+    66	               1 if n <= 2
+    67	   Fib(n) =
+    68	               Fib(n - 1) + Fib(n - 2) if n > 2
+    69	
+    70	   The sequence starts 1, 1, 2, 3, 5, 8, 13, 21, 34, 55,...
+    71	*/
+    72	int fib_recursive(int n) {
+    73	  if (n <= 2) return 1;
+    74	  return fib_recursive(n - 1) + fib_recursive(n - 2);
+    75	}
+    76	
+    77	int fib_dw(int n) {
+    78	  int i = 0;         /* loop counter */
+    79	  int val = 0;   
+    80	  int next = 1;  
+    81	
+    82	  /* Assembler for the loop:
+    83	
+    84	       ;; %eax holds temp
+    85	       ;; %ebx holds val
+    86	       ;; %edx holds next
+    87	       ;; %ecx holds i
+    88	       ;; %esi holds the parameter, n
+    89	
+    90	     .L6:
+    91	         leal (%edx, %ebx), %eax  ;; temp = val + next
+    92		 movl %edx, %ebx          ;; val = next
+    93		 movl %eax, %edx          ;; next = temp
+    94	         incl %ecx                ;; i += 1
+    95	         cmpl %esi, %ecx          ;; (i < n) ?
+    96	         jl .L6                   ;; if (i < n) goto .L6
+    97	         movl %ebx, %eax          ;; return val
+    98	  */
+    99	  do {
+   100	    int temp = val + next;
+   101	    val = next;
+   102	    next = temp;
+   103	    i++;
+   104	  } while(i < n);
+   105	
+   106	  return val;
+   107	}
+   108	
+   109	
+   110	
+   111	
+   112	
+   113	
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	int fib_w(int n) {
+   123	  /* Assembler for fib_w:
+   124	
+   125	       ;; %eax holds n and then temp (after .L10)
+   126	       ;; %ebx holds val
+   127	       ;; %ecx holds next
+   128	       ;; %edx holds i
+   129	
+   130	           movl 8(%ebp), %eax       ;; get parameter n
+   131		   movl $1, %ebx            ;; val = 1
+   132	           movl $1, %ecx            ;; next = 1
+   133		   cmpl %eax, %ebx          ;; (val > n) ?
+   134	           jge .L9                  ;; if (val >= n) return
+   135	           leal -1(%eax), %edx      ;; i = n - 1
+   136	     .L10:
+   137	           leal (%ecx, %ebx), %eax  ;; temp = next + val
+   138	           movl %ecx, %ebx          ;; val = next
+   139	           movl %eax, %ecx          ;; next = temp
+   140		   decl %edx                ;; i--
+   141	           jnz  .L10                ;; if (i != 0) goto .L10
+   142	     .L9:       
+   143	  */
+   144	  int i = 1;
+   145	  int val = 1;
+   146	  int next = 1;
+   147	
+   148	  while (i < n) {
+   149	    int temp = val + next;
+   150	    val = next;
+   151	    next = temp;
+   152	    i++;
+   153	  }
+   154	  
+   155	  return val;
+   156	}
+   157	
+   158	int main() {
+   159	  int i;
+   160	  for (i = 1; i < 8; i++) {
+   161	    printf("Fib(%i) == %i (recursive) and %i (dw) and %i (w)\n",
+   162		   i, fib_recursive(i), fib_dw(i), fib_w(i));
+   163	  }
+   164	
+   165	  return 0;
+   166	}

@@ -1,0 +1,434 @@
+
+                                CSC373: Computer Systems 1
+                                        Homework 4
+Points: 100
+Due:    Before midnight, July 16
+
+1. Consider this code segment
+
+         int n = 1234;
+         float f = 1234.0f;
+
+   Here's the internal representation of each in big endian, with the
+   most significant byte to the left:
+
+         n: 00 00 04 d2
+   
+         f: 44 9a 40 00
+
+   Explain how the bits in the integer variable n and the floating-point variable
+   f are correlated. It may be easiest to show how to derive f from n.
+Answer:
+It may be useful to show the hex bytes in binary so that int n and
+float f can be lined up in both bases. Here's the binary, with each hex
+digit as four binary digits:
+n: 0000 0000  0000 0000  0000 0100  1101 0010
+f: 0100 0100  1001 1010  0100 0000  0000 0000
+Because f is nonnegative, its MSB (leftmost bit) is 0. Further, an IEEE 754
+has an "implicit leading 1" in the significand. Taking that into account,
+n's bits and f's bits line up as follows (I've used a * to mark where f's implicit
+leading 1 would have been):
+n: 0000...010011010010...
+f: ........*0011010010...
+The extraneous 0s have been omitted from both for readability. Note that, with the
+implicit leading bit omitted, the two patterns are the same. Although the bits are
+not in the same positions in n and f, they do match. So far, we've basically handled
+the fractional part (significand).
+Now to the next step, the exponent. The deciminal integer 1,234 is
+
+in binary. The binary point is implicit and at the right end:
+.0
+To remove the implicit leading 1, we need to move the binary point ten places to the
+left, which gives us
+.0011010010
+So the floating point magnitude is 1.0011010010 * 2**10 and the implicit leading 1
+will be dropped.  The unbiased exponent is 10 and the the biased exponent is 137
+because the bias is -127 (that is, 137 - 127 = 10). So the exponent is
+
+in binary. Now let's lay the whole thing out, padding with 0s on the right:
+ 10001001 00110100100000000000000
+Next we break this into 4-bit junks, as before, and put the hex digits below:
+ 0100 1001 1010 0100 0000 0000 0000
+    4    9    a    4    0    0    0
+The hex by itself is
+ 9a 40 00
+This is the original hex dump of f.
+
+2. Consider this code segment:
+
+         int n = 1234;
+         float f = 1234.0f;
+	 if (n == f) printf("They're equal.\n");
+	 else printf("They're not equal.\n");
+
+   When executed, the output is
+
+         They're equal.
+
+   What must the compiler be doing in order to reach this result? We know from 
+   Question 1, by inspecting the hex values, that n and f differ at the bit level;
+   and the equality operator ==, in this context, simply checks whether the bit
+   patterns are the same.
+Answer:
+The compiler promotes the int to a float. In effect, the code executes as if
+it had been written
+if ((float) n == f) ...
+At the machine-language level, comparisons are at the bit level; because ints and
+floats have different bit formats, one type must be converted to the other in order
+to get a reasonable comparision. Were the compiler not to make the conversion, the
+bit patterns would be different in this example and the result would be false
+rather than true.
+
+3. Here's a short C program:
+
+   /* This program uses the pow function, which is part of the run-time
+        math library. To enable its use, this file (fpointHwk.c) was
+        compiled/linked as follows:
+
+             gcc -o fpointHwk -lm fpointHwk.c
+
+        In "-lm", that's a lowercase L rather than a one.
+     */
+
+     #include <stdio.h>
+     #include <math.h>
+
+     int main() {
+        /* first printf statements */
+        double d1 = 1.0 / 10.0;
+        printf("d1 == %f\n", d1);
+
+        double d2 = pow(2.0, -20.0) * d1;
+        printf("d2 == %f\n", d1);
+
+ 
+
+        double d3 = 9.54 * pow(10.0, -8.0);
+        printf("d3 == %f\n", d1);
+
+        printf("\n");
+
+        /* second printf statements */
+        if (d1 == d2) printf("d1 == d2\n");
+        else printf("d1 != d2\n");
+
+        if (d1 == d3) printf("d1 == d3\n");
+        else printf("d1 != d3\n");
+
+        if (d2 == d3) printf("d2 == d3\n");
+        else printf("d2 != d3\n");
+
+        return 0;
+     }
+
+    Here's the output:
+
+        d1 == 0.100000
+        d2 == 0.100000
+        d3 == 0.100000
+
+        d1 != d2
+        d1 != d3
+        d2 != d3
+
+    Explain what's going on. In particular, the first printf statements give the
+    same value for d1, d2, and d3: 0.100000. However, the comparisons using ==
+    all evaluate to false, as show in the second group of printf statements.
+    Explain, then, why the system thinks that d1 != d2 and so on.
+
+Answer:
+My original code printed out d1 each time, for which I apologize. However,
+the comparisons were still correct. With the correct print out, the
+interesting case involves d2 and d3. For each, the external
+representation (that is, what printf outputs) is 0 to six places, that
+is,
+.000000
+This is the printf("%f",...) output but C also has a %e, which is more
+suitable in this case. If you change to printf("%e",...) you'll get
+d1 == 0.100000
+d2 == 9.536743e-08
+d3 == 9.540000e-08
+which is a far better external representation and which, of course, shows
+that d2 != d3.
+If you take the comparison to the bit level, it's even clearer. Here's the hex
+dump of d2 and d3, using show_bytesBE ('big endian'):
+d2: 3e 79 99 99 99 99 99 9a
+d3: 3e 79 9b d6 8c 73 7e 42
+Both d2 and d3 are doubles (IEEE 754 extended floating-point types), which have
+a fractional part of 52 bits and an exponent of 11 bits. Recall that each hex
+digit is four binary digits. Starting from the right, it's clear from
+inspection that the two numbers differ in the rightmost hex pair
+d2: 9a
+d3: 42
+Indeed, the rightmost 4 bits differ: a in d2 is 1010, whereas 2 in d3 is 0010.
+These digits clearly belong to the fractional part or significand. There
+are further differences, of course, but this difference is sufficient. It's
+worth noting that the sign, exponent fields, and high-order significand bits
+are identical in the two. The problem is that printf("%f",...) doesn't capture
+the difference.
+In summary, although the %f external representation does not capture the
+difference in the internal (that is, binary) representation, the
+bitwise == comparison and the %e external representation do capture the
+difference.
+
+
+
+
+
+
+
+4. In the web_client.c program (included in sysIO.jar on the home site), 
+   there's a call to gethostbyname, which takes a string and returns a
+   pointer to a struct hostent. Here's a code segment to illustrate:
+
+      struct hostent* host_ptr = gethostbyname("condor.depaul.edu");
+
+   This pointer is passed to the function dump_host_aux, which prints 
+   information about the host with the given name. In the case of
+   www.yahoo.com, for instance, here's the output:
+
+ 
+
+
+
+
+
+
+
+
+
+          Official name: www.yahoo.akadns.net
+          Aliases: www.yahoo.com
+          Host type: AF_INET
+          Address length: 4
+          Addresses: 68.142.197.86
+                     68.142.197.87
+                     68.142.197.90
+                     68.142.197.67
+                     68.142.197.69
+                     68.142.197.75
+                     68.142.197.77
+                     68.142.197.84
+ 
+   The structure itself looks like this:
+
+     struct hostent {
+        char*    h_name;       ;; official name
+        char**   h_aliases;    ;; alias list
+        int      h_addrtype;   ;; host address type 
+        int      h_length;     ;; length of address 
+        char**   h_addr_list;  ;; list of addresses 
+     };
+
+
+   Of interest here is the second field in the structure, h_aliases, which
+   is a list of alternative names. (The official name for yahoo is not
+   www.yahoo.com but rather www.yahoo.akadns.net; hence, www.yahoo.com is an
+   alias for this official name.) Here's the loop that prints the aliases:
+
+
+         printf("Aliases: ");
+         int i = 0;
+         while (host_ptr->h_aliases[i] != NULL) {
+            printf("%.21s\n", host_ptr->h_aliases[i]);
+            i++;
+         }
+
+   So the loop terminates when the ith entry is NULL, which is defined as 0
+   in the header file stdlib.h. 
+
+   Here's a simpler example of what's going on. The data type of strings
+   is char**, that is, strings points to an array of strings. Note that the
+   last entry in the list is NULL, which is 0. (Putting the integer 0 in there
+   works the same.) If you put, say, -1 in place of NULL, you get a 
+   compiler warning. Explain why the compiler is willing to accept an
+   array initialization in which the last element is not a string, like the
+   others, but rather an integer. 
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+         /* output from this program:
+
+               foo
+               bar
+               baz
+          */
+          #include <stdlib.h>
+          #include <stdio.h>
+
+          int main() {
+            char* strings[ ] = { "foo", "bar", "baz", NULL };
+            int i = 0;
+            while (strings[i] != NULL)
+               printf("%s\n", strings[i++]);
+            return 0;
+          }
+Answer:
+In C, the integer 0 is "overloaded"; that is, it represents the number zero,
+the null address (NULL itself is a C macro: define NULL 0), and the representation
+of boolean false (any non-zero integer value represents boolean true). The
+while loop thus could be simplified to
+while (strings[i])
+...
+As written, each member of strings[i] but the last points to the (stack) address of
+the first character in the strings "foo", "bar", and "baz" (that is, to the addresses
+of 'f', 'b', and 'b', respectively); the last pointer has the value 0, NULL.
+In different words, the array strings is really an array of pointers: three
+pointers to char and one null pointer. The compiler thus accepts all four members of
+the array strings as valid pointers, with the last as a void* pointer; and any void*
+pointer can be converted, automatically, to a pointer of some other type (e.g., char*).
+That's why the compiler will accept a void* pointer such as NULL in any array of
+pointers.
+No other integer value would get by the compiler. If you change 0 to, say, 1, the code
+won't compile.
+
+
+5. Here's a short program, echo.c, that prompts the user to enter a string 
+   from the standard input and then echos the string back to the standard
+   output:
+       
+      #include <stdio.h>
+      #include <stdlib.h>
+
+      char buffer[1024 + 1];
+
+      char* prompt_and_read() {
+         printf("\nPlease enter a string (-1 to exit): ");
+         fgets(buffer, 1024, stdin);
+         return buffer;
+      }
+
+      int main() {
+         while (1) {
+           char* ptr = prompt_and_read();
+           int flag = atoi(ptr);    /* converts string to int */
+           if (flag < 0) break;     /* break out of the loop */
+           printf("You entered: %s\n", ptr);
+         }
+         return 0;
+      }
+
+   Note that array named buffer is not a local variable in 
+   prompt_and_read but rather is defined outside of all functions.
+   (In C jargon, buffer is an extern variable.) Why? In particular,
+   what's the problem with defining buffer inside of prompt_and_read,
+   as show here?
+
+     char* prompt_and_read() {
+         char buffer[1024 + 1];
+         printf("\nPlease enter a string (-1 to exit): ");
+         fgets(buffer, 1024, stdin);
+         return buffer;
+      }
+
+
+Answer:
+In the 2nd version, buffer[1024 + 1] is allocated on the stack and
+thus is in the call frame of prompt_and_read. When prompt_and_read
+returns, the storage for buffer thus can be reallocated to some
+other use (e.g., the caller might call another function whose
+call frame then overwrites buffer). The guiding rule is this:
+In a function, never return a pointer to a stack address.
+In the first version, buffer is basically part of the program's
+load module. In particular, storage for buffer is not allocated on
+the stack and thus exists independently of calls to prompt_and_read.
+Note on Java/C#, etc. In these languages, arrays are like objects
+in that they are newed:
+// Java prompt_and_read
+char[ ] prompt_and_read() {
+char[ ] buffer = new char[1024 + 1];
+...
+return buffer; // OK, buffer is on the heap, not the stack
+}
+The Java buffer will be garbage-collected from the heap.
+
+
+
+6. Here is a C program. For review, the malloc function takes one argument,
+   the number of bytes to allocate dynamically from the heap (as opposed to
+   the stack) and returns a pointer to the first byte of allocated storage
+   or NULL (0) if no storage can be allocated.
+
+   The program compiles, runs, and generates output. Answer the questions
+   below the program. (The code itself is in the ZIP file so you don't have
+   to extract it from this handout.)
+
+
+#include <stdio.h>
+
+#define Size1 (4)
+#define Size2 (3)
+#define Size3 (5)
+
+int main() {
+  int* a1 = malloc(4 * sizeof(int));
+  int* a2 = malloc(3 * sizeof(int));
+  int* a3 = malloc(5 * sizeof(int));
+  a1[0] = 1; a1[1] = 2; a1[2] = 3; a1[3] = 4;
+  a2[0] = 9; a2[1] = 8; a2[3] = 7;
+  a3[0] = -1; a3[1] = -2; a3[2] = -3; a3[3] = -4; a3[4] = -5;
+
+  int sizes[ ] = {Size1, Size2, Size3, 0};
+
+  int** ptr2ptr = malloc(sizeof(int*) * 4);
+  ptr2ptr[0] = a1;
+  ptr2ptr[1] = a2;
+  ptr2ptr[2] = a3;
+  ptr2ptr[3] = 0;
+
+  int i = 0;
+  while (ptr2ptr[i]) {
+    int j;
+    for (j = 0; j < sizes[i]; j++)
+      printf("%i ", ptr2ptr[i][j]);
+    printf("\n");
+    i++;
+  }
+  return 0;
+}
+
+1. Draw a diagram that depicts the situation in storage after 
+   a1, a2, a3, and ptr2ptr have been initialized.
+Here's the basic idea:
++--+--+--+--+
+a1--------->|1 |2 |3 |4 |
++--+--+--+--+
+/|\ 
+|
++--|-+----+----+----+
+ptr2ptr---->|  | |    |    | 0  |
++----+----+----+----+
+    1     2   3
+And so on.
+
+2. Are a1, a2, and a3 of the same type? Explain as specifically as possible
+Yes, all are of type pointer to int. (And they're constants.)
+
+3. Are a1 and ptr2ptr of the same type? Explain as specifically as possible.
+No, ptr2ptr is of type pointer to pointer to int.
+
+4. If a1, a2, and a3 are considered to be arrays, are they of the same size?
+No, one of size 3, one of size 4, and one of size 5.
+
+5. If ptr2ptr is considered to be an array, is it the same size as any of
+   a1, a2, or a3?
+Yes, a1 and ptr2ptr are both of size 4 (the number of elements in them), although
+they are of different types (hence, their elements are of different types).
+
+6. The while loop and the nested for loop terminate correctly. The
+   for loop is basically a counted loop. Explain how it terminates.
+   Explain what makes the while loop terminate.
+The four loops terminate on counts; the while loop terminates because
+ (NULL) is both the NULL pointer and false in C. So 
+while (0)   // terminate loop
+

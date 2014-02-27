@@ -1,0 +1,17 @@
+Approximate timing for various operations on a typical PC:
+
+Execute a typical instruction: ............... 1 ns = 1/1,000,000,000 sec 
+
+Fetch from L1 cache memory: .................. 1 ns 
+Fetch from L2 cache memory: .................. 7 ns
+Fetch from main memory: .................... 100 ns
+Fetch 1MB sequentially from memory: .... 250,000 ns
+
+Fetch from new disk location (seek):   8,000,000 ns
+Read 1MB sequentially from disk: .... 20,000,000 ns
+
+Send 2K bytes over 1Gbps network:	  20,000 ns
+Send packet US to Europe and back:   150,000,000 ns = 150 ms
+
+Branch misprediction:                          5 ns
+Mutex lock/unlock:	                      25 ns

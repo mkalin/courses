@@ -1,0 +1,451 @@
+     1	-- Code1.txt: code examples, mostly in C with a little Perl to start
+     2	
+     3	# binary.pl
+     4	
+     5	sub to_binary {
+     6	    my $number = shift;
+     7	
+     8	    # base case
+     9	    return $number if $number == 0 || $number == 1;
+    10	
+    11	    # recursive case
+    12	    my $quotient = int($number / 2);
+    13	    my $remainder = $number % 2;
+    14	    my $binary_number = to_binary($quotient) . $remainder;
+    15	}
+    16	
+    17	my $n = 37;
+    18	my $b = to_binary($n);
+    19	print "$n in decimal is $b in binary\n";
+    20	
+    21	# Output:
+    22	#
+    23	# 37 in decimal is 100101 in binary
+    24	#
+    25	# Interpretation of output:
+    26	#
+    27	#  100101 is 37. 
+    28	#  37 is (2 * 18) + 1
+    29	#    18 is (2 * 9) + 0
+    30	#      9 is (2 * 4) + 1
+    31	#       4 is (2 * 2) + 0
+    32	#        2 is (2 * 1) + 0
+    33	#         1 is 1         1
+    34	# 
+    35	#  Now read the remainder bits at the end, bottom to top: 100101
+    36	#
+    37	#  Next we work in binary. Note that removing the rightmost
+    38	#  bit in a binary number divides the number by 2
+    39	#  just as removing the rightmost decimal numeral from a 
+    40	#  decimal number divides the number by 10. In the binary
+    41	#  case, the remainder is 0 or 1; in the decimal case, the
+    42	#  remainder is one of 0,1,...,8,9. For instance, take 37.
+    43	#  Remove the 7 (remainder) to get 3. 37 = 3 * 10 + 7.
+    44	#
+    45	#  Now do the same in binary. 37 in decimal is 100101 in binary.
+    46	#
+    47	#  Remove the rightmost bit, 1, to get
+    48	#  10010, which is 18 (37 = 18 * 2 + 1)
+    49	#
+    50	#  10010 is 18. Remove the rightmost bit, 0, to get
+    51	#  1001, which is 9 (2 * 9 + 0 = 18)
+    52	#
+    53	#  1001 is 9. Remove the rightmost bit, 1, to get
+    54	#  100, which is 4 (2 * 4 + 1 = 9)
+    55	#
+    56	#  100 is 4. Remove the rightmost bit, 0, to get
+    57	#  10, which is 2 (2 * 2 + 0 = 2)
+    58	# 
+    59	#  10 is 2. Remove the rightmost bit, 0, to get
+    60	#  1, which is 1. This is a base case: 1 in decimal is 1 in binary.
+    61	
+    62	/* hello.c */
+    63	#include <stdio.h>
+    64	
+    65	int main() {
+    66	  printf("Hello, world!\n");
+    67	  return 0;
+    68	}
+    69	/* end of file */
+    70	
+    71	
+    72	/* endian.c */
+    73	#include <stdio.h>
+    74	
+    75	int main() {
+    76	  int n = 0xabcdef12;               /* 0x means "hex" */
+    77	  printf("n in decimal: %d\n", n);  /* -1,412,567,278 */
+    78	
+    79	  printf("%p\n", &n); /* print n's address: 0xbffa1f74 */
+    80	
+    81	  printf("n contains %d bytes.\n", sizeof(n)); /* n's size in bytes: 4 */
+    82	
+    83	  /* store n's address in ptr but cast the address to that of
+    84	     a char (1 byte) rather than of an int (4 bytes) */
+    85	  unsigned char* ptr = (unsigned char*) &n;
+    86	  int i;
+    87	
+    88	  /* Run onn an Intel machine, which is little endian */
+    89	  for (i = 0; i < sizeof(int); i++)
+    90	    printf("%.2x ", ptr[i]);        /* 12 ef cd ab */
+    91	  printf("\n");
+    92	
+    93	  /* in "reverse" order */
+    94	  unsigned char* last = ptr + sizeof(int) - 1; 
+    95	  while (last >= ptr)               /* ab cd ef 12 */
+    96	    printf("%.2x ", *last--); 
+    97	  printf("\n");
+    98	  
+    99	  return 0;
+   100	}
+   101	/* end of file */
+   102	
+   103	
+   104	
+   105	
+   106	
+   107	
+   108	
+   109	
+   110	
+   111	
+   112	
+   113	
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	/* convert.c */
+   123	#include <stdio.h>
+   124	/* Convert command-line arguments from decimal to hexidecimal */
+   125	/* Sample invocation: convert 26 -9 44 3 11 -15 */
+   126	
+   127	int main(int argc, char* argv[]) {
+   128	  /* usage check */
+   129	  if (argc < 2) {
+   130	    printf("Invoke as: convert [one or more decimal integers]\n");
+   131	    return -1;  /* negative integer signals abnormal termination */
+   132	  }
+   133	
+   134	  int i = 1;         /* 1 because argv[0] is the program's name */
+   135	  while (i < argc) { /* argc is the number of command-line arguments */
+   136	    int next;
+   137	    sscanf(argv[i++], "%d", &next);
+   138	    if (i == 2) printf("%d resides at address %u\n", next, &next);
+   139	    printf("Decimal: %d   Hex: %x\n", next, next);
+   140	  }
+   141	
+   142	  /* Now print out 10 through 20 in decimal/hex and their negatives */
+   143	  for (i = 0; i <= 20; i++) {
+   144	    printf("Decimal: %d   Hex: %x\n", i, i);
+   145	    printf("Decimal: %d   Hex: %x\n", -i, -i);
+   146	  }
+   147	
+   148	  /* Now subtract y from x assuming an underlying 2's complement 
+   149	     implementation of integers */
+   150	  int x = 7, y = 5;       /* x in binary is 0111 and y is 0101 */
+   151	  y = ~y;                 /* 1's complement of y is 1010 */
+   152	  y += 1;                 /* increment y: in binary, 1011 */
+   153	  printf("2's complemented y is %d\n", y);
+   154	
+   155	  int ans = x + y;  /* x + y is 0111 + 1011 is 0010, 2 in decimal */
+   156	  printf("%d - %d is %d\n", x, y, ans); 
+   157	
+   158	  /* Meaning of the phrase "2's complement":
+   159	
+   160	       -x = 2**N - x if x != 0
+   161	            0        otherwise
+   162	
+   163	     For instance, in a 5-bit binary system, the 2's complement
+   164	     representation of -2 would be
+   165	
+   166	     2**5 = 32 - 2 = 30 = 11110 in binrary 
+   167	                        = -2 in 5-bit 2's complement */   
+   168	
+   169	  /* Changing signs at the 2's complement level */
+   170	  printf("\n");
+   171	  int n = 7;   /* 00...111 */
+   172	  n = ~n;      /* 11...000 -- 1's complement == invert bits */
+   173	  n += 1;      /* 11...001 -- 2's complement == 1's complement + 1 */
+   174	  printf("n = 7; n = ~n; n += 1; ===> %d\n", n); /* -7 */
+   175	  n = ~n;      /* 00...110 */
+   176	  n += 1;      /* 00...111 */
+   177	  printf("Again ===> %d\n", n ); /* 7 */
+   178	  return 0;
+   179	}
+   180	/* end of convert.c */
+   181	
+   182	/* finite.c */
+   183	#include <stdio.h>
+   184	#include <limits.h>
+   185	
+   186	int main() {
+   187	  /* basic overflow example */
+   188	  printf("Largest signed int is %d (%x)\n", 
+   189		 INT_MAX, INT_MAX);
+   190	  printf("Largest + 1 is       %d (%x)\n", 
+   191		 INT_MAX + 1, INT_MAX + 1); /* generates compiler warning on overflow */
+   192	  printf("Smallest signed is   %d (%x)\n", 
+   193		 INT_MIN, INT_MIN);         /* same as above */
+   194	  /* output:
+   195	  Largest signed int is 2147483647 (7fffffff)
+   196	  Largest + 1 is       -2147483648 (80000000)
+   197	  Smallest signed is   -2147483648 (80000000)
+   198	  */
+   199	
+   200	  printf("Largest unsigned int is %u (%x)\n", 
+   201		 UINT_MAX, UINT_MAX);
+   202	  printf("Largest unsigned + 1 is %u (%x)\n", 
+   203		 UINT_MAX + 1, UINT_MAX + 1); /* generates compiler warning on overflow */
+   204	  printf("Largest signed int is   %d (%x)\n",
+   205		 INT_MAX, INT_MAX);
+   206	  /* output:
+   207	  Largest unsigned int is 4294967295 (ffffffff)
+   208	  Largest unsigned + 1 is 0 (0)
+   209	  Largest signed int is   2147483647 (7fffffff)
+   210	  */
+   211	
+   212	  printf("Largest unsigned is %u times as big as the largest signed.\n",
+   213		 UINT_MAX / (unsigned) INT_MAX);
+   214	  /* Largest unsigned is 2 times as big as the largest signed. */
+   215	
+   216	  /* multiplication via shifting and one addition */
+   217	  unsigned int n = 54321;
+   218	  unsigned int n_doubled = n << 1;
+   219	  printf("\nn      ==  %u\nn << 1 == %u\n", 
+   220		 n, n_doubled);
+   221	  printf("n * 2  == %u\n", n * 2);
+   222	  /*
+   223	    n      ==  54321
+   224	    n << 1 == 108642
+   225	    n * 2  == 108642
+   226	  */
+   227	
+   228	  printf("\n");
+   229	  unsigned int n_quadrupled = n << 2;
+   230	  printf("n * 4        == %u\n", n * 4);
+   231	  printf("n << 2       == %u\n", n_quadrupled);
+   232	  printf("n << 1 + n   == %u\n", n_doubled + n);
+   233	  printf("n * 3        == %u\n", n * 3);
+   234	  /*
+   235	    n * 4        == 217284
+   236	    n << 2       == 217284
+   237	    n << 1 + n   == 162963
+   238	    n * 3        == 162963
+   239	  */
+   240	
+   241	
+   242	  /* integer wrap up with "C puzzles" */
+   243	  printf("\n");
+   244	  int x = INT_MIN;  /* for a 32-bit int, -2,147,483,648. In binary,
+   245			       10000000000000000000000000000000 */
+   246	  if (x >= 0 || ((2 * x) < 0)) printf("x >= OR 2 * x < 0\n");
+   247	  else printf("Ooops! 2 * x is %d\n", 2 * x);
+   248	
+   249	  /* First, a brief review of sign changes in 2's complement */
+   250	  printf("\n");
+   251	  int t = -7;
+   252	  t = ~t;    /* 1's complement */
+   253	  t += 1;    /* 2's complement */
+   254	  printf("%t = ~t followed by t += 1 is %d\n", t); /* 7 */
+   255	  t = ~t;
+   256	  t += 1;
+   257	  printf("%t = ~t followed by t += 1 is %d\n", t); /* -7 */
+   258	
+   259	  printf("\n");
+   260	  if (x > 0 || -x >= 0) printf("Just what I expected.\n");
+   261	  else printf("Ooops! Must not either x be > 0 or -x >= 0?\n");
+   262	  if (x == -x) printf("yes, for some x, x == -1\n");
+   263	  /* Recall that x is 1000...000. So the 1's complement is
+   264	     0111...111. Now add 1. */
+   265	
+   266	  /* Work for any value of x? Why, assuming 32-bit int? */
+   267	  printf("\n");
+   268	  x = 31;
+   269	  if ((x & 7) != 7 || (x << 30) < 0)       /* 7 in binary is 0...111 */
+   270	    printf("x & 7 != 7 OR x << 30 < 0\n"); /* 31 is 0..11111 */
+   271	  else
+   272	    printf("Ooops!\n");
+   273	
+   274	  return 0;
+   275	}
+   276	/* end of finite.c */
+   277	
+   278	
+   279	/* more_endian.c */
+   280	/** Excecuted on an Intel PC with Linux **/
+   281	
+   282	#include <stdio.h>
+   283	
+   284	void show_bytes(char*, unsigned char*, int);
+   285	
+   286	int main() {
+   287	
+   288	  int n;
+   289	  /* store address of n in ptr_to_n, which then "points to" n */
+   290	  unsigned char* ptr_to_n = (unsigned char*) &n;
+   291	 
+   292	  /* first, some small ints */
+   293	  n = 9;
+   294	  show_bytes("int", ptr_to_n, sizeof(int));      /* 09 00 00 00 */
+   295	
+   296	  n = 17;                                        /* 11 00 00 00 */
+   297	  show_bytes("int", ptr_to_n, sizeof(int));
+   298	
+   299	
+   300	
+   301	
+   302	  /* 12,345 is 00110000 00111001 in binary and 3039 in hex */
+   303	  n = 12345;
+   304	  show_bytes("int", ptr_to_n, sizeof(int));       /* 39 30 00 00 */
+   305	
+   306	  float f = 12345.0;
+   307	  ptr_to_n = (unsigned char*) &f;
+   308	  show_bytes("float", ptr_to_n, sizeof(float));   /* 00 e4 40 46 */
+   309	
+   310	  double d = 12345.0;
+   311	  ptr_to_n = (unsigned char*) &d;
+   312	  show_bytes("double", ptr_to_n, sizeof(double)); /* 00 00 00 00 80 1c c8 40 */
+   313	
+   314	  d = 3.1415;
+   315	  ptr_to_n = (unsigned char*) &d;
+   316	  show_bytes("double", ptr_to_n, sizeof(double)); /* 6f 12 83 c0 ca 21 09 40 */
+   317	  
+   318	  f = 3.1415;
+   319	  ptr_to_n = (unsigned char*) &f;
+   320	  show_bytes("float", ptr_to_n, sizeof(float));   /* 56 0e 49 40 */
+   321	
+   322	  show_bytes("void*", (unsigned char*) &ptr_to_n, /* 2c 4b fc bf */
+   323	             sizeof(void*)); 
+   324	
+   325	  return 0;
+   326	}
+   327	
+   328	void show_bytes(char* msg, unsigned char* ptr, int how_many) {
+   329	  printf("%s\n", msg);
+   330	  int i;
+   331	  /* The 2nd argument to printf, ptr[i], could be rewritten in
+   332	     two ways:
+   333	                 i[ptr]
+   334	                 *ptr++
+   335	
+   336	     Quick exercise: Why does the first work?
+   337	
+   338	     Quick explanation of *ptr++: The ++ associates with ptr, not
+   339	       with *ptr; so ptr++ increments ptr by the sizeof of whatever
+   340	       ptr points to, which is a char == 8 bits. The * operator
+   341	       dereferences the pointer, that is, gets the value pointed to.
+   342	       So *ptr++ first gets the value to which ptr currently points
+   343	       and then increments ptr by one char (8 bits).                     
+   344	  */
+   345	  for (i = 0; i < how_many; i++) printf(" %.2x", ptr[i]);
+   346	  printf("\n");
+   347	
+   348	}
+   349	/* end of endian.c */
+   350	/**************************************************************************/
+   351	
+   352	
+   353	
+   354	
+   355	
+   356	
+   357	
+   358	
+   359	
+   360	
+   361	
+   362	/* nums.c */
+   363	
+   364	#include <stdio.h>
+   365	#include <limits.h>
+   366	
+   367	/* show_bytes is now defined above main so that the definition
+   368	   also counts as a declaration 
+   369	*/
+   370	void show_bytes(char* msg, unsigned char* ptr, int how_many) {
+   371	  printf("%s\n", msg);
+   372	  int i;
+   373	  for (i = 0; i < how_many; i++) printf(" %.2x", ptr[i]);
+   374	  printf("\n");
+   375	}
+   376	
+   377	int left_right1(unsigned n) {
+   378	  return (int) ((n << 24) >> 24);
+   379	}
+   380	
+   381	int left_right2(unsigned n) {
+   382	  return ((int) n << 24) >> 25;
+   383	}
+   384	
+   385	int sum_ints(int array[ ], unsigned length) {
+   386	  int i; /* trouble starts here */
+   387	  int result = 0;
+   388	  
+   389	  if (length == 0) printf("0 - 1 in unsigned is %x\n", length - 1);
+   390	  if ((unsigned) 0 - (unsigned) 1 == UINT_MAX) printf("Yes!\n");
+   391	  /* 0 - 1 is 111...1111 */
+   392	  for (i = 0; i <= length - 1; i++)  /* length - 1 brings it home */
+   393	    result += array[i];
+   394	  return result;
+   395	}
+   396	
+   397	int main() {
+   398	  /* dangers of mixed integer types */
+   399	  unsigned int n1 = 0;
+   400	  signed int n2 = -1;
+   401	  int n3 = (n1 > n2) ? n1 : n2;
+   402	  printf("%d\n", n3); /* -1 is printed */
+   403	
+   404	  /* illustration of constants in limits.h and shifting */
+   405	  n1 = 1;          /* n1 is unsigned: 000...001 in binary  */
+   406	  int count = 0;  
+   407	  while (n1 < INT_MAX) {
+   408	    n1 = n1 << 1;  /* left shift one position */
+   409	    count++;
+   410	  }
+   411	  n1 = n1 >> 1;    /* why? */
+   412	  /* output is: After 30 1-bit left shifts, n1's value is 1073741824 */
+   413	  printf("After %d 1-bit left shifts, n1's value is %d\n", 
+   414		 count - 1, n1);
+   415	
+   416	
+   417	
+   418	
+   419	
+   420	
+   421	
+   422	  /* binary expansions of signed and unsigned types */
+   423	  int signed_num = -12345;
+   424	  unsigned int unsigned_num = 53191;
+   425	  show_bytes("signed int", (unsigned char*) &signed_num, /* c7 cf ff ff */
+   426		     sizeof(int));
+   427	  show_bytes("unsigned", (unsigned char*) &unsigned_num, /* c7 cf 00 00 */
+   428		     sizeof(unsigned));
+   429	
+   430	  /* p. 63 in the book: key assumption is that sizeof(int) is 4 == 32 bits */
+   431	  printf("left_rigth1(127) => %d  left_right2(127) => %d\n", 
+   432		 left_right1(127), left_right2(127));
+   433	  printf("left_right1(128) => %d  left_right2(128) => %d\n", 
+   434		 left_right1(128), left_right2(128));
+   435	  printf("left_right1(255) => %d  left_right2(255) => %d\n", 
+   436		 left_right1(255), left_right2(255));
+   437	  printf("left_right1(256) => %d  left_right2(256) => %d\n", 
+   438		 left_right1(256), left_right2(256));
+   439	
+   440	  /* more mixed type dangers */
+   441	  printf("\n");
+   442	  int a[ ] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+   443	  int sum_a = sum_ints(a, (unsigned) 10);
+   444	  printf("Sum of the ints in the array is: %d\n", sum_a);
+   445	
+   446	  int b[0]; /* empty */
+   447	  int sum_b = sum_ints(b, (unsigned) 0); /* trouble ends here */
+   448	
+   449	  return 0;
+   450	}
+   451	/* end of nums.c */

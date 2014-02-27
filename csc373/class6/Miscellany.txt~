@@ -1,0 +1,1292 @@
+                                    Miscellaneous C Examples
+
+/* Options for passing arrays to functions, illustrated
+   with three implementations of a to_string function.
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MaxName    (60)
+#define MaxString (250)
+
+typedef unsigned int bool;
+enum truth_values {false, true}; 
+
+typedef struct Emp {
+  unsigned char lname[MaxName + 1]; /* + 1 for '\0' */
+  unsigned char fname[MaxName + 1];
+  unsigned int  id;
+  unsigned char dept;
+  bool          married;
+} Emp; /* on a straight count, 131 bytes */
+
+void set_name(char* target, char* source) {
+  if (strlen(source) > MaxName) return;
+  strcpy(target, source);
+}
+
+void set_id(unsigned int* id_ptr) {
+  *id_ptr = rand();
+}
+
+void set_dept(unsigned char* dept_ptr, unsigned char code) {
+  *dept_ptr = code;
+}
+
+void set_married(unsigned int* married, unsigned int status) {
+  *married = status;
+}
+
+/* safest */
+void to_string(Emp* this, char* buffer) {
+  unsigned char temp[32];
+
+  printf("\n** Employee information **");
+  
+  strcpy(buffer, "");
+
+  strcat(buffer, "\nLast name:   "); /* strncat is even safer */
+  strcat(buffer, this->lname);
+  strcat(buffer, "\nFirst name:  ");
+  strcat(buffer, this->fname);  
+
+  sprintf(temp, "%i", this->id);
+  strcat(buffer, "\nEmployee id: ");
+  strcat(buffer, temp);
+
+  sprintf(temp, "%c", this->dept);
+  strcat(buffer, "\nDepartment:  ");
+  strcat(buffer, temp);
+
+  strcat(buffer, "\nMarried?:    ");
+  if (this->married) 
+    strcat(buffer, "yes");
+  else
+    strcat(buffer, "no");
+}
+
+/* ok */
+unsigned char* to_string2(Emp* this) {
+  unsigned char temp[256];
+
+  char* buffer = malloc(256);
+
+  printf("\n** Employee information **");
+  
+  strcpy(buffer, "");
+
+  strcat(buffer, "\nLast name:   "); 
+  strcat(buffer, this->lname);
+  strcat(buffer, "\nFirst name:  ");
+  strcat(buffer, this->fname);  
+
+  sprintf(temp, "%i", this->id);
+  strcat(buffer, "\nEmployee id: ");
+  strcat(buffer, temp);
+
+  sprintf(temp, "%c", this->dept);
+  strcat(buffer, "\nDepartment:  ");
+  strcat(buffer, temp);
+
+  strcat(buffer, "\nMarried?:    ");
+  if (this->married) 
+    strcat(buffer, "yes");
+  else
+    strcat(buffer, "no");
+  return buffer;
+}
+
+/* DIASTER: never do this! (gcc compiler issues warning.) */
+unsigned char* to_string3(Emp* this) {
+  unsigned char buffer[256];
+  unsigned char temp[32];
+
+  printf("\n** Employee information **");
+  
+  strcpy(buffer, "");
+
+  strcat(buffer, "\nLast name:   "); 
+  strcat(buffer, this->lname);
+  strcat(buffer, "\nFirst name:  ");
+  strcat(buffer, this->fname);  
+
+  sprintf(temp, "%i", this->id);
+  strcat(buffer, "\nEmployee id: ");
+  strcat(buffer, temp);
+
+  sprintf(temp, "%c", this->dept);
+  strcat(buffer, "\nDepartment:  ");
+  strcat(buffer, temp);
+
+  strcat(buffer, "\nMarried?:    ");
+  if (this->married) 
+    strcat(buffer, "yes");
+  else
+    strcat(buffer, "no");
+
+  return buffer;
+}
+
+void dump_addresses(Emp* emp) {
+  printf("Address of Emp:     %p (%u)\n", emp, emp);
+  printf("Address of lname:   %p (%u)\n", emp->lname, emp->lname);
+  printf("Address of fname:   %p (%u)\n", emp->fname, emp->fname);
+  printf("Address of id:      %p (%u)\n", &emp->id, &emp->id);
+  printf("Address of dept:    %p (%u)\n", &emp->dept, &emp->dept);
+  printf("Address of married: %p (%u)\n", &emp->married, &emp->married);
+}
+
+int main() {
+  /* Seed the pseudo-random number generator with the current time. 
+     An Emp's id is set to a pseudo-random number. */
+  srand(time(0)); 
+
+  Emp fred;
+  /* sizeof(fred) also would work. */
+  printf("sizeof(Emp) is %i\n", sizeof(Emp)); /* 136 on my system */
+
+  dump_addresses(&fred);
+  /* on my system:
+
+     Address of Emp:     0xbff7b1a0 (3220681120)
+     Address of lname:   0xbff7b1a0 (3220681120)
+     Address of fname:   0xbff7b1dd (3220681181)
+     Address of id:      0xbff7b21c (3220681244)
+     Address of dept:    0xbff7b220 (3220681248)
+     Address of married: 0xbff7b224 (3220681252)
+  */
+
+  /* Give fred's properties some values */
+  set_name(fred.lname, "Flintstone");
+  set_name(fred.fname, "Fred");
+  set_id(&fred.id);
+
+  set_dept(&fred.dept, 'Z');
+  set_married(&fred.married, true);
+
+  /* preferred to_string */
+  unsigned char buffer[256];
+  to_string(&fred, buffer);
+  printf("%s\n", buffer);
+  /* output:
+
+      ** Employee information **
+      Last name:   Flintstone
+      First name:  Fred
+      Employee id: 2084589247
+      Department:  Z
+      Married?:    yes 
+  */
+
+  /* to_string2: same output as above */
+  unsigned char* ptr = to_string2(&fred);
+  printf("%s\n", ptr);
+  free(ptr);  /* critical */
+
+  /* to_string3: if it doesn't crash, it's pure luck.
+     (In this case, it's because nothing is called 
+     after to_string3.)
+  */
+  printf("%s\n", to_string3(&fred));
+  
+  return 0;
+}
+
+/*
+-falign-functions=n  
+-falign-jumps=n 
+-falign-labels=n  
+-falign-loops=n 
+-fbranch-probabilities
+-fprofile-values 
+-fvpt -fbranch-target-load-optimize 
+-fbranch-target-load-optimize2
+-fcaller-saves  
+-fcprop-registers 
+-fcse-follow-jumps  
+-fcse-skip-blocks  
+-fdata-sections 
+-fdelayed-branch  
+-fdelete-null-pointer-checks 
+-fexpensive-optimizations  
+-ffast-math
+-ffloat-store 
+-fforce-addr  
+-fforce-mem  
+-ffunction-sections 
+-fgcse  
+-fgcse-lm  
+-fgcse-sm
+-fgcse-las  
+-floop-optimize 
+-fcrossjumping  
+-fif-conversion  
+-fif-conversion2 
+-finline-functions  
+-finline-limit=n  
+-fkeep-inline-functions 
+-fkeep-static-consts  
+-fmerge-constants
+-fmerge-all-constants 
+-fmove-all-movables  
+-fnew-ra  
+-fno-branch-count-reg 
+-fno-default-inline
+-fno-defer-pop 
+-fno-function-cse  
+-fno-guess-branch-probability 
+-fno-inline  
+-fno-math-errno
+-fno-peephole  
+-fno-peephole2 
+-funsafe-math-optimizations  
+-ffinite-math-only 
+-fno-trapping-math  
+-fno-zero-initialized-in-bss 
+-fomit-frame-pointer  
+-foptimize-register-move 
+-foptimize-sibling-calls  
+-fprefetch-loop-arrays 
+-fprofile-generate 
+-fprofile-use 
+-freduce-all-givs
+-fregmove  
+-frename-registers 
+-freorder-blocks  
+-freorder-functions 
+-frerun-cse-after-loop
+-frerun-loop-opt 
+-frounding-math 
+-fschedule-insns  
+-fschedule-insns2 
+-fno-sched-interblock
+-fno-sched-spec  
+-fsched-spec-load 
+-fsched-spec-load-dangerous 
+-fsched-stalled-insns=n
+-sched-stalled-insns-dep=n 
+-fsched2-use-superblocks 
+-fsched2-use-traces  
+-fsignaling-nans
+-fsingle-precision-constant 
+-fstrength-reduce  
+-fstrict-aliasing  
+-ftracer  
+-fthread-jumps
+-funroll-all-loops  
+-funroll-loops  
+-fpeel-loops -funswitch-loops  
+-fold-unroll-loops
+-fold-unroll-all-loops 
+--param name=value -O  -O0  -O1  -O2  -O3  -Os
+
+Loop peeling example, with x and y two arrays of size >= 11:
+
+int j = 10, n = 10, i;
+for (i = 0; i < n; i++) {
+  y[i] = x[i] + x[j];
+  j = i;
+}
+
+Here's the "peeled loop":
+
+y[0] = x[0] + x[10];
+for ( i = 1; i < n; i++) {
+  y[i] = x[i] + x[i - 1];
+}
+*/
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+/* "ragged" arrays in C */
+
+#include <stdio.h>
+
+#define Size1 (4)
+#define Size2 (3)
+#define Size3 (5)
+
+int main() {
+  int* a1 = malloc(4 * sizeof(int));
+  int* a2 = malloc(3 * sizeof(int));
+  int* a3 = malloc(5 * sizeof(int));
+  a1[0] = 1; a1[1] = 2; a1[2] = 3; a1[3] = 4;
+  a2[0] = 9; a2[1] = 8; a2[3] = 7;
+  a3[0] = -1; a3[1] = -2; a3[2] = -3; a3[3] = -4; a3[4] = -5;
+
+  int sizes[ ] = {Size1, Size2, Size3, 0};
+
+  int** ptr2ptr = malloc(sizeof(int*) * 4);
+  ptr2ptr[0] = a1;
+  ptr2ptr[1] = a2;
+  ptr2ptr[2] = a3;
+  ptr2ptr[3] = 0;
+
+  int i = 0;
+  while (ptr2ptr[i]) {
+    int j;
+    for (j = 0; j < sizes[i]; j++)
+      printf("%i ", ptr2ptr[i][j]);
+    printf("\n");
+    i++;
+  }
+  return 0;
+}
+;;;;
+
+/* file: sum.c */
+int accumulator = 0;
+
+int sum(int n1, int n2) {
+  int t = n1 + n2;
+  accumulator += t;
+  return t;
+}
+/*
+  At the command prompt:  gcc -02 -S sum.c
+     -02 ==> level 2 optimization
+     -S  ==> generate assembly code file sum.s, shown below
+
+ 	.file	"sum.c"
+.globl accumulator
+	.bss
+	.align 4
+	.type	accumulator, @object
+	.size	accumulator, 4
+accumulator:
+	.zero	4
+	.text
+	.p2align 2,,3
+.globl sum
+	.type	sum, @function
+sum:
+	pushl	%ebp
+	movl	%esp, %ebp
+	movl	12(%ebp), %eax
+	addl	8(%ebp), %eax
+	addl	%eax, accumulator
+	leave
+	ret
+	.size	sum, .-sum
+	.section	.note.GNU-stack,"",@progbits
+	.ident	"GCC: (GNU) 4.1.1 20111201"
+;;;;
+
+  Again at the command prompt, on my Linux box:
+
+          gcc -02 -c sum.c    ;; produces sum.o
+
+          objdump -d sum.o    ;; produces what's shown below
+                              ;; (stuff that starts with _ is an annotation)
+
+sum.o:     file format elf32-i386
+
+Disassembly of section .text:
+
+_offset _bytes                 _equivalent in assembly
+
+00000000 <sum>:
+   0:   55                      push   %ebp
+   1:   89 e5                   mov    %esp,%ebp
+   3:   8b 45 0c                mov    0xc(%ebp),%eax
+   6:   03 45 08                add    0x8(%ebp),%eax
+   9:   01 05 00 00 00 00       add    %eax,0x0
+   f:   c9                      leave
+  10:   c3                      ret
+
+   Explanation: 
+
+   The _offsets are from the start of the file.
+
+   The _bytes are the byte sequence, broken into seven groupings, each grouping 
+   is an instruction. An IA32 instruction can be from 1 to 15 byes in size.
+   
+   The _equivalent column is the equivalent assembly instruction to the byte code.
+
+*/
+;;;;
+
+/* system-level I/O */
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+
+#define FILE_NAME "nums.bin"
+
+void report_and_die(const char* msg) {
+  fprintf(stderr, msg);
+  exit(-1);
+}
+
+int main() {
+  const int bad_io = 0xffffffff;
+  char error_msg[512];
+
+  int file_descriptor = open(FILE_NAME,         /* name */
+			     O_CREAT | O_RDWR,  /* create for read/write */
+			     0);                /* permissions */
+
+  if (file_descriptor == bad_io) {
+    sprintf(error_msg, "Couldn't open file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+
+  /* Write some data. */
+  int n[ ] = { 9, 7, 5, 3, 1 };
+  int read_in[5 * sizeof(int)];
+
+  int flag = write(file_descriptor, n, sizeof(n));
+  if (flag == bad_io) {
+    sprintf(error_msg, "Couldn't write to file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+  
+  flag = close(file_descriptor);
+  if (flag == bad_io) {
+    sprintf(error_msg, "Couldn't close file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+  
+  ssize_t in_flag = read(file_descriptor, read_in, sizeof(read_in));
+  
+  if (in_flag == bad_io) {
+    sprintf(error_msg, "Couldn't read from file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+
+  file_descriptor = open(FILE_NAME, O_RDONLY, 0);
+  if (file_descriptor == bad_io) {
+    sprintf(error_msg, "Couldn't open file %s for reading.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+
+  flag = read(file_descriptor, read_in, sizeof(read_in));
+ 
+  return 0;
+}
+;;;;
+
+/* macros, etc. */
+
+-- turing.dat: tape-initialization file for the tape
+
+#11+11111111#
+
+-- add.mac: set of instructions for a Turing machine that adds two numbers in unary
+
+;;;;;;;;;;;; Unary Add Program
+;;;;
+;;;; The two positive integers to be added occur between a pair of #'s
+;;;; and are separated from each other by a +. Any number of other symbols
+;;;; except blanks, which do not belong to the input alphabet, may occur to 
+;;;; the left of the leftmost #, as the program simply ignores such symbols.
+;;;; The sum, which occurs in the tape cells immediately to the right of the 
+;;;; rightmost #, also is represented in unary. The original integers are 
+;;;; blanked out when the program terminates.
+;;;;
+;;;; Let M and N be the two integers to be added. If M is two and N is three,
+;;;; the tape could be initialized to
+;;;;
+;;;;            #11+111#...
+;;;;
+;;;; When the TM halts, the tape would look like
+;;;;
+;;;;            #BB+BBB#11111...
+;;;;
+;;;; The TM's initial state is q0 and the RWD is positioned over the tape's
+;;;; leftmost cell after tape initialization. The TM halts in state q99 with
+;;;; the RWD scanning the leftmost 1 in the sum.
+;;;;
+;;;;;;;;;;;;
+;;;;
+;;;;;;;;;;;; Initial Rountine
+;;;
+;;;; Find the left # by moving right across all other input symbols.
+;;;;
+q0 1 1 R q0    ;; across 1's
+q0 + + R q0    ;; across +'s
+q0 # # R q10   ;; leftmost # found
+;;;
+;;;;
+;;;;;;;;;;;; Copy Routine
+;;;
+;;;; Copy an integer to the sum area.
+;;;;
+q10 + + R q10  ;; move right across +
+q10 B B R q10  ;; find the leftmost 1 in M
+q10 1 B R q20  ;; find the sum area
+q20 1 1 R q20  ;; move right across remaining 1's in M
+q20 + + R q20  ;; move right across +
+q20 # # R q30  ;; sum found, prepare to copy
+q30 1 1 R q30  ;; move across 1's in partial sum
+q30 B 1 L q40  ;; return to M or N
+;;;
+;;;;
+;;;;;;;;;;;; Return Routine
+;;;
+;;;; Return from sum area to M or N
+;;;;
+q40 1 1 L q40  ;; move left across partial sum
+q40 # # L q50  ;; rightmost # found, continue moving left across N
+q50 B B R q90  ;; nothing left in N to copy, prepare to halt
+q50 1 1 L q60  ;; move left across N, which still has at least one 1
+q60 1 1 L q60  ;; ditto
+q60 B B R q10  ;; continue Copy Routine for N
+q60 + + L q70  ;; move into M
+q70 B B R q10  ;; M is copied, prepare to copy N
+q70 1 1 L q80  ;; move left across M, which still has at least one 1
+q80 1 1 L q80  ;; ditto
+q80 B B R q10  ;; continue Copy Routine for M
+;;;
+;;;;
+;;;;;;;;;;;; Halt Routine
+;;;;
+;;;; Position RWD over leftmost 1 in sum.
+;;;;
+q90 B B R q90  ;; move across B's in N
+q90 # # R q99  ;; position RWD over leftmost 1 in sum and halt
+;;;
+
+-- slices from a sample run
+
+			     TM cycle 0 
+  q0
++---+---+---+---+---+---+---+---+---+---+---+---+---+
+| # | 1 | 1 | + | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | # | 
++---+---+---+---+---+---+---+---+---+---+---+---+---+
+  1   2   3   4   5   6   7   8   9  10  11  12  13 
+
+			Hit Return to continue... 
+
+
+			     TM cycle 1 
+     q10
++---+---+---+---+---+---+---+---+---+---+---+---+---+
+| # | 1 | 1 | + | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | # | 
++---+---+---+---+---+---+---+---+---+---+---+---+---+
+  1   2   3   4   5   6   7   8   9  10  11  12  13 
+
+			Hit Return to continue...  
+
+
+			     TM cycle 2 
+         q20
++---+---+---+---+---+---+---+---+---+---+---+---+---+
+| # | B | 1 | + | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | # | 
++---+---+---+---+---+---+---+---+---+---+---+---+---+
+  1   2   3   4   5   6   7   8   9  10  11  12  13 
+
+			Hit Return to continue... 
+
+
+			     TM cycle 3 
+             q20
++---+---+---+---+---+---+---+---+---+---+---+---+---+
+| # | B | 1 | + | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | # | 
++---+---+---+---+---+---+---+---+---+---+---+---+---+
+  1   2   3   4   5   6   7   8   9  10  11  12  13 
+...
+                                                     q99
++---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+| # | B | B | + | B | B | B | B | B | B | B | B | # | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
++---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+  1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23 
+
+;;;;
+
+-- turing.h
+
+#include  <stdio.h>
+#include  <ctype.h>
+#include  <string.h>
+#include  <stdlib.h>
+
+#define   True                 1
+#define   False                0
+
+/**** User Section 
+
+ The user can set legal state symbols, read symbols, and write symbols by
+ changing the appropriate string initializations in this section. The user
+ also can reset the initial machine state, the maximum number of cycles
+ the machine will run, or the tape size by changing the appropriate #defines.
+   
+****/
+
+char state_symbols[] = "qQ";       
+
+char read_symbols[]  = "bB01*+#";
+char write_symbols[] = "bB01*+#";
+
+#define   InitialMachineState    "q0"
+
+#define   MaxReasonableCycles        10000
+#define   MaxTapeSize		      5000
+
+#define   DeterministicMachine    True
+
+/**** End of User Section ****/
+
+#define   Semicolon        ';'
+#define   CommentDelimiter Semicolon
+
+#define   Abnormal             1
+
+#define   Left_Lower            'l'
+#define   Left_Upper            'L'
+#define   Right_Lower           'r'
+#define   Right_Upper           'R'
+
+#define   Top                   't'
+#define   Bottom                'b'
+
+#define   R_W_Head              printf("%s", machine_state);
+
+#define   BlankChar             ' '
+#define   TabChar               '\t'
+#define   NewLineChar           '\n'
+
+#define   Nl                    putchar('\n')
+#define   Tab                   putchar('\t')
+#define   Blank                 putchar(' ')
+#define   Four_Blanks           Blank, Blank, Blank, Blank
+#define   Ellipsis              printf("%s", "...")
+
+#define   Pause                 Nl, Nl, Tab, Tab, Tab, \
+                                printf("Hit Return to continue... "), \
+                                getchar()
+
+#define   FileNameSize        25
+#define   TuringProgramFile   "turing.mac"
+#define   TuringDataFile      "tape.dat"
+
+#define   MaxCellsPerLine      15
+#define   MaxRecordSize	       80
+
+#define   MaxStateNameSize      5
+#define   CellSizeInSpaces      5
+
+#define   print_cell_vertical_border()         printf("| ")
+#define   print_cell_horizontal_border()       printf("+---")
+#define   print_border_terminator()            printf("+")
+#define   print_cell_index(index)              printf("%d", (index))
+
+int       current_row_start,
+          current_row_end;
+
+typedef   struct Transition {
+             char               current_state[MaxStateNameSize];
+             char               next_state[MaxStateNameSize];
+             char               read_symbol;
+             char               write_symbol;
+             char               direction;
+             struct Transition  *next_transition;
+} Transition;
+
+Transition  *head;
+
+char        program_file[FileNameSize];
+char        tape_file[FileNameSize];
+
+int         tape_index = 0;
+
+int         tape_count = 0;
+
+char        tape[MaxTapeSize];
+char        machine_state[MaxStateNameSize];
+
+int         halt = False;
+int         normal_termination = True;
+int         infinite_loop = False;
+
+int         cycle_count = 0;
+
+int         display_cycles = 1;
+
+#define     min(x, y)     ((x) < (y)) ? (x) : (y)
+#define     max(x, y)     ((x) > (y)) ? (x) : (y) 
+
+#define     print_current_cycle()  Tab, Tab, Tab, \
+	           printf("     TM cycle %d ", cycle_count)
+
+#define     NoSuchProgramFile(which) \
+                printf("\n\n\n\t\tProgram file %s does not exist. Must abort.\n\n", which);
+
+#define     NoSuchInputFile(which) \
+                printf("\n\n\n\t\tTape file %s does not exist. Must abort.\n\n", which);
+
+/* end of turing.h */
+
+#include "turing.h"
+
+/* Vanilla C Turing Machine simulator. */
+int main() {
+  void   initialize(),
+         tour(),
+         clean_up();
+  int    run_again_p();
+
+  do {
+    initialize();
+    tour();
+    clean_up();
+  } while (run_again_p());
+}
+
+void tour() {
+  void   make_next_transition();
+  void   tape_display_p();
+  void   infinite_tour_error();
+  
+  while (!halt) {
+    make_next_transition();
+    if (!normal_termination)
+      halt = True;
+    else
+      tape_display_p();
+    if (cycle_count > MaxReasonableCycles)
+      infinite_tour_error();
+  }
+}
+
+void  make_next_transition() {   
+  Transition  *next = head;
+  int         search = True;
+  int         found = False;
+  int         match_p();
+  void        update_tape_and_state();
+
+  /* Match current state and read symbol with program. */
+  while (search) 
+    /* If a match, take write action, set machine's state to next state,
+       move read/write head, and stop searching. */
+    if (match_p(next)) {
+      update_tape_and_state(next);
+      search = False;
+      found = True;
+    }
+  /* Otherwise, check whether to continue searching. */
+    else if (next->next_transition != NULL)
+      next = next->next_transition;             /* yes */
+    else
+      search = False;                             /* no */
+
+  if (!found)
+    halt = True;
+}
+
+/***** auxiliary functions *****/
+
+int  match_p(next)
+Transition *next;
+{
+  return(strcmp(next->current_state, machine_state) == 0  &&
+	 next->read_symbol == tape[tape_index]);
+}
+
+void  update_tape_and_state(next)
+Transition  *next;
+{
+  tape[tape_index] = next->write_symbol;
+  strcpy(machine_state, next->next_state);
+  if (next->direction == Left_Upper  ||  
+      next->direction == Left_Lower)
+    --tape_index;
+  else
+    ++tape_index;
+
+  /* Check whether read/write head is still inbounds. */
+  if (tape_index < 0  ||  tape_index >= MaxTapeSize) 
+    normal_termination = False;   /* no */
+  else
+    ++cycle_count;                /* yes */
+
+  tape_count = max(tape_count, tape_index + 1);
+}
+
+void  infinite_tour_error() {
+  Nl, Nl, Nl, Tab, Tab;
+
+  printf("Program has run for %d cycles without terminating.",
+	  MaxReasonableCycles);
+  Nl, Tab, Tab;
+  printf("Oracle suspects an infinite tour.");
+  Nl, Nl, Nl;
+
+  halt = True;
+  infinite_loop = True;
+}
+
+void  clean_up()
+{
+  void  display_tape();
+
+  if (normal_termination  &&  !infinite_loop) {
+    printf("\n\n\n\t\tProgram terminated normally in %d cycles.",
+           cycle_count);
+    printf("\n\t\tTape dump follows.\n");
+    display_tape();
+  }
+  else if (!infinite_loop)
+    printf("\n\n\t\tProgram ran off tape during cycle %d.\n\n",
+           cycle_count);
+}
+
+/***** input/output and parse functions *****/
+
+void  read_program()
+{
+  char        buffer[MaxRecordSize];
+  void        parse_input(), 
+              deterministic_p();
+  int         count = 0;
+  int         full_line_comment_p();
+  FILE        *fptr = fopen(program_file, "r");
+  Transition  *next, *last = NULL;   
+
+
+  if (fptr != NULL) {
+    while (fgets(buffer, MaxRecordSize, fptr) != NULL) {
+      if (!full_line_comment_p(buffer)) {
+	next = (Transition *) calloc(1, sizeof(Transition));
+	if (last != NULL) 
+	  last->next_transition = next;
+	else
+	  head = next;
+	parse_input(buffer, next, ++count);
+	last = next;
+      }
+    }
+    fclose(fptr);
+
+    /* Check for determinism. */
+    if (DeterministicMachine)
+      deterministic_p(); 
+  }
+  else {
+    NoSuchProgramFile(program_file);
+    exit(Abnormal);
+  }
+}
+
+void  parse_input(buffer, current, count)
+char  buffer[];
+Transition  *current;
+int   count;
+{
+  void  error_dump();
+  void  drop_inline_comments();
+  int   legal_scan_p();
+  char  new_buffer[MaxRecordSize];
+
+  drop_inline_comments(buffer, new_buffer);
+
+  sscanf(new_buffer, "%s %c %c %c %s", 
+	  current->current_state,
+	 &current->read_symbol,
+	 &current->write_symbol,
+	 &current->direction,
+	  current->next_state);
+
+  if (!legal_scan_p(current))
+    error_dump(count);
+}
+
+void drop_inline_comments(buffer, new_buffer)
+char *buffer, *new_buffer;
+{
+  while (*buffer != CommentDelimiter  &&  *buffer != '\0') 
+    *new_buffer++ = *buffer++;
+  *new_buffer = '\0';
+}
+
+
+int  full_line_comment_p(buffer)
+char *buffer;
+{
+  int len = strlen(buffer),
+      i = 0;
+
+  if (*buffer == CommentDelimiter)
+    return(True);
+
+  while (*buffer == BlankChar || *buffer == TabChar  ||  *buffer == NewLineChar) {
+    ++buffer, ++i;
+    if (i >= len  ||  *buffer == CommentDelimiter)
+      return(True);
+  }
+  return(False);
+}
+
+
+int  legal_scan_p(current)
+Transition  *current;
+{
+  int    all_digits_p(),
+         state_symbol_p(),
+         read_symbol_p(),
+         write_symbol_p(),
+         direction_symbol_p();
+
+  return(state_symbol_p(current->current_state[0])   &&
+	  all_digits_p(&current->current_state[1], 
+		        MaxStateNameSize - 1)           &&
+	  state_symbol_p(current->next_state[0])      &&
+	  all_digits_p(&current->current_state[1],     
+		        MaxStateNameSize - 1)           &&
+	  read_symbol_p(current->read_symbol)           &&
+	  write_symbol_p(current->write_symbol)         &&
+	  direction_symbol_p(current->direction));
+}
+
+/* Check whether a symbol is a legal state symbol. */
+int  state_symbol_p(symbol)
+char symbol;
+{
+  int i = 0,
+      len = strlen(state_symbols);
+
+  while (i < len) 
+    if (symbol == state_symbols[i++]) 
+      return(True);
+
+  return(False);
+}
+
+/* Check whether a symbol is a legal read symbol. */
+int  read_symbol_p(symbol)
+char symbol;
+{
+  int i = 0,
+      len = strlen(read_symbols);
+
+  while (i < len)
+    if (symbol == read_symbols[i++])
+      return(True);
+
+  return(False);
+}
+
+/* Check whether a symbol is a legal write symbol. */
+int  write_symbol_p(symbol)
+char symbol;
+{
+  int i = 0,
+      len = strlen(write_symbols);
+
+  while (i < len)
+    if (symbol == write_symbols[i++])
+      return(True);
+
+  return(False);
+}
+
+int  direction_symbol_p(symbol)
+char symbol;
+{
+  return (symbol == Left_Upper   ||  symbol == Left_Lower  ||
+          symbol == Right_Upper  ||  symbol == Right_Lower);
+}
+            
+int  all_digits_p(array, size)
+char array[];
+int  size;
+{
+  int      i = 0;
+  int      answer = True;
+
+  while (i < size) 
+    if (array[i] != '\0'  &&
+        array[i] != '0'   &&
+        array[i] != '1'   &&
+        array[i] != '2'   &&
+        array[i] != '3'   &&
+        array[i] != '4'   &&
+        array[i] != '5'   &&
+        array[i] != '6'   &&
+        array[i] != '7'   &&
+        array[i] != '8'   &&
+        array[i] != '9') {
+      answer = False;
+      i = size;
+    }
+    else
+      ++i;
+
+  return(answer);
+}
+
+void  error_dump(count)
+int  count;
+{
+  void  dump_turing_program();
+
+  Nl, Nl, Nl, Tab, 
+  printf("There is a syntax error in row %d of the Turing program.", count);
+  Nl, Tab,
+  printf("A program dump follows."), Nl;
+  dump_turing_program();
+  exit(Abnormal);
+}           
+
+void  deterministic_p()
+{
+  Transition  *this = head, *next;
+  void        dump_turing_program();
+
+  while (this != NULL) {
+    next = this->next_transition;
+    while (next != NULL) 
+      if (strcmp(this->current_state, next->current_state) == 0  &&
+	   this->read_symbol == next->read_symbol) {
+	Nl, Nl, Tab;
+	printf("At least two instructions are identical in their\n\t");
+	printf("first two elements:   %s\t%c",
+	        this->current_state, this->read_symbol);
+	Nl, Nl, Tab;
+	printf("Program dump follows.");
+	dump_turing_program();
+	exit(Abnormal);
+      }
+      else
+	next = next->next_transition;
+    this = this->next_transition;
+  }                 
+}
+
+void  dump_turing_program() {
+  Transition   *next = head;
+  int          count = 0;
+  Nl, Nl, Tab, printf("Turing program:"), Nl;
+
+  while(next != NULL) { 
+    Nl, Tab, printf("Row %d:   %s %c %c %c %s",
+	             ++count,
+                     next->current_state,
+                     next->read_symbol,
+                     next->write_symbol,
+                     next->direction,
+                     next->next_state);
+    next = next->next_transition;
+  }
+   Nl, Nl, Nl;
+}
+
+void  initialize() {
+  void   display_tape(),
+         get_tape_file(),
+         get_program_file(),
+         read_program(),
+         set_watch_level();
+  FILE   *fptr; 
+  int    i;
+  int    next;
+
+  get_tape_file();
+  get_program_file();
+  read_program();
+  set_watch_level();
+
+  tape_index = 0;
+  tape_count = 0;
+  cycle_count = 0;
+  strcpy(machine_state, InitialMachineState);
+  halt = 
+    infinite_loop = False;
+
+  for (i = 0; i < MaxTapeSize; ++i)
+    tape[i] = 'B';
+
+  fptr = fopen(tape_file, "r");
+
+  if (fptr != NULL) {
+    while((next = fgetc(fptr)) != EOF) 
+      if (next != BlankChar && next != TabChar && next != NewLineChar)
+	tape[tape_count++] = next;
+    
+    tape[tape_count] = 'B';   
+
+    fclose(fptr);
+    fflush(stdin);
+
+    display_tape();
+  }
+  else {
+    NoSuchInputFile(tape_file);
+    exit(Abnormal);
+  }
+}         
+
+void  tape_display_p()
+{
+  void   display_tape();
+
+  if (display_cycles  &&  
+      (cycle_count % display_cycles) == 0)
+    display_tape();
+}
+
+void  display_tape()
+{
+  int     index = 0, col_counter = 0;
+  int     cell = 1;
+  int     remaining;
+  void    print_top_or_bottom();
+
+  remaining = tape_count;
+  current_row_start = 1;
+  current_row_end = MaxCellsPerLine;
+
+  Nl, Nl;
+  print_current_cycle();
+
+  Nl, Nl;
+  print_top_or_bottom(cell, min(tape_count, MaxCellsPerLine), Top);
+  Nl;
+  print_cell_vertical_border();
+
+  while (index < tape_count) {
+    if (++col_counter > MaxCellsPerLine) {
+      remaining -= MaxCellsPerLine;
+      current_row_start += MaxCellsPerLine;
+      current_row_end += MaxCellsPerLine;
+      col_counter = 0;
+      Ellipsis;
+      print_top_or_bottom(cell, MaxCellsPerLine, Bottom);
+      Nl, Nl;
+      print_top_or_bottom(cell, min(remaining, MaxCellsPerLine), Top);
+      Nl;
+      print_cell_vertical_border();
+      cell = index + 1;
+      continue;
+    }
+    printf("%c ", tape[index++]);
+    print_cell_vertical_border();
+  }
+  print_top_or_bottom(index - remaining + 1, remaining, Bottom);
+
+  Pause;
+  Nl, Nl, Nl;
+}
+
+void  print_top_or_bottom(cell_index, cell_count, top_or_bottom)
+int   cell_index, cell_count;
+char  top_or_bottom;
+{
+  void  print_read_write_head();
+  int   current_row_p();
+  int   i;
+
+  if (current_row_p(top_or_bottom))
+    print_read_write_head();   
+  
+  Nl;
+  for (i = 0; i < cell_count; ++i) 
+    print_cell_horizontal_border();
+  print_border_terminator();
+
+  if (top_or_bottom == Bottom) {
+    Nl;
+    for (i = 0; i < cell_count; ++ i) {
+      if (cell_index <= 9)
+	Blank, Blank;
+      else
+	Blank;
+      print_cell_index(cell_index++);
+      if (cell_index <= 100)
+	Blank;
+    }
+  }
+}
+
+int  current_row_p(top_or_bottom)
+char top_or_bottom;
+{
+  int index = tape_index + 1;
+
+  if (top_or_bottom == Bottom)
+    return(False);
+  else 
+    return(current_row_start <= index  &&  index  <= current_row_end);
+}
+
+void  print_read_write_head()
+{
+  int  i, limit,
+       length = strlen(machine_state),
+       indent = CellSizeInSpaces - length - 1;
+
+  limit = (tape_index % MaxCellsPerLine);
+
+  for (i = 0; i < limit; ++i)
+    Four_Blanks;
+ 
+  for (i = 0; i < indent; ++i)
+    Blank;
+  
+  R_W_Head;
+}
+
+void  set_watch_level()
+{
+  char  ans[2];
+
+  printf("\n\n\t\tTrace? (y/n)  ");
+  scanf("%s", ans);
+
+  if (*ans  == 'y'  ||  *ans == 'Y') {
+     printf("\n\n\t\tHow many cycles between tape displays?\n");
+     printf("\t\tEnter an integer:  ");
+     scanf("%d", &display_cycles);
+     display_cycles = max(display_cycles, 1);
+   }
+  else
+    display_cycles = 0;
+   
+  Nl, Nl;
+}
+
+void  get_program_file()
+{
+  char   file[FileNameSize];
+
+  printf("\n\n\t\tEnter file name for program\n\t\t");
+  printf("or D for default file (turing.mac):  ");
+  scanf("%s", file);
+
+  if (strcmp(file, "D") == 0  ||  strcmp(file, "d") == 0) 
+    strcpy(program_file, TuringProgramFile);
+  else
+    strcpy(program_file, file);
+}   
+
+void  get_tape_file()
+{
+  char   file[FileNameSize];
+
+  printf("\n\t\tEnter file name for initial tape data\n\t\t");
+  printf("or D for default file (tape.dat):  ");
+  scanf("%s", file);
+
+  if (strcmp(file, "D") == 0  ||  strcmp(file, "d") == 0) 
+    strcpy(tape_file, TuringDataFile);
+  else
+    strcpy(tape_file, file);
+}   
+
+int  run_again_p() {
+  char  ans[2];
+
+  printf("\n\t\tRun it again? (y/n)  ");
+  scanf("%s", ans);
+  Nl;
+
+  if (*ans == 'y'  ||  *ans == 'Y') 
+    return(True);
+  else
+    return(False);
+}

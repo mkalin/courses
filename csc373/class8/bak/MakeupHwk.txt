@@ -1,0 +1,152 @@
+
+                                 CSC 373: Computer Systems 1
+                                      Makeup Homework
+
+Points: 100
+Due:    July 21, 2009 before midnight
+
+You can use this in place of a missed homework or substitute for one
+already done. In the latter case, I'll grade and substitute it for any
+homework with a lower grade.
+
+1. When I execute the program
+
+      #include <stdio.h>
+
+      int main() {
+        int n;
+        scanf("%d\n", n);
+        return 0;
+      }
+
+   I get a "segmentation fault," which results from an attempt to access some
+   inappropriate area of memory. The problem occurs in the scanf: the second
+   argument should be &n rather than n. Explain why this mistake should cause
+   the program to abort on the scanf execution.
+
+2. Document the function mystery. The documentation should explain what each line 
+   does and also give a general overview of what mystery does, that is, how mystery 
+   computes the return value from the two arguments.
+
+     #include <stdio.h>
+
+     int mystery(int n1, int n2) {
+       unsigned char* ptr1 = (unsigned char*) &n1;
+       unsigned char* ptr2 = (unsigned char*) &n2;
+
+       int ret_val;
+       unsigned char* ptr3 = (unsigned char*) &ret_val;
+
+       ptr2 += sizeof(int) - 1;
+       ptr3 += sizeof(int) - 1;
+
+       int i;
+       for (i = 0; i < sizeof(int); i++) {
+         *ptr3 = *ptr2;
+         ptr3--;
+         ptr2--;
+       }
+  
+       ptr3++;
+       *ptr3 = *ptr1;
+
+       return ret_val;
+     }
+
+3. For the floating-point number 5.1, show the layout for a C float on
+   the assumption that C follows the IEEE single-precision standard.
+
+
+
+4. Consider these variable declarations
+
+      int x = 1;
+      int y = 2;
+      unsigned int p = (unsigned int) x;
+      unsigned int q = (unsigned int) y;
+
+      unsigned int ans = ((~x * y) + (p * q)) == -y;
+
+   Is ans true regardless of the initial values for x and y? Explain.
+
+5. Here is a short code segment with three lines of output. Explain how the
+   second and third lines of output are related. In other words, how do we
+   get from 305419896.000000 to 286331144.000000.
+
+
+     int x = 0x12345678;
+     printf("%d\n%f\n%f\n", 
+	 x, (float) x, (float) ((x << 4) - x));
+     /* output:
+
+         305419896 
+         305419896.000000 
+         286331144.000000
+     */
+
+
+6. In modern cache design, a major debate is over the relative merits of
+   direct-mapped and set-associative caches. As noted in class, the trend is
+   towards set-associative design for L1 but direct-mapped for L2 and other
+   off-chip caches. Present the pros and cons for each type of cache, being
+   as specific as possible about their relative strengths and weaknesses. The
+   key issue here involves the tradeoffs: there are good points and bad points
+   for each.
+
+7. Here's a C program. Please document where indicated. In particular, explain how
+   each pointer expression (e.g., p[i] is a pointer expression, as is *ptr++) 
+   works.
+
+#include <stdio.h>
+#include <ctype.h> /* for isalpha, which tests whether an character code is
+		      for an alphabetic character */
+
+const int n = 60;
+
+/* document */
+int comp(const void* v1, const void* v2) {
+  return (*(const unsigned char*) v2) - (*(const unsigned char*) v1);
+}
+
+/* document */
+void dump(unsigned char* p, unsigned int n) {
+  unsigned int i;
+  for (i = 0; i < n; i++) printf("%c ", p[i]);
+  printf("\n");
+}
+
+int main() {
+  /* 'A' is 65 in either ASCII or Unicode.
+     The ASCII codes are, in fact, preserved in Unicode. 
+     For the uppercase letters, the codes are consecutive.
+  */
+  unsigned char c = 'A';
+  unsigned int n = 'Z' - 'A' + 1;
+
+  /* these two statements are equivalent to a single calloc
+     statement. From the documentation on calloc, figure out
+     what the appropriate calloc statement would be and
+     replace these two with the appropriate calloc statement. */
+  unsigned char* ptr = malloc(2 * n);
+  bzero(ptr, n);
+  unsigned char* base = ptr;
+
+  /* document from here until the end: give the output as well */
+  while (isalpha(c)) 
+    *ptr++ = c++;
+
+  unsigned int k = n / 2;
+  unsigned char* p1 = malloc(k);
+  unsigned char* p2 = malloc(k);
+  memcpy(p1, base, k);
+  memcpy(p2, base + k, k);
+  qsort(p1, k, 1, comp);
+  qsort(p2, k, 1, comp);
+
+  dump(p1, k);
+  dump(p2, k);
+
+  return 0;
+}
+
+

@@ -1,0 +1,28 @@
+
+                           File Formats for the ZIP files
+
+My class handouts and code are packed into a ZIP file using a standard
+ZIP utility. Inside the ZIP are either text files or other ZIP files.
+Sometimes, as in the very first file Class1.zip, there is an embedded
+Zip file. Any standard Zip utility can be used to unpack the archive.
+
+Unix-type systems and Windows have different conventions for text files.
+It's possible that my text files may be single line on a Windows box. This
+happens, in particular, with Notepad. A better editor (for instance, Notepad++)
+usually recognizes the difference and displays the text on multiple lines. The
+same goes for MS Word.
+
+Also, there are many sites and tools for conversions, among them:
+
+   http://ccrma-www.stanford.edu/~craig/utility/flip/
+   http://www.fileformat.info/convert/text/unix2dos.tr
+   http://www.sg-chem.net/u2win/
+
+Of course, I can't guarantee any of these: use at your own risk but they
+seem fine from my simple testing.
+
+My text files originate mostly from a Unix box because I use a helpful
+utility to put in line numbers. It's important to resolve quickly any
+glitches there may be in downloading, unpacking, and reading my files.
+
+-- mgk

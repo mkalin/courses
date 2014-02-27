@@ -1,0 +1,299 @@
+     1	#include <stdio.h>
+     2	#include <string.h>
+     3	#include <stdlib.h>
+     4	
+     5	#define MaxName    (60)
+     6	#define MaxString (250)
+     7	
+     8	typedef unsigned int bool;
+     9	enum truth_values { false = 0, true }; 
+    10	
+    11	typedef struct Emp {
+    12	  unsigned char lname[MaxName + 1]; /* + 1 for '\0' */
+    13	  unsigned char fname[MaxName + 1];
+    14	  unsigned int  id;
+    15	  unsigned char dept;
+    16	  bool          married;
+    17	} Emp; /* on a straight count, 131 bytes */
+    18	
+    19	void set_name(char* target, char* source) {
+    20	  if (strlen(source) > MaxName) return;
+    21	  strcpy(target, source);
+    22	}
+    23	
+    24	void set_id(unsigned int* id_ptr) {
+    25	  *id_ptr = rand();
+    26	}
+    27	
+    28	void set_dept(unsigned char* dept_ptr, unsigned char code) {
+    29	  *dept_ptr = code;
+    30	}
+    31	
+    32	void set_married(unsigned int* married, unsigned int status) {
+    33	  *married = status;
+    34	}
+    35	
+    36	/* safest */
+    37	void to_string(Emp* this, char* buffer) {
+    38	  unsigned char temp[32];
+    39	
+    40	  printf("\n** Employee information **");
+    41	  
+    42	  strcpy(buffer, "");
+    43	
+    44	  strcat(buffer, "\nLast name:   "); 
+    45	  strcat(buffer, this->lname);
+    46	  strcat(buffer, "\nFirst name:  ");
+    47	  strcat(buffer, this->fname);  
+    48	
+    49	  sprintf(temp, "%i", this->id);
+    50	  strcat(buffer, "\nEmployee id: ");
+    51	  strcat(buffer, temp);
+    52	
+    53	  sprintf(temp, "%c", this->dept);
+    54	  strcat(buffer, "\nDepartment:  ");
+    55	  strcat(buffer, temp);
+    56	
+    57	  strcat(buffer, "\nMarried?:    ");
+    58	  if (this->married) strcat(buffer, "yes");
+    59	  else  strcat(buffer, "no");
+    60	}
+    61	
+    62	/* ok */
+    63	unsigned char* to_string2(Emp* this) {
+    64	  unsigned char temp[256];
+    65	
+    66	  char* buffer = malloc(256);
+    67	
+    68	  printf("\n** Employee information **");
+    69	  
+    70	  strcpy(buffer, "");
+    71	
+    72	  strcat(buffer, "\nLast name:   "); 
+    73	  strcat(buffer, this->lname);
+    74	  strcat(buffer, "\nFirst name:  ");
+    75	  strcat(buffer, this->fname);  
+    76	
+    77	  sprintf(temp, "%i", this->id);
+    78	  strcat(buffer, "\nEmployee id: ");
+    79	  strcat(buffer, temp);
+    80	
+    81	  sprintf(temp, "%c", this->dept);
+    82	  strcat(buffer, "\nDepartment:  ");
+    83	  strcat(buffer, temp);
+    84	
+    85	  strcat(buffer, "\nMarried?:    ");
+    86	  if (this->married) 
+    87	    strcat(buffer, "yes");
+    88	  else
+    89	    strcat(buffer, "no");
+    90	  return buffer;
+    91	}
+    92	
+    93	/* DIASTER: never do this! (gcc compiler issues warning.) */
+    94	unsigned char* to_string3(Emp* this) {
+    95	  unsigned char buffer[256];
+    96	  unsigned char temp[32];
+    97	
+    98	  printf("\n** Employee information **");
+    99	  
+   100	  strcpy(buffer, "");
+   101	
+   102	  strcat(buffer, "\nLast name:   "); 
+   103	  strcat(buffer, this->lname);
+   104	  strcat(buffer, "\nFirst name:  ");
+   105	  strcat(buffer, this->fname);  
+   106	
+   107	  sprintf(temp, "%i", this->id);
+   108	  strcat(buffer, "\nEmployee id: ");
+   109	  strcat(buffer, temp);
+   110	
+   111	  sprintf(temp, "%c", this->dept);
+   112	  strcat(buffer, "\nDepartment:  ");
+   113	  strcat(buffer, temp);
+   114	
+   115	  strcat(buffer, "\nMarried?:    ");
+   116	  if (this->married) strcat(buffer, "yes");
+   117	  else strcat(buffer, "no");
+   118	
+   119	  return buffer;
+   120	}
+   121	
+   122	void dump_addresses(Emp* emp) {
+   123	  printf("Address of Emp:     %p (%u)\n", emp, emp);
+   124	  printf("Address of lname:   %p (%u)\n", emp->lname, emp->lname);
+   125	  printf("Address of fname:   %p (%u)\n", emp->fname, emp->fname);
+   126	  printf("Address of id:      %p (%u)\n", &emp->id, &emp->id);
+   127	  printf("Address of dept:    %p (%u)\n", &emp->dept, &emp->dept);
+   128	  printf("Address of married: %p (%u)\n", &emp->married, &emp->married);
+   129	}
+   130	
+   131	int main() {
+   132	  /* Seed the pseudo-random number generator with the current time. 
+   133	     An Emp's id is set to a pseudo-random number. */
+   134	  srand(time(0)); 
+   135	
+   136	  Emp fred;
+   137	  /* sizeof(fred) also would work. */
+   138	  printf("sizeof(Emp) is %i\n", sizeof(Emp)); /* 136 on my system */
+   139	
+   140	  dump_addresses(&fred);
+   141	  /* on my system:
+   142	
+   143	     Address of Emp:     0xbff7b1a0 (3220681120)
+   144	     Address of lname:   0xbff7b1a0 (3220681120)
+   145	     Address of fname:   0xbff7b1dd (3220681181)
+   146	     Address of id:      0xbff7b21c (3220681244)
+   147	     Address of dept:    0xbff7b220 (3220681248)
+   148	     Address of married: 0xbff7b224 (3220681252)
+   149	  */
+   150	
+   151	  /* Give fred's properties some values */
+   152	  set_name(fred.lname, "Flintstone");
+   153	  set_name(fred.fname, "Fred");
+   154	  set_id(&fred.id);
+   155	
+   156	  set_dept(&fred.dept, 'Z');
+   157	  set_married(&fred.married, true);
+   158	
+   159	  /* preferred to_string */
+   160	  unsigned char buffer[256];
+   161	  to_string(&fred, buffer);
+   162	  printf("%s\n", buffer);
+   163	  /* output:
+   164	      ** Employee information **
+   165	      Last name:   Flintstone
+   166	      First name:  Fred
+   167	      Employee id: 2084589247
+   168	      Department:  Z
+   169	      Married?:    yes */
+   170	
+   171	  /* to_string2: same output as above */
+   172	  unsigned char* ptr = to_string2(&fred);
+   173	  printf("%s\n", ptr);
+   174	  free(ptr);  /* critical */
+   175	
+   176	  /* to_string3: if it doesn't crash, it's pure luck.
+   177	     (In this case, it's because nothing is called after to_string3.) */
+   178	  printf("%s\n", to_string3(&fred));
+   179	  return 0;
+   180	}
+   181	
+   182	/*
+   183	-falign-functions=n  
+   184	-falign-jumps=n 
+   185	-falign-labels=n  
+   186	-falign-loops=n 
+   187	-fbranch-probabilities
+   188	-fprofile-values 
+   189	-fvpt -fbranch-target-load-optimize 
+   190	-fbranch-target-load-optimize2
+   191	-fcaller-saves  
+   192	-fcprop-registers 
+   193	-fcse-follow-jumps  
+   194	-fcse-skip-blocks  
+   195	-fdata-sections 
+   196	-fdelayed-branch  
+   197	-fdelete-null-pointer-checks 
+   198	-fexpensive-optimizations  
+   199	-ffast-math
+   200	-ffloat-store 
+   201	-fforce-addr  
+   202	-fforce-mem  
+   203	-ffunction-sections 
+   204	-fgcse  
+   205	-fgcse-lm  
+   206	-fgcse-sm
+   207	-fgcse-las  
+   208	-floop-optimize 
+   209	-fcrossjumping  
+   210	-fif-conversion  
+   211	-fif-conversion2 
+   212	-finline-functions  
+   213	-finline-limit=n  
+   214	-fkeep-inline-functions 
+   215	-fkeep-static-consts  
+   216	-fmerge-constants
+   217	-fmerge-all-constants 
+   218	-fmove-all-movables  
+   219	-fnew-ra  
+   220	-fno-branch-count-reg 
+   221	-fno-default-inline
+   222	-fno-defer-pop 
+   223	-fno-function-cse  
+   224	-fno-guess-branch-probability 
+   225	-fno-inline  
+   226	-fno-math-errno
+   227	-fno-peephole  
+   228	-fno-peephole2 
+   229	-funsafe-math-optimizations  
+   230	-ffinite-math-only 
+   231	-fno-trapping-math  
+   232	-fno-zero-initialized-in-bss 
+   233	-fomit-frame-pointer  
+   234	-foptimize-register-move 
+   235	-foptimize-sibling-calls  
+   236	-fprefetch-loop-arrays 
+   237	-fprofile-generate 
+   238	-fprofile-use 
+   239	-freduce-all-givs
+   240	-fregmove  
+   241	
+   242	-frename-registers 
+   243	-freorder-blocks  
+   244	-freorder-functions 
+   245	-frerun-cse-after-loop
+   246	-frerun-loop-opt 
+   247	-frounding-math 
+   248	-fschedule-insns  
+   249	-fschedule-insns2 
+   250	-fno-sched-interblock
+   251	-fno-sched-spec  
+   252	-fsched-spec-load 
+   253	-fsched-spec-load-dangerous 
+   254	-fsched-stalled-insns=n
+   255	-sched-stalled-insns-dep=n 
+   256	-fsched2-use-superblocks 
+   257	-fsched2-use-traces  
+   258	-fsignaling-nans
+   259	-fsingle-precision-constant 
+   260	-fstrength-reduce  
+   261	-fstrict-aliasing  
+   262	-ftracer  
+   263	-fthread-jumps
+   264	-funroll-all-loops  
+   265	-funroll-loops  
+   266	-fpeel-loops -funswitch-loops  
+   267	-fold-unroll-loops
+   268	-fold-unroll-all-loops 
+   269	--param name=value -O  -O0  -O1  -O2  -O3  -Os
+   270	
+   271	Loop peeling example, with x and y two arrays of size >= 11:
+   272	
+   273	int j = 10, n = 10, i;
+   274	for (i = 0; i < n; i++) {
+   275	  y[i] = x[i] + x[j];
+   276	  j = i;
+   277	}
+   278	
+   279	Here's the "peeled loop":
+   280	
+   281	y[0] = x[0] + x[10];
+   282	for ( i = 1; i < n; i++) {
+   283	  y[i] = x[i] + x[i - 1];
+   284	}
+   285	*/
+   286	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   287	
+   288	
+   289	
+   290	
+   291	
+   292	
+   293	
+   294	
+   295	
+   296	
+   297	
+   298	
+   299	

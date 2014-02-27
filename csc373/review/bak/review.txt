@@ -1,0 +1,70 @@
+     1	-- Addressing modes of interest in IA-32
+     2	
+     3	Global Symbol                   MOVL x, %eax
+     4	Immediate	                MOVL $56, %eax
+     5	Register	                MOVL %ebx, %eax
+     6	Indirect	                MOVL (%esp), %eax
+     7	Base-Relative	                MOVL -4(%ebp), %eax
+     8	;;;;
+     9	
+    10	
+    11	int main() {                   +===========+
+    12	  no_op(777, 333);             |           |<=== main's %ebp, <=== %esp: (c)
+    13	  /*...*/                      +-----------+
+    14	}                                    ...       
+    15	                               +-----------+
+    16	void no_op(int a, int b) {     |    333    | ;; call to no_op(..., 333) 
+    17	    int y = 5;                 +-----------+ 
+    18	    int z = 9;                 |    777    | ;; call to no_op(777, ...)
+    19	    y += b;                    +--- -------+
+    20	    z += a;                    |main's %eip| ;; call to no_op, <=== %esp: (c)     
+    21	    return;                    +===========+
+    22	}                              |main's %ebp|<=== no_op's %ebp & %esp: (1), (2), (c)
+    23	                               +-----------+
+    24	                               | 5, 338    | -4(%ebp): (4), (8)
+    25	                               +-----------+
+    26	                               | 9, 876    |<=== %esp: (3), (b)
+    27	                               +-----------+
+    28	         +-------------+                       +--------------------+
+    29	         | 333, 777    | :(6), (9)             | ptr to 5, ptr to 9 | :(7), (a)
+    30	         +-------------+                       +--------------------+
+    31	            %edx                                      %eax
+    32	
+    33	_no_op:
+    34	 pushl %ebp (1)            ;; save the base pointer (call frame pointer) from
+    35	                           ;; the caller, that is, the function that calls no_op
+    36	                      
+    37	 movl %esp, %ebp (2)       ;; create a new call frame by setting %ebp to TOP
+    38	 
+    39	 subl $8, %esp (3)         ;; move the stack pointer 8 bytes, which means the
+    40	                           ;; new TOP is now 2 DWORDs from the pushed (saved) %ebp
+    41	
+    42	 movl $5, -4(%ebp) (4)     ;; store constant 5 one DWORD into current call frame
+    43	                           ;; in effect: y = 5
+    44	
+    45	 movl $9, -8(%ebp) (5)     ;; store constant 9 two DWORDs into current call frame
+    46	                           ;; in effect: z = 9
+    47	
+    48	 movl 12(%ebp), %edx (6)   ;; copy parameter b's value into %edx
+    49	
+    50	 leal -4(%ebp), %eax (7)   ;; copy y's location, at -4(%ebp), into %eax
+    51	                           ;; in effect: %eax points to y
+    52	
+    53	 addl %edx, (%eax) (8)     ;; y += b: %edx holds b and (%eax) points to y, which
+    54	                           ;; is 5; and y is stored at -4(%ebp)
+    55	                           ;; The sum is stored where (%eax) points.
+    56	
+    57	 movl 8(%ebp), %edx (9)    ;; copy parameter a's value into %edx
+    58	
+    59	 leal -8(%ebp), %eax (a)   ;; copy z's location into %eax
+    60	                           ;; in effect: %eax points to z
+    61	
+    62	 addl %edx, (%eax) (b)     ;; z += a: %edx holds a and (%eax) points to z
+    63	                           ;; the sum is stored where %eax points
+    64	
+    65	 leave (c)       ;;  movl %ebp, %esp  ;; set TOP to start of this call frame
+    66	                 ;;  popl %ebp        ;; restore the saved %ebp, thereby setting
+    67	                                      ;; TOP to the end of the caller's call frame. 
+    68	
+    69	 ret (d)         ;; return control to the caller of no_op
+    70	

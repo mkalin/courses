@@ -1,0 +1,274 @@
+     1	#include <stdio.h>
+     2	#include <stdlib.h>
+     3	
+     4	#define MaxLname    (60)
+     5	#define MaxFname    (60)
+     6	#define MaxAddress (120)
+     7	
+     8	typedef struct Emp {
+     9	  char     lname[MaxLname + 1];
+    10	  char     fname[MaxFname + 1];
+    11	  char     address[MaxAddress + 1];
+    12	  unsigned id;
+    13	  char     dept;
+    14	  float    salary;
+    15	} Emp;
+    16	
+    17	
+    18	/* Not a good idea! */
+    19	Emp populate_emp1(Emp e) {
+    20	  /* fill in the fields */
+    21	  return e;
+    22	}
+    23	
+    24	/* Far better idea */
+    25	void populate_emp2(Emp* e_ptr) {
+    26	  /* fill in the fields */
+    27	}
+    28	
+    29	/* ok */
+    30	Emp* create_emp() {
+    31	  return (Emp*) malloc(sizeof(Emp));
+    32	}
+    33	
+    34	int main() {
+    35	  Emp* fred = create_emp();
+    36	  populate_emp1(*fred);  /* bad */
+    37	  populate_emp2(fred);   /* good */
+    38	
+    39	  Emp betty;
+    40	  populate_emp1(betty);  /* bad */
+    41	  populate_emp2(&betty); /* good */
+    42	
+    43	  /* process fred and other Emps as needed */
+    44	  free(fred); /* critical */
+    45	  /*...*/
+    46	  return 0;
+    47	}
+    48	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    49	
+    50	#include <netinet/in.h>
+    51	#include <arpa/inet.h>
+    52	#include <netdb.h>
+    53	#include <sys/socket.h>
+    54	#include <stdio.h>
+    55	
+    56	typedef struct hostent host_info;
+    57	
+    58	void show_bytes(char* msg, unsigned char* ptr, int how_many) {
+    59	  printf("%s\n", msg);
+    60	  int i;
+    61	  for (i = 0; i < how_many; i++) printf(" %.2x", ptr[i]);
+    62	  printf("\n");
+    63	}
+    64	
+    65	void dump_host_aux(host_info* host_ptr) {
+    66	  if (host_ptr == NULL) return;
+    67	  /* Here's the hostent structure layout:
+    68	
+    69	     struct hostent {
+    70	        char*    h_name;       ;; official name
+    71	        char**   h_aliases;    ;; alias list
+    72	        int      h_addrtype;   ;; host address type 
+    73	        int      h_length;     ;; length of address 
+    74	        char**   h_addr_list;  ;; list of addresses 
+    75	     };
+    76	  */
+    77	  printf("\n");
+    78	  printf("Official name: %s\n", host_ptr->h_name);
+    79	
+    80	  printf("Aliases: ");
+    81	  int i = 0;
+    82	  while (host_ptr->h_aliases[i] != NULL) {
+    83	    printf("%.21s\n", host_ptr->h_aliases[i]);
+    84	    i++;
+    85	  }
+    86	  
+    87	  int type = host_ptr->h_addrtype;
+    88	  const char* type_str = (type == 2) ? "AF_INET" : "AF_INET6";
+    89	
+    90	  printf("Host type: %s\n", type_str);
+    91	
+    92	  printf("Address length: %i\n", host_ptr->h_length);
+    93	
+    94	  printf("Addresses: ");
+    95	  i = 0;
+    96	  while (host_ptr->h_addr_list[i] != NULL) {
+    97	    struct in_addr addr;
+    98	    addr.s_addr = *((unsigned int*) host_ptr->h_addr_list[i]);
+    99	    if (i > 0) printf("           ");
+   100	    printf("%.21s\n", inet_ntoa(addr));
+   101	    i++;
+   102	  }
+   103	  printf("\n");
+   104	}
+   105	
+   106	void dump_host(const char* host_name) {
+   107	  host_info* host = gethostbyname(host_name);
+   108	  dump_host_aux(host);
+   109	}
+   110	
+   111	int main() {
+   112	  /* host and network byte order */
+   113	  int n = 0xabcdef12;
+   114	  show_bytes("IA32 int:", (unsigned char*) &n, sizeof(int));
+   115	  unsigned u = htonl(n);
+   116	  show_bytes("htonl:", (unsigned char*) &u, sizeof(unsigned));
+   117	  u = ntohl(u);
+   118	  show_bytes("ntohl:", (unsigned char*) &n, sizeof(int));
+   119	  /* output:
+   120	
+   121	     IA32 int: 12 ef cd ab
+   122	     htonl:    ab cd ef 12
+   123	     ntohl:    12 ef cd ab
+   124	  */
+   125	
+   126	  /* dotted-decimal addresses in network byte order */
+   127	  struct in_addr inet_address;
+   128	  int flag = inet_aton("140.192.1.6", &inet_address);
+   129	  if (flag) {
+   130	    unsigned long addr = inet_address.s_addr;
+   131	    show_bytes("inet_aton:", (unsigned char*) &addr, sizeof(unsigned long));
+   132	    /*
+   133	        inet_aton: 8c c0 01 06 ;; 140 192 1 6
+   134	    */
+   135	  }
+   136	
+   137	  /* some lookup stuff */
+   138	  dump_host("condor.depaul.edu");
+   139	  dump_host("www.google.com");
+   140	  dump_host("www.yahoo.com");
+   141	  dump_host("localhost");
+   142	  /* output:
+   143	
+   144	    Official name: condor.depaul.edu
+   145	    Aliases:
+   146	    Host type:AF_INET
+   147	    Address length: 4
+   148	    Addresses: 140.192.1.6
+   149	
+   150	    Official name: www.l.google.com
+   151	    Aliases: www.google.com
+   152	    Host type: AF_INET
+   153	    Address length: 4
+   154	    Addresses: 72.14.203.104
+   155	               72.14.203.99
+   156	
+   157	    Official name: www.yahoo.akadns.net
+   158	    Aliases: www.yahoo.com
+   159	    Host type: AF_INET
+   160	    Address length: 4
+   161	    Addresses: 68.142.197.66
+   162	               68.142.197.74
+   163	               68.142.197.79
+   164	               68.142.197.82
+   165	               68.142.197.84
+   166	               68.142.197.85
+   167	               68.142.197.87
+   168	               68.142.197.90
+   169	
+   170	    Official name: localhost.localdomain
+   171	    Aliases: localhost
+   172	    Host type: AF_INET
+   173	    Address length: 4
+   174	    Addresses: 127.0.0.1
+   175	  */
+   176	
+   177	  return 0;
+   178	}
+   179	
+   180	;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   181	
+   182	#include <unistd.h>
+   183	#include <sys/types.h>
+   184	#include <sys/stat.h>
+   185	#include <fcntl.h>
+   186	#include <stdio.h>
+   187	
+   188	#define FILE_NAME "nums.bin"
+   189	
+   190	void report_and_die(const char* msg) {
+   191	  fprintf(stderr, msg);
+   192	  exit(-1);
+   193	}
+   194	
+   195	int main() {
+   196	  const int bad_io = 0xffffffff;
+   197	  char error_msg[512];
+   198	
+   199	  int file_descriptor = open(FILE_NAME,         /* name */
+   200				     O_CREAT | O_RDWR,  /* create for read/write */
+   201				     0);                /* permissions */
+   202	  if (file_descriptor == bad_io) {
+   203	    sprintf(error_msg, "Couldn't open file %s.\n", FILE_NAME);
+   204	    report_and_die(error_msg);
+   205	  }
+   206	
+   207	  /* Write some data. */
+   208	  int n[ ] = { 9, 7, 5, 3, 1 };
+   209	  int read_in[5 * sizeof(int)];
+   210	
+   211	  int flag = write(file_descriptor, n, sizeof(n));
+   212	  if (flag == bad_io) {
+   213	    sprintf(error_msg, "Couldn't write to file %s.\n", FILE_NAME);
+   214	    report_and_die(error_msg);
+   215	  }
+   216	  
+   217	  flag = close(file_descriptor);
+   218	  if (flag == bad_io) {
+   219	    sprintf(error_msg, "Couldn't close file %s.\n", FILE_NAME);
+   220	    report_and_die(error_msg);
+   221	  }
+   222	  
+   223	  ssize_t in_flag = read(file_descriptor, read_in, sizeof(read_in));
+   224	  
+   225	  if (in_flag == bad_io) {
+   226	    sprintf(error_msg, "Couldn't read from file %s.\n", FILE_NAME);
+   227	    report_and_die(error_msg);
+   228	  }
+   229	
+   230	  file_descriptor = open(FILE_NAME, O_RDONLY, 0);
+   231	  if (file_descriptor == bad_io) {
+   232	    sprintf(error_msg, "Couldn't open file %s for reading.\n", FILE_NAME);
+   233	    report_and_die(error_msg);
+   234	  }
+   235	
+   236	  flag = read(file_descriptor, read_in, sizeof(read_in));
+   237	  
+   238	  return 0;
+   239	}
+   240	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   241	
+   242	#include <stdio.h>
+   243	#include <stdlib.h>
+   244	
+   245	#define FileName "test.out"
+   246	
+   247	int main() {
+   248	  FILE *fptr;
+   249	  char  string[80];
+   250	  int   n;
+   251	
+   252	  if((fptr = fopen(FileName, "w")) == 0) { 
+   253	    printf("Can't open file.\n");
+   254	    exit(-1);
+   255	  }
+   256	  
+   257	  printf("Enter a string and a number: ");
+   258	  fscanf(stdin, "%s%d", string, &n); /* read from keyboard */
+   259	
+   260	  fprintf(fptr, "%s %d", string, n); /* write to the file */
+   261	  fclose(fptr); 
+   262	
+   263	  if((fptr = fopen(FileName, "r")) == 0) {
+   264	    printf("Cannot open file.\n");
+   265	    exit(-1);
+   266	  }
+   267	
+   268	  fscanf(fptr, "%s%d", string, &n);      /* read from file */
+   269	  fprintf(stdout, "%s %d\n", string, n); /* print to screen */
+   270	  fclose(fptr);
+   271	
+   272	  return 0;
+   273	}
+   274	

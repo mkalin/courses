@@ -1,0 +1,232 @@
+     1	                            CSC 373: Computer Systems 1
+     2	                                 Homework #2
+     3	
+     4	Points: 100
+     5	Due: Before midnight, Tuesday, June 27
+     6	
+     7	Problem 1:                            
+     8	
+     9	  Machine M is byte addressable. Below are memory addresses starting at
+    10	  address 100. Next to the address is its contents, shown in signed 
+    11	  decimal. So the first entry represents that memory cell 100 holds -1,
+    12	  which will written as
+    13	
+    14	                 RAM[100] == -1 
+    15	
+    16	  Assume that all arithmetic operations are done at the byte level.
+    17	
+    18	  Addressing Modes through examples:
+    19	
+    20	    Memory Direct:      ADD 100, 101, 105    ;; RAM[105] = RAM[100] + RAM[101]
+    21	  
+    22	    Immediate:          ADD $10, 101, 104    ;; RAM[104] = 10 + RAM[101]
+    23	
+    24	    Memory Indirect:    SUB $10, @102, 104   ;; RAM[104] = 10 - RAM[RAM[102]]
+    25	                                             ;;          = 10 - 101
+    26	
+    27	    Displacement:       ADD 2(101), $10, 104 ;; RAM[104] = RAM[101 + 2] + 10
+    28	                                             ;;          = 31 + 10
+    29	                                             ;; displacements can be negative or
+    30	                                             ;; positive
+    31	
+    32	    The addressing modes can be combined. In particular, in a displacement
+    33	    address, the base address could be, for example, (101) or (@101).
+    34	========================================================================================
+    35	
+    36	  Memory   Contents
+    37	  Address
+    38	  
+    39	   100       -1
+    40	   101        2
+    41	   102      106
+    42	   103       31
+    43	   104        4
+    44	   105       56
+    45	   106      101
+    46	   107       18
+    47	   108      105
+    48	   109      102
+    49	   110        3
+    50	
+    51	 Show the contents of RAM after the following short pseudo-assembler program
+    52	 executes. ADD signifies addition, SUB signifies subtraction, and MOV signifies
+    53	 copy (for instance, the instruction "MOV 100, 101" would copy the contents of
+    54	 RAM[100] into RAM[101], leaving RAM[100] unchanged). The three instructions 
+    55	 accept mixes of instruction modes. To begin, RAM is as shown above.
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	 Here's the pseudo-assembler program, which executes from the first instruction 
+    63	 through the last, HALT. The HALT instruction does not impact RAM.
+    64	
+    65	 SUB @106, -2(104), 110
+    66	 MOV 102, 104
+    67	 ADD 110, 2(@102), 110
+    68	 SUB $110, 110, 110
+    69	 ADD 6(101), -2(104), -4(104) 
+    70	 HALT
+    71	/********************************************************************************/
+    72	
+    73	Problem 2:
+    74	
+    75	IA32 uses certain conventions with respect to registers. The registers
+    76	
+    77	             %eax %edx %ecx
+    78	
+    79	are "caller save" registers, whereas the registers
+    80	
+    81	             %ebx %edi %esi
+    82	
+    83	are "callee save" registers.
+    84	
+    85	Example to illustrate:
+    86	
+    87	        /* assume callee needs three registers */
+    88	        int callee(int n1, int n2) {
+    89	           int temp = n1 * n2;
+    90	           return temp - (n1 + n2);
+    91	        }
+    92	
+    93	        void caller() {
+    94	           int a = 4;
+    95	           int b = 8;
+    96	           int c = callee(a, b);
+    97	           /*...*/
+    98	        }
+    99	
+   100	When caller calls callee, callee does not need to worry about overwriting
+   101	the "caller save" registers (for instance, %eax). The system ensures that
+   102	any data that caller required and that happened to be stored in these
+   103	"caller save" registers would be saved and restored for caller. However,
+   104	if callee were to overwrite any of the "callee save" registers (for instance,
+   105	%ebx), then callee first must save the current contents of any such 
+   106	register and then restore the contents before returning. Assume, in the
+   107	above example, that caller and callee each requires registers for its local
+   108	int variables, parameters, and return value.
+   109	
+   110	Do a register assignment that follows the "caller save" and "callee save"
+   111	conventions. In other words, indicate which C variable's value would be
+   112	stored in which register. You do not need to show how the computation would
+   113	occur at the assembler level. You do need to indicate the register in which
+   114	callee's return value would be stored.
+   115	/******************************************************************************/
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	Problem 3: Document the assembler below. A detailed explanation follows.
+   123	
+   124	/* This function is called no_op ("no operation" or NOP in assembler) 
+   125	   because it does no useful work, as the return of void indicates.
+   126	   Anyway, below the C function is the label
+   127	
+   128	             _no_op:
+   129	
+   130	   that begins the non-optimized assembler, which implements the C
+   131	   code. The problem here is to document each line of the assembler.
+   132	   I've started by doing the first two and the last two.
+   133	   
+   134	   The early sections in Chapter 3 go over the assembler in detail. 
+   135	   P. 144 has a table of the instructions. The book's index is also
+   136	   helpful. For example, the instruction leal (Load Effective Address Long),
+   137	   which we'll go over in class, is explained on p. 143.
+   138	
+   139	   My comments are a bit wordy. The idea is to document to the stardard
+   140	   expectation: someone can understand what the code does merely by reading
+   141	   the documentation and without studying the code itself. There's no need
+   142	   to document the C code, only the assembler.
+   143	
+   144	   Quick review of asm:
+   145	
+   146	      -- $8 signifies immediate addressing so $8 means "the value 8"
+   147	      
+   148	      -- 12(%ebp) is an example of displacement addressing with
+   149	         %ebp as the base address and +12 as the offset (note that
+   150	         some displacements are negative)
+   151	
+   152	      -- keep in mind that the IA32 stack grows "downwards," that is,
+   153	         from high addresses to low addresses. So a negative displacement
+   154	         takes you to a higher address and a negative displacement takes
+   155	         you to a lower addresses:
+   156	                                       High Addresses
+   157	
+   158	            P + n, n >= 1               ---->
+   159	
+   160	            P, some point on the stack  ----> 
+   161	
+   162	            P - n, n >= 1               ---->
+   163	
+   164	                                       Low Addresses
+   165	
+   166	*/
+   167	   
+   168	
+   169	
+   170	
+   171	
+   172	
+   173	
+   174	
+   175	
+   176	
+   177	
+   178	
+   179	
+   180	
+   181	
+   182	void no_op(int a, int b) {
+   183	    int y = 5;
+   184	    int z = 9; 
+   185	    y += b;
+   186	    z += a;
+   187	    return;
+   188	}
+   189	
+   190	_no_op:
+   191	 pushl %ebp                ;; save the base pointer (call frame pointer) from
+   192	                           ;; the caller, that is, the function that calls no_op
+   193	                      
+   194	 movl %esp, %ebp           ;; create a new call frame by setting %ebp to TOP
+   195	
+   196	 subl $8, %esp     
+   197	 movl $5, -4(%ebp) 
+   198	 movl $9, -8(%ebp)     
+   199	 movl 12(%ebp), %edx   
+   200	 leal -4(%ebp), %eax   
+   201	 addl %edx, (%eax)
+   202	 movl 8(%ebp), %edx
+   203	 leal -8(%ebp), %eax
+   204	 addl %edx, (%eax)
+   205	
+   206	 leave           ;; restore the call frame pointer (%ebp) and the
+   207	                 ;; stack pointer (%esp) to their values before the
+   208	                 ;; call to no_op. In effect, leave is equivalent to
+   209	                 ;;
+   210	                 ;;  movl %ebp, %esp  ;; set TOP to start of this call frame
+   211	                 ;;  popl %ebp        ;; restore the saved %ebp, thereby setting
+   212	                                      ;; TOP to the end of the caller's 
+   213	                                      ;; current call frame. Now new items
+   214	                                      ;; can be added to the caller's stack frame
+   215	
+   216	 ret             ;; return control to the caller of no_op
+   217	                 ;; when the caller invoked 
+   218	                 ;;
+   219	                 ;;     call no_op
+   220	                 ;;     <next instruction in caller>
+   221	                 ;;
+   222	                 ;; the call instruction pushes the address of the next 
+   223	                 ;; caller instruction onto the stack. The ret instruction
+   224	                 ;; pops this address off the stack so that the caller
+   225	                 ;; now can resume execution.
+   226	
+   227	
+   228	
+   229	
+   230	
+   231	
+   232	  

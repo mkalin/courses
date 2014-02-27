@@ -1,0 +1,466 @@
+                             CSC 373/406: Systems 1
+                                 Homework #2
+
+Points: 100
+Due: Before midnight, Tuesday, July 2
+
+Grading rubric: 
+
+There are 6 problems, the first four of which are worth 20 
+points apiece; problems 5 and 6 are worth 10 points apiece.
+The rubric is on a per-problem basis, as the problems are quite
+different.
+
+Problem 1: All 20 points are for the explanation, which needs to
+to be clear, precise, and convincing. The question should be 
+addressed directly: What, exactly, will happen during execution
+if the extern variable state were auto instead?
+
+Problem 2: There are basically two parts. The first is to determine what the
+compiler does with respect to register assignment. The second is to assess
+the compiler's work. For example, does the compiler seem to do such a good
+job that no improvement can be made? If not, what sort of improvement could be
+made? Assessing the compiler's work is worth 5 points; reasons for the 
+assessment are worth 15 points.
+
+Problem 3: Sample documentation is in place for most of the IA-32 statements.
+The problem is to document the rest. The documentation should be precise.
+For example, consider this C code:
+
+  int x = 1;
+  int y = 2;
+  int t = x;
+  x = y;
+  y = t;
+
+Here's precise documentation:
+
+  int x = 1;  /* store 1 in x */
+  int y = 2;  /* store 2 in y */
+  int t = x;  /* copy x's value, 1, into t */
+  x = y;      /* copy y's value, 2, into x */
+  y = t;      /* copy t, which is x's original value, into y:
+                 x and y have swapped values */
+
+Problem 4: The problem is to write a C program that prints out
+a 3-dimensional array twice, each time as if it were a 1-dimensional
+array. To print out a 1-dimensional array requires no nested loops; 
+hence, no nested loops should be used in printing out the array
+either left to right or right to left. Your code should be added to
+my code and called in some appropriate way. My original code should
+be left as is. The revised code must compile with the command:
+
+     gcc HwkCode.c    ;; unixy system
+     gcc-3 HwkCode.c  ;; windows
+
+The name of the C file is arbitrary, of course. The important point
+is that the code must be C, not C++. There is no credit if the compilation 
+does not produce an executable. If the code executes as required, 
+there are no deductions for "coding style" so long as nested looping is not
+used. The code should be documented (5 points).
+
+Problem 5: The answer should trace, in some easy-to-understand way,
+how each of the five instructions impacts memory, that is, how the
+contents of a memory location change. At the end, the contents of the
+final contents should be shown.
+
+Problem 6: Document the function swap, explain in general what it does.
+(By "in general" is meant what does the function do to any two arrays
+passed to it?). Also document the lines in the swap function.
+       
+;;;;
+
+Problem 1: Here's the recursive "Hello, world!" program that we looked at in class:
+
+                        
+#include <stdio.h>
+
+/* global variables: shared among all calls to all functions 
+   in this file.
+*/
+char* greeting_pieces[ ] = {"Hello", ",", " world", "!"};
+int state = 4; /* number of strings in array greeting_pieces */
+
+int main() {
+  if (--state < 0) return 0;        /* decrement status & return to invoker */
+
+  int i = state;                    /* make a local copy of status */
+
+  main();                           /* recursively invoke main */
+  printf("%s", greeting_pieces[i]); /* print your greeting piece */
+
+  return 0;
+}
+/* end of source code */
+
+The variable named state occurs outside of main (right above main, in fact) and is
+called "extern" in C. If the variable state were inside main (as, for example, the 
+int variable i is inside main), then state would be "auto" rather than "extern." 
+
+Why must state be extern for this example to work? In different words, what's the
+problem with making it auto?
+;;;;
+
+
+Problem 2. IA32 uses certain conventions with respect to registers. The registers
+
+             %eax %edx %ecx
+
+are "caller save" registers, whereas the registers
+
+             %ebx %edi %esi
+
+are "callee save" registers.
+
+
+
+
+
+
+
+
+Example to illustrate:
+
+        /* assume callee needs three registers */
+        int callee(int n1, int n2) {
+           int temp = n1 * n2;
+           return temp - (n1 + n2);
+        }
+
+        void caller() {
+           int a = 4;
+           int b = 8;
+           int c = callee(a, b);
+           /*...*/
+        }
+
+When caller calls callee, callee does not need to worry about overwriting
+the "caller save" registers (for instance, %eax). The system ensures that
+any data that caller required and that happened to be stored in these
+"caller save" registers would be saved and restored for caller. However,
+if callee were to overwrite any of the "callee save" registers (for instance,
+%ebx), then callee first must save the current contents of any such 
+register and then restore the contents before returning. Assume, in the
+above example, that caller and callee each requires registers for its local
+int variables, parameters, and return value.
+
+Do a register assignment that follows the "caller save" and "callee save"
+conventions. In other words, indicate which C variable's value would be
+stored in which register. You do not need to show how the computation would
+occur at the assembler level. You do need to indicate the register in which
+callee's return value would be stored.
+
+To begin, see what gcc would do with respect to register assignment and
+then determine whether you can do better. If the C file is foo.c, then
+the compile command is:
+
+   gcc -S foo.c
+;;;;
+
+
+Problem 3: Document the assembler below. A detailed explanation follows.
+
+/* This function is called no_op ("no operation" or NOP in assembler) 
+   because it does no useful work, as the return of void indicates.
+   Anyway, below the C function is the label
+
+             _no_op:
+
+   that begins the non-optimized assembler, which implements the C
+   code. The problem here is to document each line of the assembler.
+   I've started by doing the first two and the last two.
+   The early sections in Chapter 3 go over the assembler in detail. 
+   P. 144 has a table of the instructions. The book's index is also
+   helpful. For example, the instruction leal (Load Effective Address Long),
+   which we'll go over in class, is explained on p. 143.
+
+   My comments are a bit wordy. The idea is to document to the stardard
+   expectation: someone can understand what the code does merely by reading
+   the documentation and without studying the code itself. There's no need
+   to document the C code, only the assembler.
+
+   Quick review of asm:
+
+      -- $8 signifies immediate addressing so $8 means "the value 8"
+      
+      -- 12(%ebp) is an example of displacement addressing with
+         %ebp as the base address and +12 as the offset (note that
+         some displacements are negative)
+
+      -- keep in mind that the IA32 stack grows "downwards," that is,
+         from high addresses to low addresses. So a negative displacement
+         takes you to a higher address and a negative displacement takes
+         you to a lower addresses:
+                                       High Addresses
+
+            P + n, n >= 1               ---->
+
+            P, some point on the stack  ----> 
+
+            P - n, n >= 1               ---->
+
+                                       Low Addresses
+
+*/
+   
+void no_op(int a, int b) {
+    int y = 5;
+    int z = 9; 
+    y += b;
+    z += a;
+    return;
+}
+
+_no_op:
+ pushl %ebp                ;; save the base pointer (call frame pointer) from
+                           ;; the caller, that is, the function that calls no_op
+                      
+ movl %esp, %ebp           ;; create a new call frame by setting %ebp to TOP
+
+ subl $8, %esp     
+ movl $5, -4(%ebp) 
+ movl $9, -8(%ebp)     
+ movl 12(%ebp), %edx   
+ leal -4(%ebp), %eax   
+ addl %edx, (%eax)
+ movl 8(%ebp), %edx
+ leal -8(%ebp), %eax
+ addl %edx, (%eax)
+
+ leave           ;; restore the call frame pointer (%ebp) and the
+                 ;; stack pointer (%esp) to their values before the
+                 ;; call to no_op. In effect, leave is equivalent to
+                 ;;
+                 ;;  movl %ebp, %esp  ;; set TOP to start of this call frame
+                 ;;  popl %ebp        ;; restore the saved %ebp, thereby setting
+                                      ;; TOP to the end of the caller's 
+                                      ;; current call frame. Now new items
+                                      ;; can be added to the caller's stack frame
+
+
+
+ ret             ;; return control to the caller of no_op
+                 ;; when the caller invoked 
+                 ;;
+                 ;;     call no_op
+                 ;;     <next instruction in caller>
+                 ;;
+                 ;; the call instruction pushes the address of the next 
+                 ;; caller instruction onto the stack. The ret instruction
+                 ;; pops this address off the stack so that the caller
+                 ;; now can resume execution.
+;;;;
+
+
+Problem 4: Here's a C program with the assignment in the documentation.
+
+/*  
+   This program populates a 3-dimensional array with randomly generated
+   integers and prints them out.
+
+   The exercise is to write the code that treats the 3-dimensional array 
+   as if it were a 1-dimensional array, which is how the system actually
+   stores the array. Your code should print the array out twice: left to
+   right and right to left, that is, in regular order and then in reverse
+   order. For example, if the 10 is the first number and 87 is the last,
+   one print out would be
+
+   10,...,87
+
+   and the other would be
+
+   87,...,10
+
+   In treating the 3-dimensional array as a 1-dimensional array, you won't
+   need nested loops of the sort that I have in the function dump. Your
+   code will look more like
+
+   for (...)
+      printf("%i ",...);
+
+   You're free to use a while loop if you prefer, of course. The key thing
+   is that your two print outs won't require nested loops.
+
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define Mod (100) /* limit numbers to small ones */
+
+/* print the contents of a 3-dimensional int array */
+void dump(int a[][2][3]) {
+  int i, j, k;
+  for (i = 0; i < 3; i++) {
+    printf("\n");
+    for (j = 0; j < 2; j++) {
+      printf("\n");
+      for (k = 0; k < 3; k++)
+	printf("%i ", a[i][j][k]);
+    }
+  }	
+  printf("\n");
+}
+
+int main() {
+  /* If you want always to get the same numbers,
+     comment out the next line.
+
+     If you want different numbers each time,
+     leave the next line as is.
+  */
+  srand(time(0)); /* seed the random number generator */
+
+  int array3[3][2][3];
+  int i, j, k;
+
+  /* fill the 3-dimensional array with random numbers */
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 2; j++)
+      for (k = 0; k < 3; k++)
+	array3[i][j][k] = rand() % Mod;
+
+  /* print out the array */
+  dump(array3);
+  
+  return 0;
+}
+;;;;
+
+Problem 5:
+
+  Machine M is byte addressable. Below are memory addresses starting at
+  address 100. Next to the address is its contents, shown in signed 
+  decimal. So the first entry represents that memory cell 100 holds -1,
+  which will written as
+
+                 RAM[100] == -1 
+
+  Assume that all arithmetic operations are done at the byte level.
+
+
+
+
+
+  Addressing Modes through examples:
+
+    Memory Direct:      ADD 100, 101, 105    ;; RAM[105] = RAM[100] + RAM[101]
+  
+    Immediate:          ADD $10, 101, 104    ;; RAM[104] = 10 + RAM[101]
+
+    Memory Indirect:    SUB $10, @102, 104   ;; RAM[104] = 10 - RAM[RAM[102]]
+                                             ;;          = 10 - 101
+
+    Displacement:       ADD 2(101), $10, 104 ;; RAM[104] = RAM[101 + 2] + 10
+                                             ;;          = 31 + 10
+                                             ;; displacements can be negative or
+                                             ;; positive
+
+    The addressing modes can be combined. In particular, in a displacement
+    address, the base address could be, for example, (101) or (@101).
+========================================================================================
+
+  Memory   Contents
+  Address
+  
+   100       -1
+   101        2
+   102      106
+   103       31
+   104        4
+   105       56
+   106      101
+   107       18
+   108      105
+   109      102
+   110        3
+
+ Show the contents of RAM after the following short pseudo-assembler program
+ executes. ADD signifies addition, SUB signifies subtraction, and MOV signifies
+ copy (for instance, the instruction "MOV 100, 101" would copy the contents of
+ RAM[100] into RAM[101], leaving RAM[100] unchanged). The three instructions 
+ accept mixes of instruction modes. To begin, RAM is as shown above.
+ Here's the pseudo-assembler program, which executes from the first instruction 
+ through the last, HALT. The HALT instruction does not impact RAM.
+
+ SUB @106, -2(104), 110
+ MOV 102, 104
+ ADD 110, 2(@102), 110
+ SUB $110, 110, 110
+ ADD 6(101), -2(104), -4(104) 
+ HALT
+  
+
+
+
+
+
+
+
+
+
+
+
+
+Problem 6
+
+#include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
+
+#define SIZE (16)
+
+/*
+  This program can be compiled and executed in the usual way.
+  The function main is documented but the function swap is not.
+  Document swap in two ways:
+   -- Explain what it does in general.
+   -- Document each line within the for loop.
+
+  Don't remove or edit any of my code but feel free to add 
+  any code that you like.
+ */
+void swap(int* p1, int* p2) {
+  int i;
+  for (i = 0; i < SIZE; i++) {
+    int n = *p1;
+    *p1 = *p2;
+    *p2 = n;
+    p1++;
+    p2--;
+  }
+}
+
+int main() {
+  srand(time(0));
+  int a1[SIZE];
+  int a2[SIZE];
+  int i;
+
+  /* Populate arrays. */
+  for (i = 0; i < SIZE; i++) {
+    a1[i] = rand() % 100;
+    a2[i] = rand() % 100;
+  }
+  /* Do a swap. */
+  swap(a1, a2 + SIZE - 1);
+
+  return 0;
+}

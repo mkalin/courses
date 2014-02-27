@@ -1,0 +1,501 @@
+     1	/* arrays, structs, and alignment issues */
+     2	
+     3	#include <stdio.h>
+     4	
+     5	void array_stuff();     /* declaration */
+     6	void struct_stuff();    /* declaration */
+     7	void function_stuff();  /* declaration */
+     8	
+     9	int main() {
+    10	  array_stuff();
+    11	  struct_stuff();
+    12	  function_stuff();
+    13	  return 0;
+    14	}
+    15	
+    16	void array_stuff() {
+    17	  /* First, a quick look at how N-dimensional arrays are stored.
+    18	     A "table" or "matrix" is a 2-dimensional array, whereas a
+    19	     "vector" is a 1-dimensional array. However, at the implemenation
+    20	     level 1-dimensional and multi-dimensional arrays are laid out the
+    21	     same way --- as contiguous elements in memory. In C, a table or
+    22	     matrix is stored in "row major" order. In this example, the first
+    23	     row consists of 1 and 2 and the first column consists of 1, 3, and
+    24	     5; hence, the C layout is 1 2 3 4 5 6 rather than 1 3 5 2 4 6.
+    25	  */
+    26	  int table[3][2] =
+    27	    { {1, 2},
+    28	      {3, 4},
+    29	      {5, 6}
+    30	    };
+    31	  int i, j;
+    32	
+    33	  /* cast because table's type is "pointer to an array of arrays." */
+    34	  int* ptr = (int*) table;
+    35				      
+    36	  /* normal way to access elements: row-major order in IA32 */
+    37	  for (i = 0; i < 3; i++)
+    38	    for (j = 0; j < 2; j++)
+    39	      printf("table[%i][%i] == %i\n", i, j, table[i][j]);
+    40	  /* output:
+    41	     
+    42	     table[0][0] == 1
+    43	     table[0][1] == 2
+    44	     table[1][0] == 3
+    45	     table[1][1] == 4
+    46	     table[2][0] == 5
+    47	     table[2][1] == 6
+    48	  */
+    49	
+    50	
+    51	
+    52	
+    53	
+    54	
+    55	
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	  /* treating an N-dimensional array as a 1-dimensional array */
+    63	  printf("\n");
+    64	  for (i = 0; i < (3 * 2); i++) 
+    65	    printf("table[%i] == %i\n", i, ptr[i]);
+    66	   /* output:
+    67	
+    68	     table[0] == 1
+    69	     table[1] == 2
+    70	     table[2] == 3
+    71	     table[3] == 4
+    72	     table[4] == 5
+    73	     table[5] == 6
+    74	  */
+    75	
+    76	  /* "ragged" arrays */
+    77	  char* ragged[5]; /* ragged has four pointers to arrays */
+    78	
+    79	  char a1[ ] = {'a', 'b', '\0'};
+    80	  ragged[0] = a1;
+    81	
+    82	  char a2[ ] = {'1', '2', '3', '\0'};
+    83	  ragged[1] = a2;
+    84	
+    85	  char a3[ ] = {'A', '\0'};
+    86	  ragged[2] = a3;
+    87	
+    88	  char a4[ ] = {'p', 'q', 'r', 's', '\0'};
+    89	  ragged[3] = a4;
+    90	
+    91	  ragged[4] = 0; /* NULL */
+    92	
+    93	  i = 0;
+    94	  while (ragged[i]) {  /* non-zero is true, NULL is 0 == false */
+    95	    j = 0;
+    96	    while (ragged[i][j] != '\0') {
+    97	      printf("%c ", ragged[i][j++]);
+    98	    }
+    99	    printf("\n"); /* could be printf('\n'); */
+   100	    i++;
+   101	  }
+   102	  /* output:
+   103	
+   104	     a b
+   105	     1 2 3
+   106	     A
+   107	     p q r s
+   108	  */
+   109	}
+   110	
+   111	
+   112	
+   113	
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	void struct_stuff() {
+   123	  struct Sample {
+   124	    int n1;   /* 4 bytes */
+   125	    char c;   /* 1 byte */
+   126	    int n2;   /* 4 bytes */
+   127	  };
+   128	
+   129	  /* code to illustrate use */
+   130	  struct Sample* ptr_s1 = malloc(sizeof(struct Sample));
+   131	  ptr_s1->n1 = 1;
+   132	  ptr_s1->c = 'A';
+   133	  ptr_s1->n2 = 2;
+   134	  (*ptr_s1).n2 += 4; /* same as ptr_s1->n2 += 4 */
+   135	  free(ptr_s1);
+   136	
+   137	  printf("A struct Sample instance requires %d bytes\n",
+   138		 sizeof(struct Sample));
+   139	  /* Output on my Linux box: A struct Sample instance requires 12 bytes */
+   140	
+   141	  /* layout issues:
+   142	                              
+   143	                      Bytes:     4       1      4
+   144	     Minimalist possibility: +--------+----+--------+
+   145	                             |  n1    |  c |   n2   |
+   146	                             +--------+----+--------+
+   147	
+   148	     If you disassemble struct Sample, you'll likely see the pertinent 
+   149	     assembler begins with the directive
+   150	
+   151	         .align 4
+   152	
+   153	     The directive means that the struct's fields are laid out in memory
+   154	     on DW0RD (that is, 4-byte) boundaries. So the picture becomes
+   155	
+   156	                                4        4        4
+   157	                            +--------+--------+--------+
+   158	                            |   n1   |   c    |   n2   |
+   159	                            +--------+--------+--------+
+   160	
+   161	     This layout "wastes" 3 bytes, as the char requires only 4; but the
+   162	     resulting processing is simpler in that memory fetches are always from
+   163	     addresses on DWORD boundaries.
+   164	  */
+   165	}
+   166	
+   167	
+   168	
+   169	
+   170	
+   171	
+   172	
+   173	
+   174	
+   175	
+   176	
+   177	
+   178	
+   179	
+   180	
+   181	
+   182	int f(int n) {          /* definition */
+   183	  return n * 2 + 1;
+   184	}
+   185	
+   186	void function_stuff() {
+   187	  int ans;
+   188	  struct Object {
+   189	    int id;
+   190	    int (*method)(int);
+   191	  };
+   192	  typedef struct Object Obj;
+   193	
+   194	  Obj obj1;
+   195	  obj1.id = 1234;
+   196	  obj1.method = f;
+   197	
+   198	  ans = (*obj1.method)(25);  /* technically correct */
+   199	  ans = obj1.method(27);     /* now allowed in standard C */
+   200	  printf("%i\n", ans);  
+   201	}
+   202	#include <stdio.h>
+   203	#include <string.h>
+   204	#include <stdlib.h>
+   205	
+   206	#define MaxName (60)
+   207	#define MaxString (250)
+   208	
+   209	typedef unsigned int bool;
+   210	enum truth_values { false = 0, true }; 
+   211	
+   212	typedef struct Emp {
+   213	  unsigned char lname[MaxName + 1]; /* + 1 for '\0' */
+   214	  unsigned char fname[MaxName + 1];
+   215	  unsigned int  id;
+   216	  unsigned char dept;
+   217	  bool          married;
+   218	} Emp; /* on a straight count, 131 bytes */
+   219	
+   220	void set_name(char* target, char* source) {
+   221	  if (strlen(source) > MaxName) return;
+   222	  strcpy(target, source);
+   223	}
+   224	
+   225	void set_id(unsigned int* id_ptr) {
+   226	  *id_ptr = rand();
+   227	}
+   228	
+   229	void set_dept(unsigned char* dept_ptr, unsigned char code) {
+   230	  *dept_ptr = code;
+   231	}
+   232	
+   233	void set_married(unsigned int* married, unsigned int status) {
+   234	  *married = status;
+   235	}
+   236	
+   237	
+   238	
+   239	
+   240	
+   241	
+   242	/* safest */
+   243	void to_string(Emp* this, char* buffer) {
+   244	  unsigned char temp[32];
+   245	
+   246	  printf("\n** Employee information **");
+   247	  
+   248	  strcpy(buffer, "");
+   249	
+   250	  strcat(buffer, "\nLast name:   "); 
+   251	  strcat(buffer, this->lname);
+   252	  strcat(buffer, "\nFirst name:  ");
+   253	  strcat(buffer, this->fname);  
+   254	
+   255	  sprintf(temp, "%i", this->id);
+   256	  strcat(buffer, "\nEmployee id: ");
+   257	  strcat(buffer, temp);
+   258	
+   259	  sprintf(temp, "%c", this->dept);
+   260	  strcat(buffer, "\nDepartment:  ");
+   261	  strcat(buffer, temp);
+   262	
+   263	  strcat(buffer, "\nMarried?:    ");
+   264	  if (this->married) 
+   265	    strcat(buffer, "yes");
+   266	  else
+   267	    strcat(buffer, "no");
+   268	}
+   269	
+   270	/* ok */
+   271	unsigned char* to_string2(Emp* this) {
+   272	  unsigned char temp[256];
+   273	
+   274	  char* buffer = malloc(256);
+   275	
+   276	  printf("\n** Employee information **");
+   277	  
+   278	  strcpy(buffer, "");
+   279	
+   280	  strcat(buffer, "\nLast name:   "); 
+   281	  strcat(buffer, this->lname);
+   282	  strcat(buffer, "\nFirst name:  ");
+   283	  strcat(buffer, this->fname);  
+   284	
+   285	  sprintf(temp, "%i", this->id);
+   286	  strcat(buffer, "\nEmployee id: ");
+   287	  strcat(buffer, temp);
+   288	
+   289	  sprintf(temp, "%c", this->dept);
+   290	  strcat(buffer, "\nDepartment:  ");
+   291	  strcat(buffer, temp);
+   292	
+   293	  strcat(buffer, "\nMarried?:    ");
+   294	  if (this->married) 
+   295	    strcat(buffer, "yes");
+   296	  else
+   297	    strcat(buffer, "no");
+   298	  return buffer;
+   299	}
+   300	
+   301	
+   302	/* DIASTER: never do this! (gcc compiler issues warning.) */
+   303	unsigned char* to_string3(Emp* this) {
+   304	  unsigned char buffer[256];
+   305	  unsigned char temp[32];
+   306	
+   307	  printf("\n** Employee information **");
+   308	  
+   309	  strcpy(buffer, "");
+   310	
+   311	  strcat(buffer, "\nLast name:   "); 
+   312	  strcat(buffer, this->lname);
+   313	  strcat(buffer, "\nFirst name:  ");
+   314	  strcat(buffer, this->fname);  
+   315	
+   316	  sprintf(temp, "%i", this->id);
+   317	  strcat(buffer, "\nEmployee id: ");
+   318	  strcat(buffer, temp);
+   319	
+   320	  sprintf(temp, "%c", this->dept);
+   321	  strcat(buffer, "\nDepartment:  ");
+   322	  strcat(buffer, temp);
+   323	
+   324	  strcat(buffer, "\nMarried?:    ");
+   325	  if (this->married) 
+   326	    strcat(buffer, "yes");
+   327	  else
+   328	    strcat(buffer, "no");
+   329	
+   330	  return buffer;
+   331	}
+   332	
+   333	void dump_addresses(Emp* emp) {
+   334	  printf("Address of Emp:     %p (%u)\n", emp, emp);
+   335	  printf("Address of lname:   %p (%u)\n", emp->lname, emp->lname);
+   336	  printf("Address of fname:   %p (%u)\n", emp->fname, emp->fname);
+   337	  printf("Address of id:      %p (%u)\n", &emp->id, &emp->id);
+   338	  printf("Address of dept:    %p (%u)\n", &emp->dept, &emp->dept);
+   339	  printf("Address of married: %p (%u)\n", &emp->married, &emp->married);
+   340	}
+   341	
+   342	int main() {
+   343	  /* Seed the pseudo-random number generator with the current time. 
+   344	     An Emp's id is set to a pseudo-random number. */
+   345	  srand(time(0)); 
+   346	
+   347	  Emp fred;
+   348	  /* sizeof(fred) also would work. */
+   349	  printf("sizeof(Emp) is %i\n", sizeof(Emp)); /* 136 on my system */
+   350	
+   351	  dump_addresses(&fred);
+   352	  /* on my system:
+   353	
+   354	     Address of Emp:     0xbff7b1a0 (3220681120)
+   355	     Address of lname:   0xbff7b1a0 (3220681120)
+   356	     Address of fname:   0xbff7b1dd (3220681181)
+   357	     Address of id:      0xbff7b21c (3220681244)
+   358	     Address of dept:    0xbff7b220 (3220681248)
+   359	     Address of married: 0xbff7b224 (3220681252)
+   360	  */
+   361	
+   362	  /* Give fred's properties some values */
+   363	  set_name(fred.lname, "Flintstone");
+   364	  set_name(fred.fname, "Fred");
+   365	  set_id(&fred.id);
+   366	
+   367	  set_dept(&fred.dept, 'Z');
+   368	  set_married(&fred.married, true);
+   369	
+   370	  /* preferred to_string */
+   371	  unsigned char buffer[256];
+   372	  to_string(&fred, buffer);
+   373	  printf("%s\n", buffer);
+   374	  /* output:
+   375	
+   376	      ** Employee information **
+   377	      Last name:   Flintstone
+   378	      First name:  Fred
+   379	      Employee id: 2084589247
+   380	      Department:  Z
+   381	      Married?:    yes 
+   382	  */
+   383	
+   384	  /* to_string2: same output as above */
+   385	  unsigned char* ptr = to_string2(&fred);
+   386	  printf("%s\n", ptr);
+   387	  free(ptr);  /* critical */
+   388	
+   389	  /* to_string3: if it doesn't crash, it's pure luck.
+   390	     (In this case, it's because nothing is called 
+   391	     after to_string3.)
+   392	  */
+   393	  printf("%s\n", to_string3(&fred));
+   394	  
+   395	  return 0;
+   396	}
+   397	
+   398	/*
+   399	
+   400	-falign-functions=n  
+   401	-falign-jumps=n 
+   402	-falign-labels=n  
+   403	-falign-loops=n 
+   404	-fbranch-probabilities
+   405	-fprofile-values 
+   406	-fvpt -fbranch-target-load-optimize 
+   407	-fbranch-target-load-optimize2
+   408	-fcaller-saves  
+   409	-fcprop-registers 
+   410	-fcse-follow-jumps  
+   411	-fcse-skip-blocks  
+   412	-fdata-sections 
+   413	-fdelayed-branch  
+   414	-fdelete-null-pointer-checks 
+   415	-fexpensive-optimizations  
+   416	-ffast-math
+   417	-ffloat-store 
+   418	-fforce-addr  
+   419	-fforce-mem  
+   420	-ffunction-sections 
+   421	-fgcse  
+   422	-fgcse-lm  
+   423	-fgcse-sm
+   424	-fgcse-las  
+   425	-floop-optimize 
+   426	-fcrossjumping  
+   427	-fif-conversion  
+   428	-fif-conversion2 
+   429	-finline-functions  
+   430	-finline-limit=n  
+   431	-fkeep-inline-functions 
+   432	-fkeep-static-consts  
+   433	-fmerge-constants
+   434	-fmerge-all-constants 
+   435	-fmove-all-movables  
+   436	-fnew-ra  
+   437	-fno-branch-count-reg 
+   438	-fno-default-inline
+   439	-fno-defer-pop 
+   440	-fno-function-cse  
+   441	-fno-guess-branch-probability 
+   442	-fno-inline  
+   443	-fno-math-errno
+   444	-fno-peephole  
+   445	-fno-peephole2 
+   446	-funsafe-math-optimizations  
+   447	-ffinite-math-only 
+   448	-fno-trapping-math  
+   449	-fno-zero-initialized-in-bss 
+   450	-fomit-frame-pointer  
+   451	-foptimize-register-move 
+   452	-foptimize-sibling-calls  
+   453	-fprefetch-loop-arrays 
+   454	-fprofile-generate 
+   455	-fprofile-use 
+   456	-freduce-all-givs
+   457	-fregmove  
+   458	-frename-registers 
+   459	-freorder-blocks  
+   460	-freorder-functions 
+   461	-frerun-cse-after-loop
+   462	-frerun-loop-opt 
+   463	-frounding-math 
+   464	-fschedule-insns  
+   465	-fschedule-insns2 
+   466	-fno-sched-interblock
+   467	-fno-sched-spec  
+   468	-fsched-spec-load 
+   469	-fsched-spec-load-dangerous 
+   470	-fsched-stalled-insns=n
+   471	-sched-stalled-insns-dep=n 
+   472	-fsched2-use-superblocks 
+   473	-fsched2-use-traces  
+   474	-fsignaling-nans
+   475	-fsingle-precision-constant 
+   476	-fstrength-reduce  
+   477	-fstrict-aliasing  
+   478	-ftracer  
+   479	-fthread-jumps
+   480	-funroll-all-loops  
+   481	-funroll-loops  
+   482	-fpeel-loops -funswitch-loops  
+   483	-fold-unroll-loops
+   484	-fold-unroll-all-loops 
+   485	--param name=value -O  -O0  -O1  -O2  -O3  -Os
+   486	
+   487	Loop peeling example, with x and y two arrays of size >= 11:
+   488	
+   489	int j = 10, n = 10, i;
+   490	for (i = 0; i < n; i++) {
+   491	  y[i] = x[i] + x[j];
+   492	  j = i;
+   493	}
+   494	
+   495	Here's the "peeled loop":
+   496	
+   497	y[0] = x[0] + x[10];
+   498	for ( i = 1; i < n; i++) {
+   499	  y[i] = x[i] + x[i - 1];
+   500	}
+   501	*/

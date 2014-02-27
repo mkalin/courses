@@ -1,0 +1,658 @@
+
+                                CSC373: Computer Systems 1
+                                 Answerts to Homework 4
+
+1. Consider this code segment
+
+         int n = 1234;
+         float f = 1234.0f;
+
+   Here's the internal representation of each in big endian, with the
+   most significant byte to the left:
+
+         n: 00 00 04 d2
+   
+         f: 44 9a 40 00
+
+   Explain how the bits in the integer variable n and the floating-point variable
+   f are correlated. It may be easiest to show how to derive f from n.
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+   Answer:
+
+   It may be useful to show the hex bytes in binary so that the int n and 
+   the float f can be lined up both ways. Here's the binary, with each hex
+   digit as four binary digits:
+
+	n: 0000 0000  0000 0000  0000 0100  1101 0010
+
+	f: 0100 0100  1001 1010  0100 0000  0000 0000
+
+   Because f is nonnegative, its MSB (leftmost bit) is 0. Further, an IEEE 754
+   has an "implicit leading 1" in the significand. Taking that into account,
+   n's bits and f's bits line up as follows (I've used a * to mark where f's implicit 
+   leading 1 would have been):
+
+	n: 0000...010011010010...
+	f: ........*0011010010...
+
+   The extraneous 0s have been omitted from both for readability. Note that, with the
+   implicit leading bit omitted, the two patterns are the same. 
+
+   The deciminal integer 1,234 is
+
+         10011010010
+
+   in binary. The binary point is implicit and at the right end:
+
+         10011010010.0
+
+   To remove the implicit leading 1, we need to move the binary point ten places to the
+   left, which gives us
+
+         1.0011010010
+
+   So the floating point magnitude is 1.0011010010 * 2**10. The unbiased exponent is 
+   10 and the the biased exponent is 137 because the bias is -127 (that is,
+   137 - 127 = 10). So the exponent is 
+
+         10001001 
+
+   in binary. Now lay the whole thing out, padding with 0s on the right:
+
+         0 10001001 00110100100000000000000
+
+   Next we break this into 4-bit junks, as before, and put the hex digits below:
+    
+	 0100 0100 1001 1010 0100 0000 0000 0000
+          4    4    9    a    4    0    0    0
+
+   In more readable form, the hex is
+
+          44 9a 40 00
+
+   This is the original hex dump of f.
+
+2. Consider this code segment:
+
+         int n = 1234;
+         float f = 1234.0f;
+	 if (n == f) printf("They're equal.\n");
+	 else printf("They're not equal.\n");
+
+   When executed, the output is
+
+         They're equal.
+
+   What must the compiler be doing in order to reach this result? We know from 
+   Question 1, by inspecting the hex values, that n and f differ at the bit level;
+   and the equality operator ==, in this context, simply checks whether the bit
+   patterns are the same.
+
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   
+   Answer:
+
+   The compiler promotes the int to a float. In effect, the code executes as if 
+   it had been written
+
+         if ((float) n == f) ...
+
+   
+
+3. Here's a short C program:
+
+   /* This program uses the pow function, which is part of the run-time
+        math library. To enable its use, this file (fpointHwk.c) was
+        compiled/linked as follows:
+
+             gcc -o fpointHwk -lm fpointHwk.c
+
+        In "-lm", that's a lowercase L rather than a one.
+     */
+
+     #include <stdio.h>
+     #include <math.h>
+
+     int main() {
+        /* first printf statements */
+        double d1 = 1.0 / 10.0;
+        printf("d1 == %f\n", d1);
+
+        double d2 = pow(2.0, -20.0) * d1;
+        printf("d2 == %f\n", d2);
+
+        double d3 = 9.54 * pow(10.0, -8.0);
+        printf("d3 == %f\n", d3);
+
+        printf("\n");
+
+        /* second printf statements */
+        if (d1 == d2) printf("d1 == d2\n");
+        else printf("d1 != d2\n");
+
+        if (d1 == d3) printf("d1 == d3\n");
+        else printf("d1 != d3\n");
+
+        if (d2 == d3) printf("d2 == d3\n");
+        else printf("d2 != d3\n");
+
+        return 0;
+     }
+
+    Here's the output:
+
+        d1 == 0.100000
+        d2 == 0.000000
+        d3 == 0.000000
+
+        d1 != d2
+        d1 != d3
+        d2 != d3
+
+    Explain what's going on. In particular, the first printf statements give the
+    same value for d1, d2, and d3: 0.100000. However, the comparisons using ==
+    all evaluate to false, as show in the second group of printf statements.
+    Explain, then, why the system thinks that d1 != d2 and so on.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    Answer:
+
+    My original code printed out d1 each time, for which I apologize. However,
+    the comparisons were still correct. With the correct print out, the 
+    interesting case involves d2 and d3. For each, the external 
+    representation (that is, what printf outputs) is 0 to six places, that
+    is, 0.000000. Yet the comparison, which occurs at the bit level, shows
+    the two not to be equal. Here's the hex dump of each, using show_bytesBE:
+
+      d2: 3e 79 99 99 99 99 99 9a
+      d3: 3e 79 9b d6 8c 73 7e 42
+
+    Both d2 and d3 are doubles (IEEE 754 extended floating-point types), which have
+    a fractional part of 52 bits and an exponent of 11 bits. Recall that each hex
+    digit is four binary digits. Starting from the right, it's clear from
+    inspection that the two numbers differ in the rightmost hex pair
+
+                          d2: 9a
+                          d3: 42
+
+    These digits are clearly belong to the fractional part or significand. There
+    are further differences, of course, but this difference is sufficient. It's
+    worth noting that the sign and exponent fields are identical in the two.
+
+    Although the external representation does not capture the difference in the
+    internal (that is, binary) representation, the bitwise == comparison 
+    certaintly does. 
+
+4. In the web_client.c program (included in sysIO.jar on the home site), 
+   there's a call to gethostbyname, which takes a string and returns a
+   pointer to a struct hostent. Here's a code segment to illustrate:
+
+      struct hostent* host_ptr = gethostbyname("condor.depaul.edu");
+
+   This pointer is passed to the function dump_host_aux, which prints 
+   information about the host with the given name. In the case of
+   www.yahoo.com, for instance, here's the output:
+
+          Official name: www.yahoo.akadns.net
+          Aliases: www.yahoo.com
+          Host type: AF_INET
+          Address length: 4
+          Addresses: 68.142.197.86
+                     68.142.197.87
+                     68.142.197.90
+                     68.142.197.67
+                     68.142.197.69
+                     68.142.197.75
+                     68.142.197.77
+                     68.142.197.84
+ 
+   The structure itself looks like this:
+
+     struct hostent {
+        char*    h_name;       ;; official name
+        char**   h_aliases;    ;; alias list
+        int      h_addrtype;   ;; host address type 
+        int      h_length;     ;; length of address 
+        char**   h_addr_list;  ;; list of addresses 
+     };
+
+
+   Of interest here is the second field in the structure, h_aliases, which
+   is a list of alternative names. (The official name for yahoo is not
+   www.yahoo.com but rather www.yahoo.akadns.net; hence, www.yahoo.com is an
+   alias for this official name.) Here's the loop that prints the aliases:
+
+
+         printf("Aliases: ");
+         int i = 0;
+         while (host_ptr->h_aliases[i] != NULL) {
+            printf("%.21s\n", host_ptr->h_aliases[i]);
+            i++;
+         }
+
+   So the loop terminates when the ith entry is NULL, which is defined as 0
+   in the header file stdlib.h. 
+
+   Here's a simpler example of what's going on. The data type of strings
+   is char**, that is, strings points to an array of strings. Note that the
+   last entry in the list is NULL, which is 0. (Putting the integer 0 in there
+   works the same.) If you put, say, -1 in place of NULL, you get a 
+   compiler warning. Explain why the compiler is willing to accept an
+   array initialization in which the last element is not a string, like the
+   others, but rather an integer. 
+
+         /* output from this program:
+
+               foo
+               bar
+               baz
+          */
+          #include <stdlib.h>
+          #include <stdio.h>
+
+          int main() {
+            char* strings[ ] = { "foo", "bar", "baz", NULL };
+            int i = 0;
+            while (strings[i] != NULL)
+               printf("%s\n", strings[i++]);
+            return 0;
+          }
+
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+   Answer:
+
+   In C, the integer 0 is "overloaded"; that is, it represents the number zero,
+   the null address (NULL itself is a C macro: define NULL 0), and the representation
+   of boolean false (any non-zero integer value represents boolean true). The 
+   while loop thus could be simplified to 
+
+           while (strings[i])
+              ...
+
+   As written, each member of strings[i] but the last points to the (stack) address of 
+   the first character in the strings "foo", "bar", and "baz" (that is, to the addresses 
+   of 'f', 'b', and 'b, respectively); the last pointer is the null pointer 0.
+   
+   In different words, the array strings is really an array of pointers: three
+   pointers to char and one null pointer. The compiler thus accepts all four members of
+   the array strings as valid pointers, with the last as a void* pointer; and any void* 
+   pointer can be converted, automatically, to a pointer of some other type (e.g., char*).
+
+   No other integer value would get by the compiler.
+
+
+5. Here's a short program, echo.c, that prompts the user to enter a string 
+   from the standard input and then echos the string back to the standard
+   output:
+       
+      #include <stdio.h>
+      #include <stdlib.h>
+
+      char buffer[1024 + 1];
+
+      char* prompt_and_read() {
+         printf("\nPlease enter a string (-1 to exit): ");
+         fgets(buffer, 1024, stdin);
+         return buffer;
+      }
+
+      int main() {
+         while (1) {
+           char* ptr = prompt_and_read();
+           int flag = atoi(ptr);    /* converts string to int */
+           if (flag < 0) break;     /* break out of the loop */
+           printf("You entered: %s\n", ptr);
+         }
+         return 0;
+      }
+
+   Note that array named buffer is not a local variable in 
+   prompt_and_read but rather is defined outside of all functions.
+   (In C jargon, buffer is an extern variable.) Why? In particular,
+   what's the problem with defining buffer inside of prompt_and_read,
+   as show here?
+
+     char* prompt_and_read() {
+         char buffer[1024 + 1];
+         printf("\nPlease enter a string (-1 to exit): ");
+         fgets(buffer, 1024, stdin);
+         return buffer;
+      }
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+   Answer:
+
+   In the 2nd version, buffer[1024 + 1] is allocated on the stack and
+   thus is in the call frame of prompt_and_read. When prompt_and_read
+   returns, the storage for buffer thus can be reallocated to some
+   other use (e.g., the caller might call another function whose
+   call frame then overwrites buffer). The rule is this:
+
+          Never return a pointer to a stack address.
+
+   In the first version, buffer is basically part of the program's
+   load module. In particular, storage for buffer is not allocated on 
+   the stack and thus exists independently of calls to prompt_and_read.
+
+
+
+6. Here's a program that fills an array with Emp objects and then does
+   two sorts so that the Employees can be printed in sorted order. The
+   system function qsort is used for sorting; it's called twice. The two
+   calls represent two different approaches to sorting, one far better than
+   the other. Please document the code where indicted; in particular, 
+   explain which qsort approach is better and why.
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MaxName (60)
+#define BuffSize (256)
+
+typedef unsigned int bool;
+enum truth_values { false = 0, true }; 
+
+typedef struct Emp {
+  unsigned char lname[MaxName + 1]; /* + 1 for '\0' */
+  unsigned char fname[MaxName + 1];
+  unsigned int  id;
+  unsigned char dept;
+  bool          married;
+} Emp;
+
+void set_name(char* target, char* source) {
+  if (strlen(source) > MaxName) return;
+  strcpy(target, source);
+}
+
+void set_id(unsigned int* id_ptr) {
+  *id_ptr = rand();
+}
+
+void set_dept(unsigned char* dept_ptr, unsigned char code) {
+  *dept_ptr = code;
+}
+
+void set_married(unsigned int* married, unsigned int status) {
+  *married = status;
+}
+
+void to_string(Emp* this, char* buffer) {
+  unsigned char temp[32];
+
+  printf("\n** Employee information **");
+  
+  strcpy(buffer, "");
+
+  strcat(buffer, "\nLast name:   "); 
+  strcat(buffer, this->lname);
+  strcat(buffer, "\nFirst name:  ");
+  strcat(buffer, this->fname);  
+
+  sprintf(temp, "%i", this->id);
+  strcat(buffer, "\nEmployee id: ");
+  strcat(buffer, temp);
+
+
+
+  sprintf(temp, "%c", this->dept);
+  strcat(buffer, "\nDepartment:  ");
+  strcat(buffer, temp);
+
+  strcat(buffer, "\nMarried?:    ");
+  if (this->married) 
+    strcat(buffer, "yes");
+  else
+    strcat(buffer, "no");
+}
+
+/** Homework: documentation assignment starts here 
+    Specific issues:
+
+    (1) Why are there two dump_emps functions rather than
+        just one? How do they differ?
+
+    (2) Same for the comp1 and comp2 functions, the callbacks
+        for qsort.
+
+    (3) I do two qsorts. In each case, as the output shows,
+        the Employees are printed in (the same) sorted order.
+        Which approach (the first qsort or the second) is better 
+        and why? Explain, in particular, how the two qsorts
+        differ.
+
+    You can ignore the const business. What 
+
+        const Emp* ptr;
+
+    means, in short, is that the object to which ptr points
+    cannot be changed. (I'm using "object" here in a generic
+    sense to mean "thing," not in the object-oriented sense.)
+*/
+
+void dump_emps1(Emp a[ ], unsigned n) {
+  int i;
+  char buffer[BuffSize];
+  for (i = 0; i < n; i++) {
+    to_string(&a[i], buffer);
+    printf("%s\n", buffer);
+  }  
+}
+
+void dump_emps2(Emp* a[ ], unsigned n) {
+  int i;
+  char buffer[BuffSize];
+  for (i = 0; i < n; i++) {
+    to_string(a[i], buffer);
+    printf("%s\n", buffer);
+  }
+}
+
+
+/* void* is the generic pointer type; that is, any
+   pointer type (such as Emp*) can be cast to or
+   from void*. In object-oriented languages such as
+   Java and C#, the Object type is the counterpart 
+   of C's void* type.
+
+   The fourth argument to qsort must be a pointer to
+   a function that (1) returns an int and (2) takes
+   two arguments of type const void*.
+
+   The returned int has the following "qsort semantics,"
+   which are used by virtually every sort routine in
+   every modern programming language. Here are the
+   semantics, explained with reference to the pointers
+   item1 and item2:
+
+      return 0 if item1->object and item2->object are
+      equal with respect to sorted order
+
+      return a negative integer if item1->object precedes
+      item2->object in sorted order
+
+      return a positive integer if item1->object succeeds
+      item2->object in sorted order
+*/
+int comp1(const void* item1, const void* item2) {
+  const Emp* emp1 = (const Emp*) item1;
+  const Emp* emp2 = (const Emp*) item2;
+  
+  unsigned char buff1[BuffSize];
+  unsigned char buff2[BuffSize];
+
+  strcpy(buff1, emp1->lname);
+  strcat(buff1, emp1->fname);
+  strcpy(buff2, emp2->lname);
+  strcat(buff2, emp2->fname);
+
+  return strcmp(buff1, buff2);
+}
+
+int comp2(const void* item1, const void* item2) {
+  const Emp** emp1 = (const Emp**) item1;
+  const Emp** emp2 = (const Emp**) item2;
+
+  unsigned char buff1[BuffSize];
+  unsigned char buff2[BuffSize];
+
+  strcpy(buff1, (*emp1)->lname);
+  strcat(buff1, (*emp1)->fname);
+  strcpy(buff2, (*emp2)->lname);
+  strcat(buff2, (*emp2)->fname);
+
+  return strcmp(buff1, buff2);
+}
+
+int main() {
+  /* Seed the pseudo-random number generator with the current time. 
+     An Emp's id is set to a pseudo-random number. */
+  srand(time(0)); 
+
+  const int n = 6;
+  Emp emps[n];
+  Emp orig_emps[n];
+
+  /* populate the array: don't bother to document this */
+  set_name(emps[0].lname, "Ruble");
+  set_name(emps[0].fname, "Barney");
+  set_id(&emps[0].id);
+  set_dept(&emps[0].dept, 'Q');
+  set_married(&emps[0].married, true);
+
+  set_name(emps[1].lname, "Ruble");
+  set_name(emps[1].fname, "Betty");
+  set_id(&emps[1].id);
+  set_dept(&emps[1].dept, 'R');
+  set_married(&emps[1].married, true);
+
+  set_name(emps[2].lname, "Flintstone");
+  set_name(emps[2].fname, "Pebbles");
+  set_id(&emps[2].id);
+  set_dept(&emps[2].dept, 'C');
+  set_married(&emps[2].married, false);
+
+  set_name(emps[3].lname, "Flintstone");
+  set_name(emps[3].fname, "Wilma");
+  set_id(&emps[3].id);
+  set_dept(&emps[3].dept, 'A');
+  set_married(&emps[3].married, true);
+
+  set_name(emps[4].lname, "Flintstone");
+  set_name(emps[4].fname, "Baby Puss");
+  set_id(&emps[4].id);
+  set_dept(&emps[4].dept, 'C');
+  set_married(&emps[4].married, false);
+
+  set_name(emps[5].lname, "Flintstone");
+  set_name(emps[5].fname, "Fred");
+  set_id(&emps[5].id);
+  set_dept(&emps[5].dept, 'Z');
+  set_married(&emps[5].married, true);
+
+  /* make a copy of the original array: I've documented it */
+  memcpy(orig_emps, emps, sizeof(emps));
+
+  /* original emps */
+  printf("**** Before sorting:\n");
+  dump_emps1(emps, n);
+
+  /* 1st qsort: better or worse approach than 2nd? why? */
+  qsort(emps, n, sizeof(Emp), comp1);
+
+  printf("\n**** After 1st sort:\n");
+  dump_emps1(emps, n);
+
+
+  int i;
+  Emp* emps_a[n];
+  for (i = 0; i < n; i++)
+    emps_a[i] = orig_emps + i;
+
+  printf("\n**** After 2nd sort:\n");
+  /* 2nd qsort: better or worse approach than 1st? why? */
+  qsort(emps_a, n, sizeof(Emp*), comp2);
+  dump_emps2(emps_a, n);
+   
+  return 0;
+}
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+ Answer:
+
+ First, the short version of an answer:
+
+ In the first qsort, we're qsorting an array of Emp elements. The sort is
+ "destructive" in that the elements themselves are moved in the array (that's
+ why I make a copy of the original way before sorting it). In the second
+ qsort, pointers to Emp elements are sorted. On my system
+
+       sizeof(Emp)  == 136
+       sizeof(Emp*) ==   4
+
+ In real life, an Emp would be considerably bigger; but, on a 32-bit machine,
+ an Emp* would still be 4 bytes. Rule 1 in efficient programming is not to 
+ move data when you can move pointers to data. Basically, this is what a
+ reasonable relational database does: the rows of a table (e.g., Employee table)
+ are stored in arbitrary, unsorted order. Various indexes are then provided so
+ that the table can be displayed in various sorted orders (by name, by ID, by
+ salary, by department, etc.) A table index is, at the implementation level, an
+ array of pointers to rows in the (data) table.
+
+ Here's a sample documentation of the 2nd comparison function:
+
+/* comp2 is used to sort an array of pointers; hence, comp2 receives 
+   from qsort pointers to two elements that qsort needs to compare.
+   By requirement, the comp2 parameters must be of type
+
+              const void*
+
+   but, in reality, they are
+
+              const Emp**
+
+   or pointers to pointers to Emps. So the void* pointers are first
+   cast to what they really are, Emp**. 
+
+   emp1 and emp2 are not pointers to Emps but pointers to pointers to
+   Emps
+
+           emp1--->some_ptr--->Emp
+
+   so we dereference, say, emp1
+
+           (*emp1)
+
+   which gives us 
+
+           some_ptr
+
+   which we then use to access the Emp to which some_ptr points. The syntax
+   is 
+            (*emp1)->lname
+
+   The parentheses are needed because -> is just as sticky as . and we want
+   to dereference emp1 to get at the pointer that points to the Employee.
+
+   The underlying comparison is the same as in comp1: create two 
+   strings, each last_name + first_name, and compare them in
+   lexicographical order so that, for instance, "cruzandrea" precedes
+   "cruzhenry".
+*/
+int comp2(const void* item1, const void* item2) {
+  const Emp** emp1 = (const Emp**) item1;
+  const Emp** emp2 = (const Emp**) item2;
+
+  unsigned char buff1[BuffSize];
+  unsigned char buff2[BuffSize];
+
+  strcpy(buff1, (*emp1)->lname);
+  strcat(buff1, (*emp1)->fname);
+  strcpy(buff2, (*emp2)->lname);
+  strcat(buff2, (*emp2)->fname);
+
+  return strcmp(buff1, buff2);
+}

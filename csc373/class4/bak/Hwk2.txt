@@ -1,0 +1,465 @@
+                            CSC 373: Computer Systems 1
+                                 Homework #2
+
+Points: 100
+Due: Before midnight: Thursday, July 1st
+
+Problem 1: Here's a program: the question is given as part of the 
+           documentation.
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MaxName (60)
+#define BuffSize (256)
+
+typedef unsigned int bool;
+enum truth_values { false = 0, true }; 
+
+typedef struct Emp {
+  unsigned char lname[MaxName + 1]; /* + 1 for '\0' */
+  unsigned char fname[MaxName + 1];
+  unsigned int  id;
+  unsigned char dept;
+  bool          married;
+} Emp;
+
+void set_name(char* target, char* source) {
+  if (strlen(source) > MaxName) return;
+  strcpy(target, source);
+}
+
+void set_id(unsigned int* id_ptr) {
+  *id_ptr = rand();
+}
+
+void set_dept(unsigned char* dept_ptr, unsigned char code) {
+  *dept_ptr = code;
+}
+
+void set_married(unsigned int* married, unsigned int status) {
+  *married = status;
+}
+
+void to_string(Emp* this, char* buffer) {
+  unsigned char temp[32];
+
+  printf("\n** Employee information **");
+  
+  strcpy(buffer, "");
+
+  strcat(buffer, "\nLast name:   "); 
+  strcat(buffer, this->lname);
+  strcat(buffer, "\nFirst name:  ");
+  strcat(buffer, this->fname);  
+
+  sprintf(temp, "%i", this->id);
+  strcat(buffer, "\nEmployee id: ");
+  strcat(buffer, temp);
+
+
+  sprintf(temp, "%c", this->dept);
+  strcat(buffer, "\nDepartment:  ");
+  strcat(buffer, temp);
+
+  strcat(buffer, "\nMarried?:    ");
+  if (this->married) 
+    strcat(buffer, "yes");
+  else
+    strcat(buffer, "no");
+}
+
+/** Homework: documentation assignment starts here 
+    Specific issues:
+
+    (1) Why are there two dump_emps functions rather than
+        just one? How do they differ?
+
+    (2) Same for the comp1 and comp2 functions, the callbacks
+        for qsort.
+
+    (3) I do two qsorts. In each case, as the output shows,
+        the Employees are printed in (the same) sorted order.
+        Which approach (the first qsort or the second) is better 
+        and why? Explain, in particular, how the two qsorts
+        differ.
+
+    You can ignore the const business. What 
+
+        const Emp* ptr;
+
+    means, in short, is that the object to which ptr points
+    cannot be changed. (I'm using "object" here in a generic
+    sense to mean "thing," not in the object-oriented sense.)
+*/
+
+void dump_emps1(Emp a[ ], unsigned n) {
+  int i;
+  char buffer[BuffSize];
+  for (i = 0; i < n; i++) {
+    to_string(&a[i], buffer);
+    printf("%s\n", buffer);
+  }  
+}
+
+void dump_emps2(Emp* a[ ], unsigned n) {
+  int i;
+  char buffer[BuffSize];
+  for (i = 0; i < n; i++) {
+    to_string(a[i], buffer);
+    printf("%s\n", buffer);
+  }
+}
+
+/* void* is the generic pointer type; that is, any
+   pointer type (such as Emp*) can be cast to or
+   from void*. In object-oriented languages such as
+   Java and C#, the Object type is the counterpart 
+   of C's void* type.
+
+
+   The fourth argument to qsort must be a pointer to
+   a function that (1) returns an int and (2) takes
+   two arguments of type const void*.
+
+   The returned int has the following "qsort semantics,"
+   which are used by virtually every sort routine in
+   every modern programming language. Here are the
+   semantics, explained with reference to the pointers
+   item1 and item2:
+
+      return 0 if item1->object and item2->object are
+      equal with respect to sorted order
+
+      return a negative integer if item1->object precedes
+      item2->object in sorted order
+
+      return a positive integer if item1->object succeeds
+      item2->object in sorted order
+*/
+int comp1(const void* item1, const void* item2) {
+  const Emp* emp1 = (const Emp*) item1;
+  const Emp* emp2 = (const Emp*) item2;
+  
+  unsigned char buff1[BuffSize];
+  unsigned char buff2[BuffSize];
+
+  strcpy(buff1, emp1->lname);
+  strcat(buff1, emp1->fname);
+  strcpy(buff2, emp2->lname);
+  strcat(buff2, emp2->fname);
+
+  return strcmp(buff1, buff2);
+}
+
+int comp2(const void* item1, const void* item2) {
+  const Emp** emp1 = (const Emp**) item1;
+  const Emp** emp2 = (const Emp**) item2;
+
+  unsigned char buff1[BuffSize];
+  unsigned char buff2[BuffSize];
+
+  strcpy(buff1, (*emp1)->lname);
+  strcat(buff1, (*emp1)->fname);
+  strcpy(buff2, (*emp2)->lname);
+  strcat(buff2, (*emp2)->fname);
+
+  return strcmp(buff1, buff2);
+}
+
+int main() {
+  /* Seed the pseudo-random number generator with the current time. 
+     An Emp's id is set to a pseudo-random number. */
+  srand(time(0)); 
+
+  const int n = 6;
+  Emp emps[n];
+  Emp orig_emps[n];
+
+
+
+  /* populate the array: don't bother to document this */
+  set_name(emps[0].lname, "Ruble");
+  set_name(emps[0].fname, "Barney");
+  set_id(&emps[0].id);
+  set_dept(&emps[0].dept, 'Q');
+  set_married(&emps[0].married, true);
+
+  set_name(emps[1].lname, "Ruble");
+  set_name(emps[1].fname, "Betty");
+  set_id(&emps[1].id);
+  set_dept(&emps[1].dept, 'R');
+  set_married(&emps[1].married, true);
+
+  set_name(emps[2].lname, "Flintstone");
+  set_name(emps[2].fname, "Pebbles");
+  set_id(&emps[2].id);
+  set_dept(&emps[2].dept, 'C');
+  set_married(&emps[2].married, false);
+
+  set_name(emps[3].lname, "Flintstone");
+  set_name(emps[3].fname, "Wilma");
+  set_id(&emps[3].id);
+  set_dept(&emps[3].dept, 'A');
+  set_married(&emps[3].married, true);
+
+  set_name(emps[4].lname, "Flintstone");
+  set_name(emps[4].fname, "Baby Puss");
+  set_id(&emps[4].id);
+  set_dept(&emps[4].dept, 'C');
+  set_married(&emps[4].married, false);
+
+  set_name(emps[5].lname, "Flintstone");
+  set_name(emps[5].fname, "Fred");
+  set_id(&emps[5].id);
+  set_dept(&emps[5].dept, 'Z');
+  set_married(&emps[5].married, true);
+  /* make a copy of the original array: I've documented it */
+  memcpy(orig_emps, emps, sizeof(emps));
+
+  /* original emps */
+  printf("**** Before sorting:\n");
+  dump_emps1(emps, n);
+
+  /* 1st qsort: better or worse approach than 2nd? why? */
+  qsort(emps, n, sizeof(Emp), comp1);
+  printf("\n**** After 1st sort:\n");
+  dump_emps1(emps, n);
+
+  int i;
+  Emp* emps_a[n];
+  for (i = 0; i < n; i++)
+    emps_a[i] = orig_emps + i;
+  printf("\n**** After 2nd sort:\n");
+
+  /* 2nd qsort: better or worse approach than 1st? why? */
+  qsort(emps_a, n, sizeof(Emp*), comp2);
+  dump_emps2(emps_a, n);
+  return 0;
+}
+
+Problem 2:
+
+IA32 uses certain conventions with respect to registers. The registers
+
+             %eax %edx %ecx
+
+are "caller save" registers, whereas the registers
+
+             %ebx %edi %esi
+
+are "callee save" registers.
+
+Example to illustrate:
+
+        /* assume callee needs three registers */
+        int callee(int n1, int n2) {
+           int temp = n1 * n2;
+           return temp - (n1 + n2);
+        }
+
+        void caller() {
+           int a = 4;
+           int b = 8;
+           int c = callee(a, b);
+           /*...*/
+        }
+
+When caller calls callee, callee does not need to worry about overwriting
+the "caller save" registers (for instance, %eax). The system ensures that
+any data that caller required and that happened to be stored in these
+"caller save" registers would be saved and restored for caller. However,
+if callee were to overwrite any of the "callee save" registers (for instance,
+%ebx), then callee first must save the current contents of any such 
+register and then restore the contents before returning. Assume, in the
+above example, that caller and callee each requires registers for its local
+int variables, parameters, and return value.
+
+First, generate the compiler's assembler to see how it assigns the registers
+Then, using the "caller save" and "callee save" information at your disposal,
+indicate whether the compiler could do a better job.
+
+To get the assembler from a C file such as mystery1.c, the command is
+
+   gcc -S mystery1.c
+
+The assembler is now in the file named 
+
+   mystery1.s
+
+/******************************************************************************/
+
+
+
+
+
+
+
+
+
+
+Problem 3: Document the assembler below. A detailed explanation follows.
+/* This function is called no_op ("no operation" or NOP in assembler) 
+   because it does no useful work, as the return of void indicates.
+   Anyway, below the C function is the label
+
+             _no_op:
+
+   that begins the non-optimized assembler, which implements the C
+   code. The problem here is to document each line of the assembler.
+   I've started by doing the first two and the last two.
+   
+   The early sections in Chapter 3 go over the assembler in detail. 
+   P. 144 has a table of the instructions. The book's index is also
+   helpful. For example, the instruction leal (Load Effective Address Long),
+   which we'll go over in class, is explained on p. 143.
+
+   My comments are a bit wordy. The idea is to document to the stardard
+   expectation: someone can understand what the code does merely by reading
+   the documentation and without studying the code itself. There's no need
+   to document the C code, only the assembler.
+
+   Quick review of asm:
+
+      -- $8 signifies immediate addressing so $8 means "the value 8"
+      
+      -- 12(%ebp) is an example of displacement addressing with
+         %ebp as the base address and +12 as the offset (note that
+         some displacements are negative)
+
+      -- keep in mind that the IA32 stack grows "downwards," that is,
+         from high addresses to low addresses. So a negative displacement
+         takes you to a higher address and a negative displacement takes
+         you to a lower addresses:
+                                       High Addresses
+
+            P + n, n >= 1               ---->
+
+            P, some point on the stack  ----> 
+
+            P - n, n >= 1               ---->
+
+                                       Low Addresses
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void no_op(int a, int b) {
+    int y = 5;
+    int z = 9; 
+    y += b;
+    z += a;
+    return;
+}
+
+_no_op:
+ pushl %ebp                ;; save the base pointer (call frame pointer) from
+                           ;; the caller, that is, the function that calls no_op
+                      
+ movl %esp, %ebp           ;; create a new call frame by setting %ebp to TOP
+
+ subl $8, %esp     
+ movl $5, -4(%ebp) 
+ movl $9, -8(%ebp)     
+ movl 12(%ebp), %edx   
+ leal -4(%ebp), %eax   
+ addl %edx, (%eax)
+ movl 8(%ebp), %edx
+ leal -8(%ebp), %eax
+ addl %edx, (%eax)
+
+ leave           ;; restore the call frame pointer (%ebp) and the
+                 ;; stack pointer (%esp) to their values before the
+                 ;; call to no_op. In effect, leave is equivalent to
+                 ;;
+                 ;;  movl %ebp, %esp  ;; set TOP to start of this call frame
+                 ;;  popl %ebp        ;; restore the saved %ebp, thereby setting
+                                      ;; TOP to the end of the caller's 
+                                      ;; current call frame. Now new items
+                                      ;; can be added to the caller's stack frame
+
+ ret             ;; return control to the caller of no_op
+                 ;; when the caller invoked 
+                 ;;
+                 ;;     call no_op
+                 ;;     <next instruction in caller>
+                 ;;
+                 ;; the call instruction pushed the address of the next 
+                 ;; caller instruction onto the stack. The ret instruction
+                 ;; pops this address off the stack so that the caller
+                 ;; now can resume execution.  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Problem 4: Compile and run the code below (included in the ZIP file).
+The code's main calls push_test and pop_test, which conduct a short
+experiment on the stack pointer, %esp in IA32. What do these
+two experiments demonstrate about how pushl and popl work in IA32?
+Explain, in other words, what I'm testing and how the results of the test
+should be interpreted.
+
+#include <stdio.h>
+
+int push_test() {
+  int ret_val;
+  /* movl %esp, %eax    ;; save stack pointer
+     pushl %esp         ;; push stack pointer onto stack
+     popl %edx          ;; pop the top value back into %edx
+     subl %edx, %eax    ;; subtract the two values
+     movl %eax, ret_val ;; set up the return value
+  */
+  asm("movl %%esp, %%eax; pushl %%esp; popl %%edx; subl %%edx, %%eax; movl %%eax, %0"
+      : "=r" (ret_val)
+      : /* not input */
+      : "%edx", "%eax");
+  return ret_val;
+}
+
+int pop_test() {
+  int ret_val = 0xffffffff;  /* -1 in decimal */
+  /* pushl ret_val       ;; save ret_val on the stack
+     movl %esp, %edx     ;; save the stack pointer
+     popl %esp           ;; pop stack to the stack pointer
+     movl %esp, ret_val  ;; set the popped value as the return value
+     movl %edx, %esp     ;; restore original stack pointer
+  */
+  asm("pushl %1; movl %%esp, %%edx; popl %%esp; movl %%esp, %0; movl %%edx, %%esp"
+      : "=r" (ret_val)
+      : "r" (ret_val)
+      : "%edx");
+  return ret_val;
+}
+
+int main() {
+  printf("push test: %d\n", push_test()); 
+  printf("pop test: %d\n", pop_test()); 
+}
+

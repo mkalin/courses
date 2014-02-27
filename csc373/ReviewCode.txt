@@ -1,0 +1,229 @@
+     1	#include <stdio.h>
+     2	#include <limits.h>
+     3	
+     4	void print_per(unsigned char);
+     5	
+     6	void show_bytesBE(char* msg, unsigned char* ptr, int how_many) {
+     7	  printf("%s\n", msg);
+     8	  int i;
+     9	  for (i = how_many - 1; i >= 0; i--) printf(" %.2x", ptr[i]);
+    10	  printf("\n");
+    11	}
+    12	
+    13	void mystery(int* p1, int* p2) {
+    14	  *p1 = *p1 + *p2;
+    15	  *p2 = *p1 - *p2;
+    16	  *p1 = *p1 - *p2;
+    17	}
+    18	
+    19	int main() {
+    20	  /* mystery function call */
+    21	  int n = 2, m = 7;
+    22	  printf("n == %i\tm == %i\n", n, m);
+    23	  mystery(&n, &m);
+    24	  printf("n == %i\tm == %i\n", n, m);
+    25	
+    26	  /* some float stuff */
+    27	  float f = 0.0;                /*  0.0:   00 00 00 00 */
+    28	 
+    29	  show_bytesBE("0.0:", (unsigned char*) &f, sizeof(float)); 
+    30	 
+    31	  f = -f;                       /*   -f:   80 00 00 00 */
+    32	  
+    33	  show_bytesBE("-f:", (unsigned char*) &f, sizeof(float)); 
+    34	
+    35	  printf("f == %f\t-f == %f\n", 
+    36		 f, -f);                /* f == -0.000000  -f == 0.000000 */
+    37	
+    38	  f = (float) (((int) f) << 1); /* f << 1: 00 00 00 00 */
+    39	  show_bytesBE("f << 1:", (unsigned char*) &f, sizeof(float));
+    40	
+    41	  /* playing with pointers */
+    42	  int k = 0xabcdef12;         /* k: ab cd ef 12 */
+    43	  show_bytesBE("k:", (unsigned char*) &k, sizeof(int));
+    44	  short* ptr;   /* sizeof(short) == 2, sizeof(int) == 4 */
+    45	  ptr = (short*) &k;
+    46	  short t = *ptr;
+    47	  show_bytesBE("t:", (unsigned char*) &t, sizeof(short)); /* ? */
+    48	  *ptr = *(ptr + 1);
+    49	  *(ptr + 1) = t;
+    50	  show_bytesBE("k:", (unsigned char*) &k, sizeof(int));   /* ? */
+    51	
+    52	  /* output? */
+    53	  int array[ ] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -2 };
+    54	  int* int_ptr = array;
+    55	  while (*int_ptr >= 0) {
+    56	    printf("%i ", *int_ptr);
+    57	    int_ptr += 2;
+    58	  }
+    59	  printf("\n");
+    60	
+    61	
+    62	  unsigned char r   = 1;
+    63	  unsigned char w   = 2;
+    64	  unsigned char rw  = r | w;
+    65	  unsigned char e   = 4;
+    66	  unsigned char rwe = rw | e;
+    67	
+    68	  printf("r == %i\nw == %i\nrw == %i\ne == %i\nrwe == %i\n",
+    69		 r, w, rw, e, rwe);
+    70	  int i;
+    71	  for (i = 0; i < 10; i++)
+    72	    print_per(i);
+    73	
+    74	  /* little more at the bit level */
+    75	  unsigned char big = UCHAR_MAX;
+    76	  signed char small = SCHAR_MIN;
+    77	  show_bytesBE("big:", &big, 
+    78		       sizeof(char ));         /* ff ==> 11111111 */
+    79	  show_bytesBE("small:", (unsigned char*) 
+    80		       &small, sizeof(char));  /* 80 ==> 10000000 */
+    81	
+    82	  unsigned char xor = big ^ small;
+    83	  show_bytesBE("xor:", &xor, 
+    84		       sizeof(char));          /* 7f ==> 01111111 */
+    85	  unsigned char or = big | small;
+    86	  show_bytesBE("or:", &or, 
+    87		       sizeof(char));          /* ff ==> 11111111 */
+    88	
+    89	  /* the problem with doubles: in C or Java on an IA32 machine 
+    90	        -- register and memory access is at the 32-bit level
+    91		-- think multithreading
+    92	  */
+    93	  printf("sizeof double is %d\n", sizeof(double)); /* 8 */
+    94	  
+    95	  return 0;
+    96	}
+    97	
+    98	void print_per(unsigned char n) {
+    99	  switch (n) {
+   100	  case 1:
+   101	    printf("1 ==> Read\n");
+   102	    break;
+   103	  case 2:
+   104	    printf("2 ==> Write\n");
+   105	    break;
+   106	  case 3:
+   107	    printf("3 ==> Read/write\n");
+   108	    break;
+   109	  case 4:
+   110	    printf("4 ==> Execute\n");
+   111	    break;
+   112	  case 7:
+   113	    printf("7 ==> Read/write/execute\n");
+   114	    break;
+   115	  default:
+   116	    printf("%i ==> No such permission.\n", n);
+   117	  }
+   118	}
+   119	/*************************************************************/
+   120	
+   121	
+   122	#include <stdio.h>
+   123	
+   124	#define SetCount (4)
+   125	#define WordCount (4)
+   126	#define Empty (-1)
+   127	#define True (1)
+   128	#define False (0)
+   129	
+   130	int sets[SetCount][WordCount];
+   131	
+   132	int lru[SetCount];
+   133	
+   134	int already_in_p(int word, int set_index) {
+   135	  int w = 0;
+   136	
+   137	  while (w < WordCount) 
+   138	    if (word == sets[set_index][w]) return True;
+   139	    else w++;
+   140	
+   141	  return False;
+   142	}
+   143	
+   144	int main() {
+   145	  int reference_string[ ] = 
+   146	    { 1, 4, 8, 5, 20, 17, 19, 56, 9, 11, 4, 
+   147	      43, 5, 6, 9, 17, 9, 56, 9, Empty };
+   148	
+   149	  int i, j;
+   150	  /* Initialize the cache to empty. */
+   151	  for (i = 0; i < SetCount; i++) 
+   152	    for (j = 0; j < WordCount; j++)
+   153	      sets[i][j] = -1;
+   154	
+   155	  /* Initialize the LRU pointers to -1 */
+   156	  for (i = 0; i < SetCount; i++) lru[i] = -1;
+   157	
+   158	  /* Iterate through the reference string. */
+   159	  i = 0;
+   160	  while (reference_string[i] != Empty) {
+   161	    int next_word = reference_string[i];
+   162	    int set_index = next_word % SetCount;
+   163	
+   164	    if (already_in_p(next_word, set_index))
+   165	      printf("Hit for word %i in Set %i\n", next_word, set_index);
+   166	    else {
+   167	      printf("Miss for word %i in Set %i\n", next_word, set_index);
+   168	
+   169	      lru[set_index] = (lru[set_index] + 1) % SetCount;
+   170	
+   171	      sets[set_index][lru[set_index]] = next_word;
+   172	
+   173	      printf("Word %i inserted into Set %i at position %i\n",
+   174		     next_word, set_index, lru[set_index]);
+   175	    }
+   176	    i++;
+   177	  }
+   178	  return 0;
+   179	}
+   180	
+   181	
+   182	/*
+   183	  Miss for word 1 in Set 1
+   184	  Word 1 inserted into Set 1 at position 0
+   185	
+   186	  Miss for word 4 in Set 0
+   187	  Word 4 inserted into Set 0 at position 0
+   188	
+   189	  Miss for word 8 in Set 0
+   190	  Word 8 inserted into Set 0 at position 1
+   191	
+   192	  Miss for word 5 in Set 1
+   193	  Word 5 inserted into Set 1 at position 1
+   194	
+   195	  Miss for word 20 in Set 0
+   196	  Word 20 inserted into Set 0 at position 2
+   197	
+   198	  Miss for word 17 in Set 1
+   199	  Word 17 inserted into Set 1 at position 2
+   200	
+   201	  Miss for word 19 in Set 3
+   202	  Word 19 inserted into Set 3 at position 0
+   203	
+   204	  Miss for word 56 in Set 0
+   205	  Word 56 inserted into Set 0 at position 3
+   206	
+   207	  Miss for word 9 in Set 1
+   208	  Word 9 inserted into Set 1 at position 3
+   209	
+   210	  Miss for word 11 in Set 3
+   211	  Word 11 inserted into Set 3 at position 1
+   212	
+   213	  Hit for word 4 in Set 0
+   214	
+   215	  Miss for word 43 in Set 3
+   216	  Word 43 inserted into Set 3 at position 2
+   217	
+   218	  Hit for word 5 in Set 1
+   219	
+   220	  Miss for word 6 in Set 2
+   221	  Word 6 inserted into Set 2 at position 0
+   222	
+   223	  Hit for word 9 in Set 1
+   224	  Hit for word 17 in Set 1
+   225	  Hit for word 9 in Set 1
+   226	  Hit for word 56 in Set 0
+   227	  Hit for word 9 in Set 1
+   228	*/
+   229	

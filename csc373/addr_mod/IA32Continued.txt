@@ -1,0 +1,390 @@
+     1	
+     2	;; Review of how the stack works under IA32:
+     3	
+     4	To begin: 
+     5	
+     6	     +-------+  +-------+  +-------+
+     7	     | 0x123 |  |  0x0  |  | 0x108 |
+     8	     +-------+  +-------+  +-------+
+     9	       %eax       %edx       %esp
+    10	
+    11	
+    12	
+    13	       High addresses
+    14	
+    15	         -------------
+    16	         -------------
+    17	         ...
+    18	         -------------
+    19	   0x108                <----- TOP
+    20	
+    21	
+    22	       Low addresses
+    23	
+    24	  /*************************************/
+    25	
+    26	  pushl %eax  ;; execute this statement
+    27	  
+    28	       High addresses               +-------+
+    29	                                    | 0x104 |
+    30	         -------------              +-------+
+    31	         -------------                 %esp
+    32	         ...
+    33	         -------------
+    34	   0x108 -------------              
+    35	   0x104     0x123    <------- TOP
+    36	
+    37	
+    38	       Low addresses
+    39	  /*************************************/
+    40	
+    41	  popl %edx                         +-------+  +-------+
+    42	                                    | 0x123 |  | 0x108 |
+    43	                                    +-------+  +-------+
+    44	                                      %edx       %esp
+    45	
+    46	      High addresses            
+    47	                                   
+    48	         -------------             
+    49	         -------------                
+    50	         ...
+    51	         -------------
+    52	   0x108               <------ TOP              
+    53	   0x104     0x123   
+    54	
+    55	
+    56	       Low addresses
+    57	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    58	
+    59	
+    60	
+    61	
+    62	;; Another example for review:
+    63	
+    64	/* fibonacci number N is defined recursively as
+    65	
+    66	               1 if n <= 2
+    67	   Fib(n) =
+    68	               Fib(n - 1) + Fib(n - 2) if n > 2
+    69	
+    70	   The sequence starts 1, 1, 2, 3, 5, 8, 13, 21, 34, 55,...
+    71	*/
+    72	int fib_recursive(int n) {
+    73	  if (n <= 2) return 1;
+    74	  return fib_recursive(n - 1) + fib_recursive(n - 2);
+    75	}
+    76	
+    77	int fib_dw(int n) {
+    78	  int i = 0;         /* loop counter */
+    79	  int val = 0;   
+    80	  int next = 1;  
+    81	
+    82	  /* Assembler for the loop:
+    83	
+    84	       ;; %eax holds temp
+    85	       ;; %ebx holds val
+    86	       ;; %edx holds next
+    87	       ;; %ecx holds i
+    88	       ;; %esi holds the parameter, n
+    89	
+    90	     .L6:
+    91	         leal (%edx, %ebx), %eax  ;; temp = val + next
+    92		 movl %edx, %ebx          ;; val = next
+    93		 movl %eax, %edx          ;; next = temp
+    94	         incl %ecx                ;; i += 1
+    95	         cmpl %esi, %ecx          ;; (i < n) ?
+    96	         jl .L6                   ;; if (i < n) goto .L6
+    97	         movl %ebx, %eax          ;; return val
+    98	  */
+    99	  do {
+   100	    int temp = val + next;
+   101	    val = next;
+   102	    next = temp;
+   103	    i++;
+   104	  } while(i < n);
+   105	
+   106	  return val;
+   107	}
+   108	
+   109	
+   110	
+   111	
+   112	
+   113	
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	int fib_w(int n) {
+   123	  /* Assembler for fib_w:
+   124	
+   125	       ;; %eax holds n and then temp (after .L10)
+   126	       ;; %ebx holds val
+   127	       ;; %ecx holds next
+   128	       ;; %edx holds i
+   129	
+   130	           movl 8(%ebp), %eax       ;; get parameter n
+   131		   movl $1, %ebx            ;; val = 1
+   132	           movl $1, %ecx            ;; next = 1
+   133		   cmpl %eax, %ebx          ;; (val > n) ?
+   134	           jge .L9                  ;; if (val >= n) return
+   135	           leal -1(%eax), %edx      ;; i = n - 1
+   136	     .L10:
+   137	           leal (%ecx, %ebx), %eax  ;; temp = next + val
+   138	           movl %ecx, %ebx          ;; val = next
+   139	           movl %eax, %ecx          ;; next = temp
+   140		   decl %edx                ;; i--
+   141	           jnz  .L10                ;; if (i != 0) goto .L10
+   142	     .L9:       
+   143	  */
+   144	  int i = 1;
+   145	  int val = 1;
+   146	  int next = 1;
+   147	
+   148	  while (i < n) {
+   149	    int temp = val + next;
+   150	    val = next;
+   151	    next = temp;
+   152	    i++;
+   153	  }
+   154	  
+   155	  return val;
+   156	}
+   157	
+   158	int main() {
+   159	  int i;
+   160	  for (i = 1; i < 8; i++) {
+   161	    printf("Fib(%i) == %i (recursive) and %i (dw) and %i (w)\n",
+   162		   i, fib_recursive(i), fib_dw(i), fib_w(i));
+   163	  }
+   164	
+   165	  return 0;
+   166	}
+   167	/******************************************************************************/
+   168	
+   169	#include <stdio.h>
+   170	char* my_gets(char* buffer) {
+   171	  int c;  /* getchar() returns the int value 0xffffffff on end-of-file */
+   172	  char* dest = buffer;
+   173	  
+   174	  /* read until newline or end-of-file (Control-Z for the standard input) */
+   175	  while ((c = getchar()) != '\n' && c != EOF)
+   176	    *dest++ = c; /* store next character in buffer and move pointer */
+   177	  
+   178	  if (c == EOF) return NULL; /* NULL is 0, the invalid address */
+   179	  return buffer; /* now filled with characters from getchar() */
+   180	}
+   181	
+   182	int main() {
+   183	  char buf[4];                   /* big trouble waiting to happen */
+   184	  char* flag = my_gets(buf);     /* flag is NULL or non-NULL */
+   185	  if (flag) printf("%s\n", buf); /* print if non-NULL */
+   186	  
+   187	  return 0;
+   188	}
+   189	/* output from sample runs:
+   190	
+   191	    $ ./stack_corrupt
+   192	    a b 
+   193	    a b
+   194	
+   195	    $ ./stack_corrupt
+   196	    a b c d e
+   197	    a b c d e
+   198	    Segmentation fault
+   199	
+   200	   The problem:
+   201	
+   202	                +=======================+ <--- main's call frame
+   203	                |        ...            |
+   204	                |-----------------------| 
+   205	                | return address        | <--- saved %eip for main
+   206	                +=======================+ <--- my_gets's call frame
+   207	                | saved stack pointer   | <--- saved %ebp for main
+   208	                |-----------------------|
+   209	                | [3] | [2] | [1] | [0] | <--- buffer in my_gets (LE)
+   210	                |-----------------------|
+   211	                |        ...            |
+   212	                +=======================|
+   213	
+   214	   At the assembler level (assembler for main):
+   215	
+   216	     main:
+   217	            pushl %ebp          ;; save main's call frame pointer
+   218	            movl %esp, %ebp     ;; create call frame for my_gets
+   219	            subl $20, %esp      ;; grow the call frame for my_gets
+   220	            pushl %ebx          ;; save %ebx on the stack
+   221	            addl $-12, %esp     ;; grow the call frame some more
+   222	            leal -4(%ebp), %ebx ;; compute buf as %ebp - 4
+   223	            pushl %ebx          ;; save new %ebx == buf on the stack
+   224	            call my_gets        ;; transfer control to my_gets
+   225	*/
+   226	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   227	
+   228	
+   229	
+   230	
+   231	
+   232	
+   233	
+   234	
+   235	
+   236	
+   237	
+   238	
+   239	
+   240	
+   241	
+   242	;; Example to clarify how pushl and popl work. For instance, does pushl
+   243	;; first insert an item onto the stack and then adjust the stack pointer 
+   244	;; (%esp) or the other way around?
+   245	
+   246	#include <stdio.h>
+   247	
+   248	int push_test() {
+   249	  int ret_val;
+   250	  /* movl %esp, %eax    ;; save stack pointer
+   251	     pushl %esp         ;; push stack pointer: original value or decremented?
+   252	     popl %edx          ;; pop the top value back into %edx
+   253	     subl %edx, %eax    ;; subtract the two values: 0 or 4 results
+   254	     movl %eax, ret_val ;; set up the return value
+   255	  */
+   256	  asm("movl %%esp, %%eax; pushl %%esp; popl %%edx; subl %%edx, %%eax; movl %%eax, %0"
+   257	      : "=r" (ret_val)
+   258	      : /* not input */
+   259	      : "%edx", "%eax");
+   260	  return ret_val;
+   261	}
+   262	
+   263	
+   264	int pop_test() {
+   265	  int ret_val = 0xffffffff;
+   266	  /* pushl ret_val       ;; save ret_val on the stack
+   267	     movl %esp, %edx     ;; save the stack pointer
+   268	     popl %esp           ;; pop to the stack pointer: original value or incremented?
+   269	     movl %esp, ret_val  ;; set the popped value as the return value
+   270	     movl %edx, %esp     ;; restore original stack pointer
+   271	  */
+   272	  asm("pushl %1; movl %%esp, %%edx; popl %%esp; movl %%esp, %0; movl %%edx, %%esp"
+   273	      : "=r" (ret_val)
+   274	      : "r" (ret_val)
+   275	      : "%edx");
+   276	  return ret_val;
+   277	}
+   278	
+   279	int main() {
+   280	  printf("push test: %d\n", 
+   281		 push_test()); /* output is 0; hence, original value pushed */
+   282	  printf("pop test: %d\n",
+   283		 pop_test());  /* output is -1; hence, orignal value popped */
+   284	}
+   285	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   286	
+   287	
+   288	
+   289	
+   290	
+   291	
+   292	
+   293	
+   294	
+   295	
+   296	
+   297	
+   298	
+   299	
+   300	
+   301	
+   302	;; Yet another example for review
+   303	
+   304	/* file: sum.c */
+   305	int accumulator = 0;
+   306	
+   307	int sum(int n1, int n2) {
+   308	  int t = n1 + n2;
+   309	  accumulator += t;
+   310	  return t;
+   311	}
+   312	/*
+   313	  At the command prompt:  gcc -02 -S sum.c
+   314	     -02 ==> level 2 optimization
+   315	     -S  ==> generate assembly code file sum.s, shown below
+   316	
+   317	 	.file	"sum.c"
+   318	.globl accumulator
+   319		.bss
+   320		.align 4
+   321		.type	accumulator, @object
+   322		.size	accumulator, 4
+   323	accumulator:
+   324		.zero	4
+   325		.text
+   326		.p2align 2,,3
+   327	.globl sum
+   328		.type	sum, @function
+   329	sum:
+   330		pushl	%ebp
+   331		movl	%esp, %ebp
+   332		movl	12(%ebp), %eax
+   333		addl	8(%ebp), %eax
+   334		addl	%eax, accumulator
+   335		leave
+   336		ret
+   337		.size	sum, .-sum
+   338		.section	.note.GNU-stack,"",@progbits
+   339		.ident	"GCC: (GNU) 3.4.5 20051201 (Red Hat 3.4.5-2)"
+   340	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   341	
+   342	
+   343	
+   344	
+   345	
+   346	
+   347	
+   348	
+   349	
+   350	
+   351	
+   352	
+   353	
+   354	
+   355	
+   356	
+   357	
+   358	
+   359	
+   360	
+   361	
+   362	  Again at the command prompt, on my Linux box:
+   363	
+   364	          gcc -02 -c sum.c    ;; produces sum.o
+   365	          objdump -d sum.o    ;; produces what's shown below
+   366	                              ;; (stuff that starts with _ is an annotation)
+   367	
+   368	sum.o:     file format elf32-i386
+   369	Disassembly of section .text:
+   370	
+   371	_offset _bytes                 _equivalent in assembly
+   372	
+   373	00000000 <sum>:
+   374	   0:   55                      push   %ebp
+   375	   1:   89 e5                   mov    %esp,%ebp
+   376	   3:   8b 45 0c                mov    0xc(%ebp),%eax
+   377	   6:   03 45 08                add    0x8(%ebp),%eax
+   378	   9:   01 05 00 00 00 00       add    %eax,0x0
+   379	   f:   c9                      leave
+   380	  10:   c3                      ret
+   381	
+   382	   Explanation: 
+   383	
+   384	   The _offsets are from the start of the file.
+   385	
+   386	   The _bytes are the byte sequence, broken into seven groupings, each grouping 
+   387	   is an instruction. An IA32 instruction can be from 1 to 15 byes in size.
+   388	   
+   389	   The _equivalent column is the equivalent assembly instruction to the byte code.
+   390	*/

@@ -1,0 +1,720 @@
+     1	
+     2	                                Introduction to IA32 Assembler
+     3	
+     4	/* stack.c */
+     5	#include <stdio.h>
+     6	
+     7	/* global variables: shared among all calls to all functions 
+     8	   in this file.
+     9	*/
+    10	char* greeting_pieces[ ] = {"Hello", ",", " world", "!"};
+    11	int state = 4; /* number of strings in array greeting_pieces */
+    12	
+    13	int main() {
+    14	  if (--state < 0) return 0;        /* decrement status & return to invoker */
+    15	
+    16	  int i = state;                    /* make a local copy of status */
+    17	
+    18	  main();                           /* recursively invoke main */
+    19	  printf("%s", greeting_pieces[i]); /* print your greeting piece */
+    20	
+    21	  return 0;
+    22	}
+    23	/* Symbolic trace: current value of state is shown as an argument to main
+    24	   for trace purposes. In fact, state is a global variable that tracks the
+    25	   state of the application.
+    26	
+    27	   main(4) 
+    28	      i = 3
+    29	      invoke main(3)
+    30	         i = 2
+    31	         invoke main(2)
+    32	            i = 1
+    33	            invoke main(1)
+    34	               i = 0
+    35	               invoke main(0)
+    36	               return to main(1) because state is now -1 (return from the if)
+    37	            print greeting_pieces[0]
+    38	            return to main(2) (return at the end of main)
+    39	         print greeting_pieces[1]
+    40	         return to main(3) (return at the end of main)
+    41	      print greeting_pieces[2]
+    42	      return to main(4) (return at the end of main)
+    43	   print greeting_pieces[3]
+    44	   return to system (return at the end of main)
+    45	*/
+    46	/* end of stack.c */
+    47	
+    48	;;;;
+    49	
+    50	
+    51	
+    52	
+    53	
+    54	
+    55	
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	
+    63	/* stack_corrupt.c */
+    64	#include <stdio.h>
+    65	
+    66	void very_bad(char* buffer) {
+    67	  int c;  /* NB: int rather than char because the system I/O function
+    68		     getchar() returns the int value 0xffffffff on end-of-file */
+    69	  char* dest = buffer;
+    70	  
+    71	  /* read until newline or end-of-file (Control-Z for the standard input) */
+    72	  while ((c = getchar()) != '\n' && c != EOF)
+    73	    *dest++ = c; /* store next character in buffer and move pointer */
+    74	  
+    75	  printf("%s\n", buffer);
+    76	}
+    77	
+    78	int main() {
+    79	  char buff[4];  /* big trouble waiting to happen */
+    80	  very_bad(buff);
+    81	  
+    82	  return 0;
+    83	}
+    84	
+    85	/* output from sample runs:
+    86	
+    87	    $ ./stack_corrupt
+    88	    a b 
+    89	    a b
+    90	
+    91	    $ ./stack_corrupt
+    92	    a b c d e f g h i j k l m n o p
+    93	    a b c d e ...
+    94	    Segmentation fault
+    95	
+    96	   The problem:
+    97	
+    98	                +=======================+ <--- main's call frame
+    99	                |        ...            |
+   100	                |-----------------------| 
+   101	                | return address        | <--- saved %eip for main
+   102	                +=======================+ <--- very_bad's call frame
+   103	                | saved stack pointer   | <--- saved %ebp for main
+   104	                |-----------------------|
+   105	                | [3] | [2] | [1] | [0] | <--- buffer in very_bad (LE)
+   106	                |-----------------------|
+   107	                |        ...            |
+   108	                +=======================|
+   109	
+   110	   At the assembler level (assembler for main):
+   111	
+   112	     main:
+   113	            pushl %ebp          ;; save main's call frame pointer
+   114	            movl %esp, %ebp     ;; create call frame for very_bad
+   115	            subl $20, %esp      ;; grow the call frame for very_bad
+   116	            pushl %ebx          ;; save %ebx on the stack
+   117	            addl $-12, %esp     ;; grow the call frame some more
+   118	            leal -4(%ebp), %ebx ;; compute buf as %ebp - 4
+   119	            pushl %ebx          ;; save new %ebx == buf on the stack
+   120	            call very_bad       ;; transfer control to very_bad
+   121	*/
+   122	
+   123	Here's a depiction of what happens on the IA32 stack. 
+   124	There are 3 registers: eax, edx, and esp.
+   125	Right now, we assume the top of the stack is address 0x108.
+   126	
+   127	     +-------+  +-------+  +-------+
+   128	     | 0x123 |  |  0x0  |  | 0x108 |
+   129	     +-------+  +-------+  +-------+
+   130	       %eax       %edx       %esp
+   131	
+   132	       High addresses
+   133	
+   134	         -------------
+   135	         -------------
+   136	         ...
+   137	         -------------
+   138	   0x108                <----- TOP
+   139	
+   140	         ...
+   141	       Low addresses
+   142	
+   143	  /*************************************/
+   144	
+   145	  pushl %eax  ;; execute this statement
+   146	  
+   147	       High addresses               +-------+
+   148	                                    | 0x104 |
+   149	         -------------              +-------+
+   150	         -------------                 %esp
+   151	         ...
+   152	         -------------
+   153	   0x108 -------------              
+   154	   0x104     0x123    <------- TOP
+   155	
+   156	
+   157	       Low addresses
+   158	  /*************************************/
+   159	
+   160	  popl %edx                         +-------+  +-------+
+   161	                                    | 0x123 |  | 0x108 |
+   162	                                    +-------+  +-------+
+   163	                                      %edx       %esp
+   164	
+   165	      High addresses            
+   166	                                   
+   167	         -------------             
+   168	         -------------                
+   169	         ...
+   170	         -------------
+   171	   0x108               <------ TOP              
+   172	   0x104     0x123   
+   173	
+   174	         ...
+   175	       Low addresses
+   176	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   177	
+   178	
+   179	
+   180	
+   181	
+   182	
+   183	/* A short example to look more closely at IA32.
+   184	   The file is IA32.c 
+   185	*/
+   186	int simple(int *xp, int y) {
+   187	  int t = *xp + y;
+   188	  *xp = t;
+   189	  return t;
+   190	}
+   191	
+   192	/* The code above resides in the file IA32.c
+   193	   The command issued is: gcc -S IA32.c, which produces IA32.s, 
+   194	   shown below. Comments added after the ;;
+   195	   This example is in the book: p. 134
+   196	
+   197	simple:
+   198	        pushl   %ebp               ;; save the frame pointer
+   199	        movl    %esp, %ebp         ;; create a new frame pointer
+   200	        movl    8(%ebp), %eax      ;; copy xp into eax
+   201	        movl    (%eax), %edx       ;; copy *xp into edx
+   202	        addl    12(%ebp), %edx     ;; add y
+   203	        movl    %edx, (%eax)       ;; store t at *xp
+   204	        movl    %edx, %eax         ;; copy t into eax, the return value
+   205	        movl    %ebp, %esp         ;; reset the stack pointer
+   206	        popl    %ebp               ;; reset the frame pointer
+   207	        ret                        ;; return
+   208	*/
+   209	
+   210	;;;;
+   211	
+   212	int swap_in_c(int* ptr, int swap_value) {
+   213	  int temp = *ptr;     /* save original value */
+   214	  *ptr = swap_value;   /* reset to swap value */
+   215	  return temp;         /* return original value */
+   216	}
+   217	
+   218	int swap_in_asm(int* ptr, int swap_value) {
+   219	  /* ebp points to the "call frame" or "stack frame," which is
+   220	     area of the stack allocated for this particular call.
+   221	     eax, edx, and ecx are general-purpose registers. (By the way,
+   222	     the "e" in all of this is for "extended," which in turn means
+   223	     32 bits.) 
+   224	
+   225	     The 8 and the 12 are byte offsets from where ebp points, which is
+   226	     at the original TOP of the call frame. So, basically, the ptr parameter
+   227	     is stored 8 bytes from the frame pointer (ebp) and the swap_value
+   228	     parameter is stored 12 bytes from the frame pointer.
+   229	
+   230	     Self-test review question: What's the difference between (%eax) and %eax?
+   231	
+   232	     Finally, %eax is a "first among equals" when it comes to general-purpose
+   233	     registers in that it holds the return value. So the invoking function, in
+   234	     this case main(), gets the value that swap_in_asm stores in eax.
+   235	  */
+   236	  asm("movl 8(%ebp),%eax");    /* fetch ptr, the pointer parameter */
+   237	  asm("movl 12(%ebp),%edx");   /* fetch swap_value, the other parameter */
+   238	  asm("movl (%eax),%ecx");     /* get the value that ptr points to */
+   239	  asm("movl %edx,(%eax)");     /* store swap_value at ptr */
+   240	  asm("movl %ecx,%eax");       /* return the original value of *ptr */
+   241	}
+   242	
+   243	int main() {
+   244	  int n1 = 7;
+   245	  int n2 = swap_in_c(&n1, -999);
+   246	  printf("n1 == %d and n2 == %d\n", n1, n2); /* output: n1 == -999 and n2 == 7 */
+   247	
+   248	  n1 = 7;
+   249	  n2 = swap_in_asm(&n1, -999);
+   250	  printf("n1 == %d and n2 == %d\n", n1, n2); /* output: n1 == -999 and n2 == 7 */
+   251	  return 0;
+   252	}
+   253	
+   254	;;;;
+   255	
+   256	/* safeMult.c */
+   257	#include <limits.h>
+   258	
+   259	int safe_mult(int n1, int n2, int* dest) {
+   260	  int ret_val;
+   261	  *dest = n1 * n2;   /* potential overflow */
+   262	  
+   263	  /* setae %%bl sets the result of the overflow test in 
+   264	     a single-byte register, bl. 
+   265	
+   266	     movzbl %%bl,%0 moves the test result to 32-bit register
+   267	     of the compiler's choosing, indicated by %0.
+   268	
+   269	     In the entry after the first colon, 
+   270	
+   271	                 "=r" (ret_val)
+   272	
+   273	     is assembler for
+   274	
+   275	                 ret_val = %0
+   276	
+   277	     where %0 is the register (the "r" in "=r") that the compiler chose.
+   278	
+   279	     There are no additional inputs to the assembler code; hence, the 
+   280	     second colon has nothing following it.
+   281	
+   282	     The third and last colon indicates the register to use for
+   283	     scratchpad in the multiplication. Note that this register is not
+   284	     eax, which is "special purpose" in that it holds the return value
+   285	     of a function.
+   286	  */
+   287	  asm("setae %%bl; movzbl %%bl,%0"
+   288	      : "=r" (ret_val)               /* lvalue to set */
+   289	      :                              /* no inputs */
+   290	      : "%ebx");                     /* scratchpad */
+   291	
+   292	  return ret_val;
+   293	}
+   294	
+   295	void print(const char* msg, int n) {
+   296	  printf("%s: returned product == %d\n", msg, n);
+   297	}
+   298	
+   299	
+   300	
+   301	
+   302	
+   303	int main() {
+   304	  int n;
+   305	  char* msg;
+   306	
+   307	  int flag = safe_mult(16, 48, &n);
+   308	  msg =  (!flag) ? "Overflow on 16 * 48" : "No overflow";
+   309	  print(msg, n);
+   310	
+   311	  flag = safe_mult(INT_MAX, INT_MAX, &n);
+   312	  msg = (!flag) ? "Overflow on INT_MAX * INT_MAX" : "No overflow.";
+   313	  print(msg, n);
+   314	  return 0;
+   315	}
+   316	/* output:
+   317	    No overflow on 16 * 48: returned product == 768
+   318	    Overflow on INT_MAX * INT_MAX: returned product == 1
+   319	*/
+   320	/* end of safeMult.c */
+   321	;;;;
+   322	
+   323	/* Memory layout on an Intel 32-bit microprocessor (hereafter, IA32) 
+   324	
+   325	  Process address space:
+   326	
+   327	  High Addresses (0xBFFFFFFF = 3,221,225,471)
+   328	
+   329	     environment pointer
+   330	
+   331	     DYNAMICALLY ALLOCATED STORAGE
+   332	
+   333	       stack grows down    ;; parameters and local variables: LIFO behavior
+   334	
+   335	       heap grows up       ;; dynamically allocated storage (malloc, calloc)
+   336	                           ;; that must be freed (free)
+   337	  
+   338	     SEGMENTS
+   339	
+   340	       .data               ;; static initialized data
+   341	
+   342	       .bss                ;; static uninitialized data
+   343	
+   344	       .text               ;; read only: holds program instructions
+   345	
+   346	     shared libraries      
+   347	
+   348	  Low Addresses (0x80000000 = 2,147,483,648)
+   349	
+   350	  High - Low = 3FFFFFFF (1,073,741,823) 
+   351	  So each process gets roughly 1G of virtual address space
+   352	*/
+   353	int add(int n1, int n2) {
+   354	  int ans = n1 + n2;
+   355	  return ans;
+   356	}
+   357	int main() {
+   358	  int x = add(8, 7);
+   359	  printf("%d\n", x);
+   360	  return 0;
+   361	} 
+   362	
+   363	/* Here's the steps I followed to get the output shown below. This file is 
+   364	   Memory.c. I'm using % as the command-line prompt, which becomes (gdb) 
+   365	   inside the debugger. My comments begin with ;;, the traditional comment 
+   366	   delimiter in assembler.
+   367	
+   368	 ;; The flag "preferred-stack-boundary" tells the compiler to increment the
+   369	 ;; stack pointer (%esp) by IA32 DWORD increments, that is, 4 bytes or 32 bits.
+   370	 ;; (In the original Intel architecure, a "word" was 16 bits; hence, a 
+   371	 ;; "double word" or dword is 32 bits and a "long word" is 64 bits.)
+   372	 ;; Without this flag, the compiler would do some funky optimizations and the
+   373	 ;; assembler would be much more difficult to read. The -ggdb option tells the
+   374	 ;; compiler to include debugging information.
+   375	 % gcc -mpreferred-stack-boundary=2 -ggdb Memory.c -o Memory
+   376	
+   377	 ;; debug the compiled Memory program
+   378	 % gdb Memory
+   379	 ;; in the debugger, disassemble the function main
+   380	 (gdb) disas main
+   381	
+   382	 ;; Here's the output. %ebp (extended base pointer) is the "frame pointer" and
+   383	 ;;                    %esp (extended stack pointer) is the "stack pointer"
+   384	 ;; Typically, the frame pointer serves as a fixed reference for offsets, much
+   385	 ;; as an array's name in Java (and C) serves as the base address for indexed
+   386	 ;; offsets. The frame pointer points to the "call frame," the part of the
+   387	 ;; stack allocated for a particular function call; so, in this example,
+   388	 ;; main gets its own call frame as does the function add. By contrast to the
+   389	 ;; frame pointer, the stack pointer moves around during the execution; and it
+   390	 ;; move anywhere in the stack but largely remains with a call frame.
+   391	 Dump of assembler code for function main:
+   392	 0x0804837c <main+0>:    push   %ebp       ;; first push EBP onto stack  
+   393	 0x0804837d <main+1>:    mov    %esp,%ebp  ;; then copy stack ptr into frame ptr
+   394	                                           ;; We now have a "call frame" for main.
+   395	
+   396	 0x0804837f <main+3>:    sub    $0x4,%esp  ;; decrement ESP by 4 (the stack
+   397	                                           ;; grows downwards so that this
+   398	                                           ;; sets the ESP to a new TOP position
+   399	                                           ;; (Note that 4 is one DWORD)
+   400	
+   401	 0x08048382 <main+6>:    push   $0x7       ;; push 7 (2nd parameter) onto stack
+   402	 0x08048384 <main+8>:    push   $0x8       ;; push 8 (1st parameter) onto stack
+   403	 0x08048386 <main+10>:   call   0x8048368 <add> ;; transfer control to add function
+   404	
+   405	 0x0804838b <main+15>:   add    $0x8,%esp       ;; add has returned: add 8 to ESP
+   406	                                                ;; (Move down the stack two DWORDS)
+   407	                                                ;; stack ptr is now back to where
+   408	                                                ;; it was before the arguments
+   409	                                                ;; 7 and 8 were pushed onto it
+   410	
+   411	 0x0804838e <main+18>:   mov    %eax,0xfffffffc(%ebp) ;; 4,294,967,292 
+   412	                                                      ;; 2**32 is 4,294,967,296
+   413	                                                      ;; So the contents of EAX is
+   414	                                                      ;; being moved from a base
+   415	                                                      ;; address + an offset
+   416	
+   417	
+   418	
+   419	
+   420	
+   421	
+   422	
+   423	 0x08048391 <main+21>:   pushl  0xfffffffc(%ebp)      ;; pushl decrements by 
+   424	                                                      ;; 2 DWORDs rather than 1
+   425	 0x08048394 <main+24>:   push   $0x8048488            ;; decrements stack ptr by 1 
+   426	 0x08048399 <main+29>:   call   0x80482b0             ;; DWORD. call to printf
+   427	 0x0804839e <main+34>:   add    $0x8,%esp             ;; move stack ptr down stack
+   428	 0x080483a1 <main+37>:   mov    $0x0,%eax             ;; put 0 in EAX
+   429	 0x080483a6 <main+42>:   leave                        ;; clear the call frame
+   430	 0x080483a7 <main+43>:   ret                          ;; return from function
+   431	 End of assembler dump.
+   432	
+   433	 ;; Now here's the dump of add:
+   434	  
+   435	 Dump of assembler code for function add:
+   436	 0x08048368 <add+0>:     push   %ebp        ;; prepare call frame
+   437	 0x08048369 <add+1>:     mov    %esp,%ebp   ;; ditto
+   438	
+   439	 0x0804836b <add+3>:     sub    $0x4,%esp   ;; new TOP for stack
+   440	
+   441	 0x0804836e <add+6>:     mov    0xc(%ebp),%eax ;; 1st arg into EAX
+   442	 0x08048371 <add+9>:     add    0x8(%ebp),%eax ;; add 2nd arg to EAX
+   443	
+   444	 0x08048374 <add+12>:    mov    %eax,0xfffffffc(%ebp) ;; return val location
+   445	 0x08048377 <add+15>:    mov    0xfffffffc(%ebp),%eax ;; copy return val into EAX
+   446	 0x0804837a <add+18>:    leave  ;; clear the call frame
+   447	 0x0804837b <add+19>:    ret    ;; return control to invoker
+   448	 End of assembler dump.
+   449	*/
+   450	
+   451	;;;;
+   452	
+   453	
+   454	
+   455	
+   456	
+   457	
+   458	
+   459	
+   460	
+   461	
+   462	
+   463	
+   464	
+   465	
+   466	
+   467	
+   468	
+   469	
+   470	
+   471	
+   472	
+   473	
+   474	
+   475	
+   476	
+   477	
+   478	
+   479	
+   480	
+   481	
+   482	
+   483	/* loopFib.c */
+   484	/* fibonacci number N is defined recursively as
+   485	
+   486	               1 if n <= 2
+   487	   Fib(n) =
+   488	               Fib(n - 1) + Fib(n - 2) if n > 2
+   489	
+   490	   The sequence starts 1, 1, 2, 3, 5, 8, 13, 21, 34, 55,...
+   491	*/
+   492	int fib_recursive(int n) {
+   493	  if (n <= 2) return 1;
+   494	  return fib_recursive(n - 1) + fib_recursive(n - 2);
+   495	}
+   496	
+   497	int fib_dw(int n) {
+   498	  int i = 0;         /* loop counter */
+   499	  int val = 0;   
+   500	  int next = 1;  
+   501	
+   502	  /* Assembler for the loop:
+   503	
+   504	       ;; %eax holds temp
+   505	       ;; %ebx holds val
+   506	       ;; %edx holds next
+   507	       ;; %ecx holds i
+   508	       ;; %esi holds the parameter, n
+   509	
+   510	     .L6:
+   511	         leal (%edx, %ebx), %eax  ;; temp = val + next
+   512		 movl %edx, %ebx          ;; val = next
+   513		 movl %eax, %edx          ;; next = temp
+   514	         incl %ecx                ;; i += 1
+   515	         cmpl %esi, %ecx          ;; (i < n) ?
+   516	         jl .L6                   ;; if (i < n) goto .L6
+   517	         movl %ebx, %eax          ;; return val
+   518	  */
+   519	  do {
+   520	    int temp = val + next;
+   521	    val = next;
+   522	    next = temp;
+   523	    i++;
+   524	  } while(i < n);
+   525	
+   526	  return val;
+   527	}
+   528	
+   529	
+   530	
+   531	
+   532	
+   533	
+   534	
+   535	
+   536	
+   537	
+   538	
+   539	
+   540	
+   541	
+   542	
+   543	int fib_w(int n) {
+   544	  /* Assembler for fib_w:
+   545	
+   546	       ;; %eax holds n and then temp (after .L10)
+   547	       ;; %ebx holds val
+   548	       ;; %ecx holds next
+   549	       ;; %edx holds i
+   550	
+   551	           movl 8(%ebp), %eax       ;; get parameter n
+   552		   movl $1, %ebx            ;; val = 1
+   553	           movl $1, %ecx            ;; next = 1
+   554		   cmpl %eax, %ebx          ;; (val > n) ?
+   555	           jge .L9                  ;; if (val >= n) return
+   556	           leal -1(%eax), %edx      ;; i = n - 1
+   557	     .L10:
+   558	           leal (%ecx, %ebx), %eax  ;; temp = next + val
+   559	           movl %ecx, %ebx          ;; val = next
+   560	           movl %eax, %ecx          ;; next = temp
+   561		   decl %edx                ;; i--
+   562	           jnz  .L10                ;; if (i != 0) goto .L10
+   563	     .L9:       
+   564	  */
+   565	  int i = 1;
+   566	  int val = 1;
+   567	  int next = 1;
+   568	
+   569	  while (i < n) {
+   570	    int temp = val + next;
+   571	    val = next;
+   572	    next = temp;
+   573	    i++;
+   574	  }
+   575	  
+   576	  return val;
+   577	}
+   578	
+   579	int main() {
+   580	  int i;
+   581	  for (i = 1; i < 8; i++) {
+   582	    printf("Fib(%i) == %i (recursive) and %i (dw) and %i (w)\n",
+   583		   i, fib_recursive(i), fib_dw(i), fib_w(i));
+   584	  }
+   585	
+   586	  return 0;
+   587	}
+   588	/* end of loopFib.c */
+   589	
+   590	;;;;
+   591	
+   592	/* address.c */
+   593	#include <stdio.h>
+   594	
+   595	unsigned find_ESP() {
+   596	  asm("movl %esp, %eax");
+   597	}
+   598	
+   599	unsigned find_EBP() {
+   600	  asm("movl %ebp, %eax");
+   601	}
+   602	
+   603	void dump_registers(const char* msg ) {
+   604	  unsigned esp = find_ESP();
+   605	  unsigned ebp = find_EBP();
+   606	
+   607	  printf("%s\nesp ==> %x\nebp ==> %x\n", msg, esp, ebp);
+   608	}
+   609	
+   610	/* p. 146 in text */
+   611	int arith(int x, int y, int z) {
+   612	  dump_registers("\nstart of arith");
+   613	  int t1 = x + y;   /* movl 12(%ebp), %eax        ;; %eax = y */
+   614	                    /* addl  8(%ebp), %eax        ;; t1 = x + y */
+   615	
+   616	  dump_registers("\ninside arith");
+   617	
+   618	  int t2 = z * 48;  /* movl 16(%ebp), %edx        ;; %edx = z */
+   619	                    /* leal means "load effective address," that is,
+   620	                       load a memory address into a register. Howerver,
+   621	                       it also can used as a hack to express basic arithmetic
+   622	                       operations. In the example below, the expression
+   623	                       leal (%edx, %edx, 2) means "add %edx to itself twice."
+   624	                       Note that one copy of z is already in %edx so that, in
+   625	                       effect, we're tripling z. The second operand is %edx, 
+   626	                       the destination.
+   627	                    /* leal (%edx, %edx, 2), %edx ;; z = z * 3 */
+   628	
+   629	                        /* sall $4, %edx  ;; t2 = z * 48 (sall is SHIFT LEFT) */
+   630	
+   631	  int t3 = t1 & 0xffff; /* andl $65535, %eax ;; 0xffff == 65,535 */
+   632	
+   633	  int t4 = t2 * t3;     /* imull %eax, %edx  ;; t4 = t2 * t3 */
+   634	
+   635	  dump_registers("\nend of arith");
+   636	
+   637	  return t4;            /* movl %edx, %eax   ;; %eax holds return value */
+   638	}
+   639	
+   640	int main() {
+   641	  dump_registers("\nstart of main");
+   642	  int ans = arith(1, 2, 3);
+   643	  dump_registers("\nmiddle of main");
+   644	  printf("return from arith is %d\n", ans);  /* 432 */
+   645	  dump_registers("\nend of main");
+   646	
+   647	  return 0;
+   648	}
+   649	
+   650	
+   651	
+   652	
+   653	
+   654	
+   655	
+   656	
+   657	
+   658	
+   659	
+   660	
+   661	
+   662	
+   663	/* output on a sample run:
+   664	start of main
+   665	esp ==> bfe3caa8
+   666	ebp ==> bfe3caa8
+   667	
+   668	start of arith
+   669	esp ==> bfe3ca78
+   670	ebp ==> bfe3ca78
+   671	
+   672	inside arith
+   673	esp ==> bfe3ca78
+   674	ebp ==> bfe3ca78
+   675	
+   676	end of arith
+   677	esp ==> bfe3ca78
+   678	ebp ==> bfe3ca78
+   679	
+   680	middle of main
+   681	esp ==> bfe3caa8
+   682	ebp ==> bfe3caa8
+   683	return from arith is 432
+   684	
+   685	end of main
+   686	esp ==> bfe3caa8
+   687	ebp ==> bfe3caa8
+   688	*/
+   689	/* end of address.c */
+   690	
+   691	;;;;
+   692	
+   693	;  hello.asm 
+   694	;  (You'll need the NASM compiler if you want to run, which you
+   695	;  can get from the URL below:
+   696	;       http://sourceforge.net/project/showfiles.php?group_id=6208 
+   697	;
+   698	; assemble:	nasm -f elf -l hello.lst  hello.asm
+   699	; link:		gcc -o hiASM  hello.o
+   700	; run:	        hello 
+   701	; output is:	Hello World 
+   702	
+   703		SECTION .data                      ; data section
+   704	msg:	db "Hello, world! (from asm)",10   ; the string to print, 10 is CR
+   705	len:	equ $-msg		           ; "$" means "here"
+   706					           ; len is a value, not an address
+   707	
+   708		SECTION .text	                   ; code section
+   709	        global main	                   ; make label available to linker 
+   710	main:			                   ; standard  gcc  entry point
+   711		
+   712		mov	edx,len	                   ; arg3, length of string to print
+   713		mov	ecx,msg	                   ; arg2, pointer to string
+   714		mov	ebx,1	                   ; arg1, where to write, screen
+   715		mov	eax,4	                   ; write command to int 80 hex
+   716		int	0x80	                   ; interrupt 80 hex, call kernel
+   717		
+   718		mov	ebx,0	                   ; exit code, 0 = normal
+   719		mov	eax,1	                   ; exit command to kernel
+   720		int	0x80	                   ; interrupt 80 hex, call kernel

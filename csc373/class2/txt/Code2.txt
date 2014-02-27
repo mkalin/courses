@@ -1,0 +1,462 @@
+     1	/* removeLNs.c */
+     2	#include <stdio.h>
+     3	#include <string.h>
+     4	
+     5	#define BuffSize (1000)
+     6	#define MaxIndent (12)
+     7	
+     8	int main() {
+     9	  
+    10	  unsigned char buffer[BuffSize + 1];
+    11	  while (fgets(buffer, BuffSize, stdin) != 0) {
+    12	    unsigned char* ptr = buffer;
+    13	    unsigned int n = 0;
+    14	
+    15	    while (isspace(*ptr)) ptr++;
+    16	    while (isdigit(*ptr) && ++n < MaxIndent) ptr++;
+    17	    if (*ptr == '\t') ptr++;
+    18	    printf("%s", ptr);
+    19	  }
+    20	  return 0;
+    21	}
+    22	;;;
+    23	
+    24	/* arrays, structs, and alignment issues */
+    25	
+    26	#include <stdio.h>
+    27	
+    28	void array_stuff();     /* declaration */
+    29	void struct_stuff();    /* declaration */
+    30	void function_stuff();  /* declaration */
+    31	
+    32	int main() {
+    33	  array_stuff();
+    34	  struct_stuff();
+    35	  function_stuff();
+    36	  return 0;
+    37	}
+    38	
+    39	void array_stuff() {
+    40	  /* First, a quick look at how N-dimensional arrays are stored.
+    41	     A "table" or "matrix" is a 2-dimensional array, whereas a
+    42	     "vector" is a 1-dimensional array. However, at the implemenation
+    43	     level 1-dimensional and multi-dimensional arrays are laid out the
+    44	     same way --- as contiguous elements in memory. In C, a table or
+    45	     matrix is stored in "row major" order. In this example, the first
+    46	     row consists of 1 and 2 and the first column consists of 1, 3, and
+    47	     5; hence, the C layout is 1 2 3 4 5 6 rather than 1 3 5 2 4 6.
+    48	  */
+    49	  int table[3][2] =
+    50	    { {1, 2},
+    51	      {3, 4},
+    52	      {5, 6}
+    53	    };
+    54	  int i, j;
+    55	
+    56	  /* cast because table's type is "pointer to an array of arrays." */
+    57	  int* ptr = (int*) table;
+    58	
+    59	
+    60	
+    61				      
+    62	  /* normal way to access elements: row-major order in IA32 */
+    63	  for (i = 0; i < 3; i++)
+    64	    for (j = 0; j < 2; j++)
+    65	      printf("table[%i][%i] == %i\n", i, j, table[i][j]);
+    66	  /* output:
+    67	     
+    68	     table[0][0] == 1
+    69	     table[0][1] == 2
+    70	     table[1][0] == 3
+    71	     table[1][1] == 4
+    72	     table[2][0] == 5
+    73	     table[2][1] == 6
+    74	  */
+    75	
+    76	  /* treating an N-dimensional array as a 1-dimensional array */
+    77	  printf("\n");
+    78	  for (i = 0; i < (3 * 2); i++) 
+    79	    printf("table[%i] == %i\n", i, ptr[i]);
+    80	   /* output:
+    81	
+    82	     table[0] == 1
+    83	     table[1] == 2
+    84	     table[2] == 3
+    85	     table[3] == 4
+    86	     table[4] == 5
+    87	     table[5] == 6
+    88	  */
+    89	}
+    90	
+    91	void struct_stuff() {
+    92	  struct Sample {
+    93	    int n1;   /* 4 bytes */
+    94	    char c;   /* 1 byte */
+    95	    int n2;   /* 4 bytes */
+    96	  };
+    97	
+    98	  /* code to illustrate use */
+    99	  struct Sample* ptr_s1 = malloc(sizeof(struct Sample));
+   100	  ptr_s1->n1 = 1;
+   101	  ptr_s1->c = 'A';
+   102	  ptr_s1->n2 = 2;
+   103	  (*ptr_s1).n2 += 4; /* same as ptr_s1->n2 += 4 */
+   104	  free(ptr_s1);
+   105	
+   106	  printf("A struct Sample instance requires %d bytes\n",
+   107		 sizeof(struct Sample));
+   108	  /* Output on my Linux box: A struct Sample instance requires 12 bytes */
+   109	
+   110	
+   111	
+   112	
+   113	
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	  /* layout issues:
+   123	                              
+   124	                      Bytes:     4       1      4
+   125	     Minimalist possibility: +--------+----+--------+
+   126	                             |  n1    |  c |   n2   |
+   127	                             +--------+----+--------+
+   128	
+   129	     If you disassemble struct Sample, you'll likely see the pertinent 
+   130	     assembler begins with the directive
+   131	
+   132	         .align 4
+   133	
+   134	     The directive means that the struct's fields are laid out in memory
+   135	     on DW0RD (that is, 4-byte) boundaries. So the picture becomes
+   136	
+   137	                                4        4        4
+   138	                            +--------+--------+--------+
+   139	                            |   n1   |   c    |   n2   |
+   140	                            +--------+--------+--------+
+   141	
+   142	     This layout "wastes" 3 bytes, as the char requires only 4; but the
+   143	     resulting processing is simpler in that memory fetches are always from
+   144	     addresses on DWORD boundaries.
+   145	  */
+   146	}
+   147	
+   148	int f(int n) {          /* definition */
+   149	  return n * 2 + 1;
+   150	}
+   151	
+   152	void function_stuff() {
+   153	  int ans;
+   154	  struct Object {
+   155	    int id;
+   156	    int (*method)(int);
+   157	  };
+   158	  typedef struct Object Obj;
+   159	
+   160	  Obj obj1;
+   161	  obj1.id = 1234;
+   162	  obj1.method = f;
+   163	
+   164	  ans = (*obj1.method)(25);  /* technically correct */
+   165	  ans = obj1.method(27);     /* now allowed in standard C */
+   166	  printf("%i\n", ans);  
+   167	}
+   168	
+   169	
+   170	
+   171	
+   172	
+   173	
+   174	
+   175	
+   176	
+   177	
+   178	
+   179	
+   180	
+   181	
+   182	#include <stdio.h>
+   183	
+   184	int main() {
+   185	  int table[3][2] = { {1, 2}, {3, 4}, {5, 6} };
+   186	
+   187	  int i, j;
+   188	  for (i = 0; i < 3; i++) {
+   189	    printf("Address of indexed row %i is %p\n", 
+   190		   i, table[i]);
+   191	    for (j = 0; j < 2; j++) {
+   192	      printf("Address of indexed col % in row %i is %p\n", 
+   193		     j, i, &table[i][j]);
+   194	      printf("\tContent is %i\n", table[i][j]);
+   195	    }      
+   196	  }
+   197	  return 0;
+   198	}
+   199	/* output from sample run:
+   200	Address of indexed row 0 is 0xbfe9ca60
+   201	Address of indexed col  0n row 0 is 0xbfe9ca60
+   202	        Content is 1
+   203	Address of indexed col  1n row 0 is 0xbfe9ca64
+   204	        Content is 2
+   205	Address of indexed row 1 is 0xbfe9ca68
+   206	Address of indexed col  0n row 1 is 0xbfe9ca68
+   207	        Content is 3
+   208	Address of indexed col  1n row 1 is 0xbfe9ca6c
+   209	        Content is 4
+   210	Address of indexed row 2 is 0xbfe9ca70
+   211	Address of indexed col  0n row 2 is 0xbfe9ca70
+   212	        Content is 5
+   213	Address of indexed col  1n row 2 is 0xbfe9ca74
+   214	        Content is 6
+   215	*/
+   216	
+   217	
+   218	
+   219	
+   220	
+   221	
+   222	
+   223	
+   224	
+   225	
+   226	
+   227	
+   228	
+   229	
+   230	
+   231	
+   232	
+   233	
+   234	
+   235	
+   236	
+   237	
+   238	
+   239	
+   240	
+   241	
+   242	/* process.c */
+   243	
+   244	#include <unistd.h>     /* symbolic constants */
+   245	#include <sys/types.h>  /* system data types */ 
+   246	#include <errno.h>      /* error codes */
+   247	#include <stdio.h>      /* printf, etc. */
+   248	#include <sys/wait.h>   /* waiting on process termination */
+   249	#include <stdlib.h>     /* utilities */
+   250	 
+   251	int main() {
+   252	  pid_t cpid;    /* process id (pid) of child or forked process */
+   253	  int   retval;  /* user-supplied return code for child */
+   254	  int   status;  /* child's exit status for parent process */
+   255	  
+   256	  /* Child process will "inherit" the three variables listed above so
+   257	     that the parent and the child now have three distinct variables
+   258	     that share the same names.
+   259	  */
+   260	  cpid = fork(); /* create the child process */
+   261	  
+   262	  /* fork succeeded */
+   263	  if (cpid >= 0) {
+   264	    printf("cpid after fork is:         %d\n\n", cpid);
+   265	 
+   266	    /* Parent and child are executing the same code; hence,
+   267	       we need to distinguish between the two. */
+   268	
+   269	    /* child code */
+   270	    if (cpid == 0) { /* fork() returns 0 to the child */
+   271	      printf("Child's pid (in child):   %d\n", getpid());
+   272	      printf("Child's parent's pid:     %d\n\n", getppid());
+   273	      printf("Child sleeping for 1 second...\n");
+   274	      sleep(1); /* 1 second */
+   275	      
+   276	      printf("\nEnter an exit value (0 to 100): ");
+   277	      scanf("%d", &retval);
+   278	      printf("Child exiting...\n\n");    
+   279	
+   280	      exit(retval); /* child terminates and returns status code */
+   281	    }
+   282	    /* parent code */
+   283	    else { /* fork() returns new pid to the parent process */
+   284	      printf("Parent's pid:             %d\n", getpid());
+   285	      printf("Child's  pid (in parent): %d\n", cpid);
+   286	      printf("Waiting for child to exit...\n");
+   287	      wait(&status); /* wait for child to exit and store its status code */
+   288	      printf("Child's exit code is: %d\n", WEXITSTATUS(status)); /* macro ensures normal */
+   289	      printf("Parent exiting...\n");             
+   290	
+   291	      exit(0); /* parent exits with normal termination */       
+   292	    }
+   293	  }
+   294	  /* fork failed (-1 is status code) */
+   295	  else { 
+   296	    perror("fork"); /* display error message */
+   297	    exit(0); 
+   298	  }
+   299	  return 0;
+   300	}
+   301	
+   302	/* output from a sample run:
+   303	
+   304	   cpid after fork is:       2410
+   305	
+   306	   Parent's pid:             2408
+   307	   Child's  pid (in parent): 2410
+   308	   Waiting for child to exit...
+   309	   cpid after fork is:          0
+   310	   
+   311	   Child's pid (in child):   2410
+   312	   Child's parent's pid:     2408
+   313	   
+   314	   Child sleeping for 1 second...
+   315	   
+   316	   Enter an exit value (0 to 100): 99
+   317	   Child exiting...
+   318	   
+   319	   Child's exit code is: 99
+   320	   Parent exiting...
+   321	*/
+   322	
+   323	
+   324	
+   325	
+   326	
+   327	
+   328	
+   329	
+   330	
+   331	
+   332	
+   333	
+   334	
+   335	
+   336	
+   337	
+   338	
+   339	
+   340	
+   341	
+   342	
+   343	
+   344	
+   345	
+   346	
+   347	
+   348	
+   349	
+   350	
+   351	
+   352	
+   353	
+   354	
+   355	
+   356	
+   357	
+   358	
+   359	
+   360	
+   361	
+   362	/* signalsJumps.c */
+   363	
+   364	#include <stdio.h>
+   365	#include <setjmp.h>
+   366	#include <stdlib.h>
+   367	#include <signal.h>
+   368	
+   369	/* output from a sample run:
+   370	
+   371	   SIGFPE is defined as 8
+   372	   Two integers: 100 10
+   373	   100 / 10 == 10
+   374	   Two integers: 100 0
+   375	        Control to jumper: signal status == 8.
+   376	   Two integers: 100 4
+   377	   100 / 4 == 25
+   378	   Two integers:  ;; I entered Control-C to terminate program
+   379	*/
+   380	
+   381	/* Define a jump buffer to handle error conditions.
+   382	   Data type jmp_buf defined in setjmp.h.
+   383	*/
+   384	static jmp_buf env;       /* file scope; type is defined in setjmp.h */
+   385	
+   386	void jumper(int);         /* callback for SIGFPE errors */
+   387	void divisionInt(void);   /* alternative to void divisionInt() */
+   388	int guard(void);          /* guards divisonInt */
+   389	
+   390	void trace_and_die(const char* msg) {
+   391	  fprintf(stderr, msg);
+   392	  exit(EXIT_FAILURE);
+   393	}
+   394	
+   395	int main() {
+   396	  /* Trap signals generated by arithmetic errors such as 
+   397	     division by zero. The statement
+   398	     
+   399	     signal(SIGINT, SIG_IGN);
+   400	
+   401	     would instruct the program to ignore (SIG_IGN) interrupts such
+   402	     as hitting Control-C while the program is in execution.
+   403	
+   404	     In this example, we want to suppress floating-point exceptions
+   405	     from the system and instead handle the matter ourselves.
+   406	
+   407	     Withtout this setup, the division of, say, 100 by 0 would generate
+   408	     a "floating-point exception" and terminate execution.
+   409	  */
+   410	  signal(SIGFPE, jumper); 
+   411	  printf("SIGFPE is defined as %i\n", SIGFPE);
+   412	
+   413	  /* Loop until error condition occurs. */
+   414	  while (0 == guard())
+   415	    ;
+   416	  return 0;
+   417	}
+   418	
+   419	
+   420	
+   421	
+   422	/* Jump out of this function to the jump destination,
+   423	   which is the point after the call to setjmp. In
+   424	   our case, the jump point occurs right after the
+   425	   if-test in function guard.
+   426	*/
+   427	void jumper(int status) {
+   428	  printf("\t Control to jumper: signal status == %d.\n", status);
+   429	  longjmp(env, 1);  /* 1 indicates with setjmp would have returned.
+   430			       If successful, longjmp forces control to return
+   431			       to the next statement after setjmp, in this case
+   432			       a call to divisionInt.
+   433			     */
+   434	  /* This code is executed only if longjmp fails. Normally, longjmp
+   435	     does not return.
+   436	  */
+   437	  trace_and_die("longjmp returned: trouble\n");
+   438	}
+   439	
+   440	/* Set a jump point for return from an error  condition, in this case 
+   441	   an error resulting from a floating-point operation. The function
+   442	   signal is invoked in main to trap such errors. Return 0 (ok) if the 
+   443	   floating-point operation succeeds; otherwise, the nonlocal jump
+   444	   of longjmp intervenes.
+   445	*/
+   446	int guard(void) {
+   447	  /* Set jump point, which is right after the if-test */
+   448	  setjmp(env);
+   449	  divisionInt();
+   450	  return 0;
+   451	}
+   452	
+   453	/* Scan the standard input for two floats and
+   454	   divide the first by the second.
+   455	*/
+   456	void divisionInt(void) {
+   457	  int n1, n2;
+   458	  printf("Two integers: ");
+   459	  scanf("%i %i", &n1, &n2);
+   460	  printf("%i / %i == %i\n", n1, n2, n1 / n2);
+   461	}
+   462	

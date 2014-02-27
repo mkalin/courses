@@ -1,0 +1,466 @@
+     1	                             CSC 373/406: Systems 1
+     2	                                 Homework #2
+     3	
+     4	Points: 100
+     5	Due: Before midnight, Tuesday, July 2
+     6	
+     7	Grading rubric: 
+     8	
+     9	There are 6 problems, the first four of which are worth 20 
+    10	points apiece; problems 5 and 6 are worth 10 points apiece.
+    11	The rubric is on a per-problem basis, as the problems are quite
+    12	different.
+    13	
+    14	Problem 1: All 20 points are for the explanation, which needs to
+    15	to be clear, precise, and convincing. The question should be 
+    16	addressed directly: What, exactly, will happen during execution
+    17	if the extern variable state were auto instead?
+    18	
+    19	Problem 2: There are basically two parts. The first is to determine what the
+    20	compiler does with respect to register assignment. The second is to assess
+    21	the compiler's work. For example, does the compiler seem to do such a good
+    22	job that no improvement can be made? If not, what sort of improvement could be
+    23	made? Assessing the compiler's work is worth 5 points; reasons for the 
+    24	assessment are worth 15 points.
+    25	
+    26	Problem 3: Sample documentation is in place for most of the IA-32 statements.
+    27	The problem is to document the rest. The documentation should be precise.
+    28	For example, consider this C code:
+    29	
+    30	  int x = 1;
+    31	  int y = 2;
+    32	  int t = x;
+    33	  x = y;
+    34	  y = t;
+    35	
+    36	Here's precise documentation:
+    37	
+    38	  int x = 1;  /* store 1 in x */
+    39	  int y = 2;  /* store 2 in y */
+    40	  int t = x;  /* copy x's value, 1, into t */
+    41	  x = y;      /* copy y's value, 2, into x */
+    42	  y = t;      /* copy t, which is x's original value, into y:
+    43	                 x and y have swapped values */
+    44	
+    45	Problem 4: The problem is to write a C program that prints out
+    46	a 3-dimensional array twice, each time as if it were a 1-dimensional
+    47	array. To print out a 1-dimensional array requires no nested loops; 
+    48	hence, no nested loops should be used in printing out the array
+    49	either left to right or right to left. Your code should be added to
+    50	my code and called in some appropriate way. My original code should
+    51	be left as is. The revised code must compile with the command:
+    52	
+    53	     gcc HwkCode.c    ;; unixy system
+    54	     gcc-3 HwkCode.c  ;; windows
+    55	
+    56	The name of the C file is arbitrary, of course. The important point
+    57	is that the code must be C, not C++. There is no credit if the compilation 
+    58	does not produce an executable. If the code executes as required, 
+    59	there are no deductions for "coding style" so long as nested looping is not
+    60	used. The code should be documented (5 points).
+    61	
+    62	Problem 5: The answer should trace, in some easy-to-understand way,
+    63	how each of the five instructions impacts memory, that is, how the
+    64	contents of a memory location change. At the end, the contents of the
+    65	final contents should be shown.
+    66	
+    67	Problem 6: Document the function swap, explain in general what it does.
+    68	(By "in general" is meant what does the function do to any two arrays
+    69	passed to it?). Also document the lines in the swap function.
+    70	       
+    71	;;;;
+    72	
+    73	Problem 1: Here's the recursive "Hello, world!" program that we looked at in class:
+    74	
+    75	                        
+    76	#include <stdio.h>
+    77	
+    78	/* global variables: shared among all calls to all functions 
+    79	   in this file.
+    80	*/
+    81	char* greeting_pieces[ ] = {"Hello", ",", " world", "!"};
+    82	int state = 4; /* number of strings in array greeting_pieces */
+    83	
+    84	int main() {
+    85	  if (--state < 0) return 0;        /* decrement status & return to invoker */
+    86	
+    87	  int i = state;                    /* make a local copy of status */
+    88	
+    89	  main();                           /* recursively invoke main */
+    90	  printf("%s", greeting_pieces[i]); /* print your greeting piece */
+    91	
+    92	  return 0;
+    93	}
+    94	/* end of source code */
+    95	
+    96	The variable named state occurs outside of main (right above main, in fact) and is
+    97	called "extern" in C. If the variable state were inside main (as, for example, the 
+    98	int variable i is inside main), then state would be "auto" rather than "extern." 
+    99	
+   100	Why must state be extern for this example to work? In different words, what's the
+   101	problem with making it auto?
+   102	;;;;
+   103	
+   104	
+   105	Problem 2. IA32 uses certain conventions with respect to registers. The registers
+   106	
+   107	             %eax %edx %ecx
+   108	
+   109	are "caller save" registers, whereas the registers
+   110	
+   111	             %ebx %edi %esi
+   112	
+   113	are "callee save" registers.
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	Example to illustrate:
+   123	
+   124	        /* assume callee needs three registers */
+   125	        int callee(int n1, int n2) {
+   126	           int temp = n1 * n2;
+   127	           return temp - (n1 + n2);
+   128	        }
+   129	
+   130	        void caller() {
+   131	           int a = 4;
+   132	           int b = 8;
+   133	           int c = callee(a, b);
+   134	           /*...*/
+   135	        }
+   136	
+   137	When caller calls callee, callee does not need to worry about overwriting
+   138	the "caller save" registers (for instance, %eax). The system ensures that
+   139	any data that caller required and that happened to be stored in these
+   140	"caller save" registers would be saved and restored for caller. However,
+   141	if callee were to overwrite any of the "callee save" registers (for instance,
+   142	%ebx), then callee first must save the current contents of any such 
+   143	register and then restore the contents before returning. Assume, in the
+   144	above example, that caller and callee each requires registers for its local
+   145	int variables, parameters, and return value.
+   146	
+   147	Do a register assignment that follows the "caller save" and "callee save"
+   148	conventions. In other words, indicate which C variable's value would be
+   149	stored in which register. You do not need to show how the computation would
+   150	occur at the assembler level. You do need to indicate the register in which
+   151	callee's return value would be stored.
+   152	
+   153	To begin, see what gcc would do with respect to register assignment and
+   154	then determine whether you can do better. If the C file is foo.c, then
+   155	the compile command is:
+   156	
+   157	   gcc -S foo.c
+   158	;;;;
+   159	
+   160	
+   161	Problem 3: Document the assembler below. A detailed explanation follows.
+   162	
+   163	/* This function is called no_op ("no operation" or NOP in assembler) 
+   164	   because it does no useful work, as the return of void indicates.
+   165	   Anyway, below the C function is the label
+   166	
+   167	             _no_op:
+   168	
+   169	   that begins the non-optimized assembler, which implements the C
+   170	   code. The problem here is to document each line of the assembler.
+   171	   I've started by doing the first two and the last two.
+   172	   The early sections in Chapter 3 go over the assembler in detail. 
+   173	   P. 144 has a table of the instructions. The book's index is also
+   174	   helpful. For example, the instruction leal (Load Effective Address Long),
+   175	   which we'll go over in class, is explained on p. 143.
+   176	
+   177	   My comments are a bit wordy. The idea is to document to the stardard
+   178	   expectation: someone can understand what the code does merely by reading
+   179	   the documentation and without studying the code itself. There's no need
+   180	   to document the C code, only the assembler.
+   181	
+   182	   Quick review of asm:
+   183	
+   184	      -- $8 signifies immediate addressing so $8 means "the value 8"
+   185	      
+   186	      -- 12(%ebp) is an example of displacement addressing with
+   187	         %ebp as the base address and +12 as the offset (note that
+   188	         some displacements are negative)
+   189	
+   190	      -- keep in mind that the IA32 stack grows "downwards," that is,
+   191	         from high addresses to low addresses. So a negative displacement
+   192	         takes you to a higher address and a negative displacement takes
+   193	         you to a lower addresses:
+   194	                                       High Addresses
+   195	
+   196	            P + n, n >= 1               ---->
+   197	
+   198	            P, some point on the stack  ----> 
+   199	
+   200	            P - n, n >= 1               ---->
+   201	
+   202	                                       Low Addresses
+   203	
+   204	*/
+   205	   
+   206	void no_op(int a, int b) {
+   207	    int y = 5;
+   208	    int z = 9; 
+   209	    y += b;
+   210	    z += a;
+   211	    return;
+   212	}
+   213	
+   214	_no_op:
+   215	 pushl %ebp                ;; save the base pointer (call frame pointer) from
+   216	                           ;; the caller, that is, the function that calls no_op
+   217	                      
+   218	 movl %esp, %ebp           ;; create a new call frame by setting %ebp to TOP
+   219	
+   220	 subl $8, %esp     
+   221	 movl $5, -4(%ebp) 
+   222	 movl $9, -8(%ebp)     
+   223	 movl 12(%ebp), %edx   
+   224	 leal -4(%ebp), %eax   
+   225	 addl %edx, (%eax)
+   226	 movl 8(%ebp), %edx
+   227	 leal -8(%ebp), %eax
+   228	 addl %edx, (%eax)
+   229	
+   230	 leave           ;; restore the call frame pointer (%ebp) and the
+   231	                 ;; stack pointer (%esp) to their values before the
+   232	                 ;; call to no_op. In effect, leave is equivalent to
+   233	                 ;;
+   234	                 ;;  movl %ebp, %esp  ;; set TOP to start of this call frame
+   235	                 ;;  popl %ebp        ;; restore the saved %ebp, thereby setting
+   236	                                      ;; TOP to the end of the caller's 
+   237	                                      ;; current call frame. Now new items
+   238	                                      ;; can be added to the caller's stack frame
+   239	
+   240	
+   241	
+   242	 ret             ;; return control to the caller of no_op
+   243	                 ;; when the caller invoked 
+   244	                 ;;
+   245	                 ;;     call no_op
+   246	                 ;;     <next instruction in caller>
+   247	                 ;;
+   248	                 ;; the call instruction pushes the address of the next 
+   249	                 ;; caller instruction onto the stack. The ret instruction
+   250	                 ;; pops this address off the stack so that the caller
+   251	                 ;; now can resume execution.
+   252	;;;;
+   253	
+   254	
+   255	Problem 4: Here's a C program with the assignment in the documentation.
+   256	
+   257	/*  
+   258	   This program populates a 3-dimensional array with randomly generated
+   259	   integers and prints them out.
+   260	
+   261	   The exercise is to write the code that treats the 3-dimensional array 
+   262	   as if it were a 1-dimensional array, which is how the system actually
+   263	   stores the array. Your code should print the array out twice: left to
+   264	   right and right to left, that is, in regular order and then in reverse
+   265	   order. For example, if the 10 is the first number and 87 is the last,
+   266	   one print out would be
+   267	
+   268	   10,...,87
+   269	
+   270	   and the other would be
+   271	
+   272	   87,...,10
+   273	
+   274	   In treating the 3-dimensional array as a 1-dimensional array, you won't
+   275	   need nested loops of the sort that I have in the function dump. Your
+   276	   code will look more like
+   277	
+   278	   for (...)
+   279	      printf("%i ",...);
+   280	
+   281	   You're free to use a while loop if you prefer, of course. The key thing
+   282	   is that your two print outs won't require nested loops.
+   283	
+   284	 */
+   285	
+   286	
+   287	
+   288	
+   289	
+   290	
+   291	
+   292	
+   293	
+   294	
+   295	
+   296	
+   297	
+   298	
+   299	
+   300	
+   301	
+   302	#include <stdio.h>
+   303	#include <stdlib.h>
+   304	#include <time.h>
+   305	
+   306	#define Mod (100) /* limit numbers to small ones */
+   307	
+   308	/* print the contents of a 3-dimensional int array */
+   309	void dump(int a[][2][3]) {
+   310	  int i, j, k;
+   311	  for (i = 0; i < 3; i++) {
+   312	    printf("\n");
+   313	    for (j = 0; j < 2; j++) {
+   314	      printf("\n");
+   315	      for (k = 0; k < 3; k++)
+   316		printf("%i ", a[i][j][k]);
+   317	    }
+   318	  }	
+   319	  printf("\n");
+   320	}
+   321	
+   322	int main() {
+   323	  /* If you want always to get the same numbers,
+   324	     comment out the next line.
+   325	
+   326	     If you want different numbers each time,
+   327	     leave the next line as is.
+   328	  */
+   329	  srand(time(0)); /* seed the random number generator */
+   330	
+   331	  int array3[3][2][3];
+   332	  int i, j, k;
+   333	
+   334	  /* fill the 3-dimensional array with random numbers */
+   335	  for (i = 0; i < 3; i++)
+   336	    for (j = 0; j < 2; j++)
+   337	      for (k = 0; k < 3; k++)
+   338		array3[i][j][k] = rand() % Mod;
+   339	
+   340	  /* print out the array */
+   341	  dump(array3);
+   342	  
+   343	  return 0;
+   344	}
+   345	;;;;
+   346	
+   347	Problem 5:
+   348	
+   349	  Machine M is byte addressable. Below are memory addresses starting at
+   350	  address 100. Next to the address is its contents, shown in signed 
+   351	  decimal. So the first entry represents that memory cell 100 holds -1,
+   352	  which will written as
+   353	
+   354	                 RAM[100] == -1 
+   355	
+   356	  Assume that all arithmetic operations are done at the byte level.
+   357	
+   358	
+   359	
+   360	
+   361	
+   362	  Addressing Modes through examples:
+   363	
+   364	    Memory Direct:      ADD 100, 101, 105    ;; RAM[105] = RAM[100] + RAM[101]
+   365	  
+   366	    Immediate:          ADD $10, 101, 104    ;; RAM[104] = 10 + RAM[101]
+   367	
+   368	    Memory Indirect:    SUB $10, @102, 104   ;; RAM[104] = 10 - RAM[RAM[102]]
+   369	                                             ;;          = 10 - 101
+   370	
+   371	    Displacement:       ADD 2(101), $10, 104 ;; RAM[104] = RAM[101 + 2] + 10
+   372	                                             ;;          = 31 + 10
+   373	                                             ;; displacements can be negative or
+   374	                                             ;; positive
+   375	
+   376	    The addressing modes can be combined. In particular, in a displacement
+   377	    address, the base address could be, for example, (101) or (@101).
+   378	========================================================================================
+   379	
+   380	  Memory   Contents
+   381	  Address
+   382	  
+   383	   100       -1
+   384	   101        2
+   385	   102      106
+   386	   103       31
+   387	   104        4
+   388	   105       56
+   389	   106      101
+   390	   107       18
+   391	   108      105
+   392	   109      102
+   393	   110        3
+   394	
+   395	 Show the contents of RAM after the following short pseudo-assembler program
+   396	 executes. ADD signifies addition, SUB signifies subtraction, and MOV signifies
+   397	 copy (for instance, the instruction "MOV 100, 101" would copy the contents of
+   398	 RAM[100] into RAM[101], leaving RAM[100] unchanged). The three instructions 
+   399	 accept mixes of instruction modes. To begin, RAM is as shown above.
+   400	 Here's the pseudo-assembler program, which executes from the first instruction 
+   401	 through the last, HALT. The HALT instruction does not impact RAM.
+   402	
+   403	 SUB @106, -2(104), 110
+   404	 MOV 102, 104
+   405	 ADD 110, 2(@102), 110
+   406	 SUB $110, 110, 110
+   407	 ADD 6(101), -2(104), -4(104) 
+   408	 HALT
+   409	  
+   410	
+   411	
+   412	
+   413	
+   414	
+   415	
+   416	
+   417	
+   418	
+   419	
+   420	
+   421	
+   422	Problem 6
+   423	
+   424	#include <stdio.h>
+   425	#include <time.h>
+   426	#include <stdlib.h>
+   427	
+   428	#define SIZE (16)
+   429	
+   430	/*
+   431	  This program can be compiled and executed in the usual way.
+   432	  The function main is documented but the function swap is not.
+   433	  Document swap in two ways:
+   434	   -- Explain what it does in general.
+   435	   -- Document each line within the for loop.
+   436	
+   437	  Don't remove or edit any of my code but feel free to add 
+   438	  any code that you like.
+   439	 */
+   440	void swap(int* p1, int* p2) {
+   441	  int i;
+   442	  for (i = 0; i < SIZE; i++) {
+   443	    int n = *p1;
+   444	    *p1 = *p2;
+   445	    *p2 = n;
+   446	    p1++;
+   447	    p2--;
+   448	  }
+   449	}
+   450	
+   451	int main() {
+   452	  srand(time(0));
+   453	  int a1[SIZE];
+   454	  int a2[SIZE];
+   455	  int i;
+   456	
+   457	  /* Populate arrays. */
+   458	  for (i = 0; i < SIZE; i++) {
+   459	    a1[i] = rand() % 100;
+   460	    a2[i] = rand() % 100;
+   461	  }
+   462	  /* Do a swap. */
+   463	  swap(a1, a2 + SIZE - 1);
+   464	
+   465	  return 0;
+   466	}

@@ -1,0 +1,81 @@
+     1	/* process.c */
+     2	#include <unistd.h>     /* symbolic constants */
+     3	#include <sys/types.h>  /* system data types */ 
+     4	#include <errno.h>      /* error codes */
+     5	#include <stdio.h>      /* printf, etc. */
+     6	#include <sys/wait.h>   /* waiting on process termination */
+     7	#include <stdlib.h>     /* utilities */
+     8	 
+     9	int main() {
+    10	  pid_t cpid;    /* process id (pid) of child or forked process */
+    11	  int   retval;  /* user-supplied return code for child */
+    12	  int   status;  /* child's exit status for parent process */
+    13	  
+    14	  /* Child process will "inherit" the three variables listed above so
+    15	     that the parent and the child now have three distinct variables
+    16	     that share the same names.
+    17	  */
+    18	  cpid = fork(); /* create the child process */
+    19	  
+    20	  /* fork succeeded */
+    21	  if (cpid >= 0) {
+    22	    printf("cpid after fork is:         %d\n\n", cpid);
+    23	 
+    24	    /* Parent and child are executing the same code; hence,
+    25	       we need to distinguish between the two. */
+    26	
+    27	    /* child code */
+    28	    if (cpid == 0) { /* fork() returns 0 to the child */
+    29	      printf("Child's pid (in child):   %d\n", getpid());
+    30	      printf("Child's parent's pid:     %d\n\n", getppid());
+    31	      printf("Child sleeping for 1 second...\n");
+    32	      sleep(1); /* 1 second */
+    33	      
+    34	      printf("\nEnter an exit value (0 to 100): ");
+    35	      scanf("%d", &retval);
+    36	      printf("Child exiting...\n\n");    
+    37	
+    38	      exit(retval); /* child terminates and returns status code */
+    39	    }
+    40	    /* parent code */
+    41	    else { /* fork() returns new pid to the parent process */
+    42	      printf("Parent's pid:             %d\n", getpid());
+    43	      printf("Child's  pid (in parent): %d\n", cpid);
+    44	      printf("Waiting for child to exit...\n");
+    45	      wait(&status); /* wait for child to exit and store its status code */
+    46	      printf("Child's exit code is: %d\n", WEXITSTATUS(status)); /* macro ensures normal */
+    47	      printf("Parent exiting...\n");             
+    48	
+    49	      exit(0); /* parent exits with normal termination */       
+    50	    }
+    51	  }
+    52	  /* fork failed (-1 is status code) */
+    53	  else { 
+    54	    perror("fork"); /* display error message */
+    55	    exit(0); 
+    56	  }
+    57	  return 0;
+    58	}
+    59	
+    60	
+    61	
+    62	/* output from a sample run:
+    63	
+    64	   cpid after fork is:       2410
+    65	
+    66	   Parent's pid:             2408
+    67	   Child's  pid (in parent): 2410
+    68	   Waiting for child to exit...
+    69	   cpid after fork is:          0
+    70	   
+    71	   Child's pid (in child):   2410
+    72	   Child's parent's pid:     2408
+    73	   
+    74	   Child sleeping for 1 second...
+    75	   
+    76	   Enter an exit value (0 to 100): 99
+    77	   Child exiting...
+    78	   
+    79	   Child's exit code is: 99
+    80	   Parent exiting...
+    81	*/

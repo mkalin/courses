@@ -1,0 +1,86 @@
+     1	/* file: sum.c */
+     2	int accumulator = 0;
+     3	
+     4	int sum(int n1, int n2) {
+     5	  int t = n1 + n2;
+     6	  accumulator += t;
+     7	  return t;
+     8	}
+     9	/*
+    10	  At the command prompt:  gcc -02 -S sum.c
+    11	     -02 ==> level 2 optimization
+    12	     -S  ==> generate assembly code file sum.s, shown below
+    13	
+    14	 	.file	"sum.c"
+    15	.globl accumulator
+    16		.bss
+    17		.align 4
+    18		.type	accumulator, @object
+    19		.size	accumulator, 4
+    20	accumulator:
+    21		.zero	4
+    22		.text
+    23		.p2align 2,,3
+    24	.globl sum
+    25		.type	sum, @function
+    26	sum:
+    27		pushl	%ebp
+    28		movl	%esp, %ebp
+    29		movl	12(%ebp), %eax
+    30		addl	8(%ebp), %eax
+    31		addl	%eax, accumulator
+    32		leave
+    33		ret
+    34		.size	sum, .-sum
+    35		.section	.note.GNU-stack,"",@progbits
+    36		.ident	"GCC: (GNU) 3.4.5 20051201 (Red Hat 3.4.5-2)"
+    37	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    38	
+    39	  Again at the command prompt, on my Linux box:
+    40	
+    41	          gcc -02 -c sum.c    ;; produces sum.o
+    42	
+    43	          objdump -d sum.o    ;; produces what's shown below
+    44	                              ;; (stuff that starts with _ is an annotation)
+    45	
+    46	
+    47	
+    48	
+    49	
+    50	
+    51	
+    52	
+    53	
+    54	
+    55	
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	sum.o:     file format elf32-i386
+    63	
+    64	Disassembly of section .text:
+    65	
+    66	_offset _bytes                 _equivalent in assembly
+    67	
+    68	00000000 <sum>:
+    69	   0:   55                      push   %ebp
+    70	   1:   89 e5                   mov    %esp,%ebp
+    71	   3:   8b 45 0c                mov    0xc(%ebp),%eax
+    72	   6:   03 45 08                add    0x8(%ebp),%eax
+    73	   9:   01 05 00 00 00 00       add    %eax,0x0
+    74	   f:   c9                      leave
+    75	  10:   c3                      ret
+    76	
+    77	   Explanation: 
+    78	
+    79	   The _offsets are from the start of the file.
+    80	
+    81	   The _bytes are the byte sequence, broken into seven groupings, each grouping 
+    82	   is an instruction. An IA32 instruction can be from 1 to 15 byes in size.
+    83	   
+    84	   The _equivalent column is the equivalent assembly instruction to the byte code.
+    85	
+    86	*/

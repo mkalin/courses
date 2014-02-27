@@ -1,0 +1,149 @@
+                                CSC373: Computer Systems 1
+                                        Homework 3
+
+Sections 6.2 and especially 6.3 and 6.4 in the book cover this material.
+
+Points: 100
+Due:    By midnight on Thursday, July 8 
+
+Terminology: Suppose that process P is executing instructions such as
+
+               x = y + z
+
+for three int variables, x, y, and z. Each of these variable names is, in 
+effect, the symbolic name of a memory address:
+           
+                0x12A    ;; &x
+               +-----+
+               |     |
+               +-----+
+                  x      ;; x, symbolic name for &n
+
+Let's say x is at 0x12A, y is at 0x13A, and z is at 0x14A. These addresses are
+all virtual addresses rather than physical ones. The run-time system needs to
+map these virtual addresses into physical memory locations (e.g., on the stack).
+
+Now we generalize. A string of memory references such as
+
+                      1, 4, 8, 5,...,9, 17
+
+is called a "reference string" and indicates the (virtual) memory addresses that an 
+executing process generates. The string is read from left to right: 1 is the first 
+address, 4 is the second, and so on. For purposes of this exercise, we don't care 
+whether the addresses are of (a) data or (b) instructions; we care only about the 
+reference string and its impact upon a cache. For example, there's a reference to 
+address 17 at the end: it could be the address of data or an instruction. If you 
+like, you can think of all addresses as addresses of instructions to fetch to the CPU 
+for execution. What's important are the addresses, not what's at the addressed location.
+
+Now back to address 17 at the end. The L1 cache will be searched to see if the word 
+with (virtual) address 17 occurs in the cache. A "word" is just a bunch of bits, 
+say, 32 bits. In the questions below, a virtual address-to-cache address translation 
+scheme will be given. 
+
+For simplicity, we assume that every memory word (data or instructions) is 8 bits
+and that addresses are of words (that is, 8-bit words). The addresses are 32 bits.
+In summary: -- every word is 8 bits in size
+            -- every address of a word is 32 bits in size
+
+The for a set-associative cache, the sets should be numbered starting with 0.
+For example, if there are 16 sets, they are numbered Set0, Set1,...,Set15 (or, if
+you prefer, Set[0], Set[1],...,Set[15]).
+
+Throughout this document, a "line" is the same as a "block" in a set: a collection
+of words.
+
+Please answer each of the following and show your reasoning.
+
+ 1. Cache C has 16 sets and is direct mapped, that is, it has
+    one block per set. Assume that the block holds only 1 word. In short,
+    we have 16 sets, each with one 8-bit block (or, if you like, one word
+    per block). Process P generates this reference string, each a word address:
+
+	1, 4, 8, 5, 20, 17, 19, 56, 9, 11, 4, 43, 5, 6, 9, 17, 9, 56, 9
+
+    C is initially empty. For each memory reference above, label it as a
+    Hit or a Miss. Show C's contents after the last memory reference.
+
+    Assume that a word's cache address is its memory address modulo the
+    cache's size in sets (for example, the word at address 1 has cache address 
+    1 % 16 = 1; the word at address 19 has cache address 19 % 16 = 3; etc.)
+    So the word at address 1 goes into set 1, and so on.
+
+ 2. Use the same reference string as in question (1). However, this time 
+    assume that there are 4 sets and that C is 16-way set associative: there
+    are 4 sets, each with 16 blocks or lines. A block still holds 1 word. The set 
+    address is now the reference string number modulus 4. For instance, the first
+    number in the reference string is 1; hence, the word at address 1 goes into
+    set 1 % 4 == set 1. If there's an empty block, the word goes there. If there's
+    no empty block, the first block is used; then the second; and so on. For ease
+    of reference, you can label the blocks 1 thru 16 (so, for instance, a word goes
+    into Set[10][4], that is, block 4 in Set 10.
+
+    Do the same as  in (1), that is, label each word reference 
+    as a cache Hit or Miss and show the cache's contents at the end. To begin, 
+    we assume the cache is empty. 
+
+ 3. Use the same reference string as in question (1). Assume 
+    that cache C is 2-way set associative with 8 sets. Each block holds 1 word. 
+    Replacement is LRU (least recently used). A memory reference's cache set is the 
+    memory address modulus 8 (for example, the word at address 8 goes into set 0; 
+    the word at  address 11 goes into set 3; etc.) Do the same as in (1) and use the 
+    same assumptions as in (2).
+
+ 4. Computer system S uses 32-bit virtual addresses as cache addresses. The cache 
+    address has three fields, left to right:
+
+                tag bits    set identifier    word offset
+
+    So how many bits are used in each field given 1,024 sets each with 8 lines. 
+    Each line contains 32 8-bit words. (A "line" is the same as a "block.")
+
+ 5. A cache's total bit size is partitioned into "data bits" (that is, data or 
+    instructions) and "overhead bits" (bits for directory tags, the valid bit, 
+    the LRU bits, if used, and so on). For now, the only "overhead bits" of 
+    interest are the directory or tag bits. Consider two set-associative caches 
+    with the same capacity:
+
+	C1: 2048 sets, 8 blocks per set, 32 words per block, 8 bits per word
+        C2: 4096 sets, 4 blocks per set, 32 words per block, 8 bits per word
+
+    Contrast the difference between "data bit" capacity and "overhead bit" size
+    for the two caches. Assume that the word offset is log(M) low-order 
+    (rightmost) bits, where M is the number of words per block; and that set 
+    address is the middle log(N) low-order bits, where N is the number of sets. 
+    The remaining (leftmost) bits are directory tags. Each set uses 32-bit 
+    addresses.
+
+ 6.  Consider the 32-bit virtual address 
+
+                   11110000 11110000 11110000 11110000
+
+     for an L2 cache with 4 blocks per set, 2048 sets, and 128 words per block. 
+     The address's low-order bits are on the right. Assume standard formatting for 
+     a cache address. (I've broken the address into four chunks of 8 bits apiece 
+     for readability only.)
+
+
+       1.  Mark the bits that give the word offset in the line.
+       2.  Mark the bits that specify the set.
+       3.  Mark the bits that constitute the tag or key.
+       4.  How many tags are in the directory as a whole?
+       5.  How many directory tags must be compared against this addrese's tag bits 
+           when a cache lookup occurs?
+
+ 7. Some cache designers are abandoning LRU as replacement policy and going instead
+    to random replacement. To see the problem, consider a 6-way set associative
+    cache with each block holding 1 word. Now consider this reference string for a
+    code segment in a loop:
+
+      1, 4, 7, 8, 9, 11, 13, 1, 4, 7, 8, 9, 11, 13, 1, 4, 7, 8, 9, 11, 13,...
+   
+    What problems does LRU cause given this reference string and our cache
+    capacity? (Assume that words enter the cache in the order in which they
+    arrive, for example, if three words in a row map to the same set, which is
+    currently empty, the first word goes into the first block; the second word
+    goes into the second block; and so on.)
+
+    Make the case that random replacement would yield better performance than
+    does LRU for this reference string.

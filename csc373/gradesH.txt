@@ -1,0 +1,48 @@
+Student     Hwk1    Hwk2
+
+Alexander    81     100
+
+Arrogante    70
+
+Bertling     88      90
+
+Delgado      84      90
+
+Dihardja     94     95
+
+Dustin       94    100
+
+Hanson      100     96
+
+Henry              100
+
+Hinton       98    100
+
+Ianni               85
+
+Lindquist           78
+
+Lewin        89     97
+
+Monnig       93    100
+
+Oda          94    100
+
+Oyuela       92    100
+
+Raison       95     85
+
+Richter      95     97
+
+Rosales      85     84
+
+Roth        100    100
+
+Semler      100    100
+
+Sherman      95    100
+
+Sidman       90     98
+
+Ward         83
+

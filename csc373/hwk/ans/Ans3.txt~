@@ -1,0 +1,530 @@
+
+                                CSC373: Computer Systems 1
+                                        Homework 3
+
+Question 1:
+
+ The short version of an answer:
+
+ In the first qsort, we're qsorting an array of Emp elements. The sort is
+ "destructive" in that the elements themselves are moved in the array. In 
+ the second qsort, pointers to Emp elements are sorted. On my system
+
+       sizeof(Emp)  == 256
+       sizeof(Emp*) ==   4  /* on a 64-bit machine, 8 */
+
+ In real life, an Emp would be considerably bigger; but, on a 32-bit machine,
+ an Emp* would still be 4 (or 8) bytes. Rule 1 in efficient programming is not to
+ move data when you can move pointers to data. Basically, this is what a
+ reasonable relational database does: the rows of a table (e.g., Employee table)
+ are stored in arbitrary, unsorted order. Various indexes are then provided so
+ that the table can be displayed in various sorted orders (by name, by ID, by
+ salary, by department, etc.) A table index is, at the implementation level, an
+ array of pointers to rows in the (data) table.
+
+ Here's sample documentation of the 2nd comparison function:
+
+/* compB is used to sort an array of pointers; hence, compB receives
+   from qsort pointers to two elements that qsort needs to compare.
+   By requirement, the compB parameters must be of type
+
+              const void*
+
+   but, in reality, they are
+
+              const Emp**
+
+   or pointers to pointers to Emps. So the void* pointers are first
+   cast to what they really are, Emp**.
+
+   emp1 and emp2 are not pointers to Emps but pointers to pointers to
+   Emps
+
+           emp1--->some_ptr--->Emp
+
+   so we dereference, say, emp1
+
+           (*emp1)
+
+   which gives us
+
+           some_ptr
+
+   which we then use to access the Emp to which some_ptr points. The syntax
+   is
+            (*emp1)->lname
+
+   The parentheses are needed because -> is just as sticky as . and we want
+   to dereference emp1 to get at the pointer that points to the Employee, in
+   particular, to the last and first names.
+
+   The underlying comparison is the same as in compA: create two
+   strings, each last_name + first_name, and compare them in
+   lexicographical order so that, for instance, "CruzAndrea" precedes
+   "CruzHenry".
+*/
+int compB(const void* item1, const void* item2) {
+  const Emp** emp1 = (const Emp**) item1;
+  const Emp** emp2 = (const Emp**) item2;
+
+  unsigned char buff1[BuffSize];
+  unsigned char buff2[BuffSize];
+
+  strcpy(buff1, (*emp1)->lname);
+  strcat(buff1, (*emp1)->fname);
+  strcpy(buff2, (*emp2)->lname);
+  strcat(buff2, (*emp2)->fname);
+
+  return strcmp(buff1, buff2);
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Please answer each of the following and show your reasoning.
+
+ 1. Cache C has 16 sets and is direct mapped, that is, it has
+    one block per set. Assume that the block holds only 1 word. In short,
+    we have 16 sets, each with one 8-bit block (or, if you like, one word
+    per block). Process P generates this reference string, each a word address:
+
+	1, 4, 8, 5, 20, 17, 19, 56, 9, 11, 4, 43, 5, 6, 9, 17, 9, 56, 9
+
+    C is initially empty. For each memory reference above, label it as a
+    Hit or a Miss. Show C's contents after the last memory reference.
+
+    Assume that a word's cache address is its memory address modulo the
+    cache's size in sets (for example, the word at address 1 has cache address 
+    1 % 16 = 1; the word at address 19 has cache address 19 % 16 = 3; etc.)
+    So the word at address 1 goes into set 1, and so on.
+
+ 
+**** Solution: I've broken the reference string into two lines for readability.
+               Above each memory address is H for HIT or M for MISS and below
+               each is the set to which it maps. A * (for example, S1*) indicates
+               that there's an explanation given below.
+  
+       Sets: S1, S2,...,Sa, Sb (Any numbering will do.)
+
+
+        Reference string (in two lines for readability):
+
+        M   M   M   M   M    M    M    M    M   M
+	1,  4,  8,  5,  20,  17,  19,  56,  9, 11,  
+       S1  S4  S8  S5   S4   S1   S3   S8  S9  Sb
+
+        M  M    M   M    H   H     H  H     H
+        4, 43,  5,  6,   9,  17,   9, 56,   9
+       S4* S5  S5* S6   S9   S1   S9  S8   S9
+
+       Explanations:
+
+       S4* miss in second row: Address 20 in the first row also maps to S4,
+           displacing 4; hence, the second reference to 4 is also a MISS.
+
+       S5* miss in second row: Adddress 43 in the second row maps to S5,
+           displacing 5; hence, the second reference to 5 is also a MISS.
+
+
+
+ 2. Use the same reference string as in question (1). However, this time 
+    assume that there are 4 sets and that C is 4-way set associative: there
+    are 4 sets, each with 4 blocks. A block still holds 1 word. The set address
+    is now the reference string number modulus 4. For instance, the first
+    number in the reference string is 1; hence, the word at address 1 goes into
+    set 1 % 4 == set 1. Here's a depiction of what a set looks like:
+
+            Si +----+----+----+----+
+               |    |    |    |    |
+               +----+----+----+----+
+                [0]  [1]   [2]  [3]
+
+    Each set is like an array of four elements, with element one of the words.
+    Now suppose a set is full and that a new element needs to come into the set.
+    Which element should be overwritten? Here are the rules:
+
+     -- Fill the set in left-to-right order, that is, index 0, then 1, then 2, then 3.
+
+     -- Keep track of the last entry. Suppose, for instance, that the set has been
+        full for some time and that the last entry was into [2]. The next entry would 
+        go into [3]. The next after that into [0]; and so on.
+
+    Write a program that simulates what happens to the cache with the reference string
+    from question (1). 
+
+    ;;
+    Below is a program together with the output. There are many ways to do this, of 
+    course; our outputs should agree.
+
+#include <stdio.h>
+
+#define SetCount   (4)
+#define BlockCount (4)
+#define Empty     (-1)
+#define True       (1)
+#define False      (0)
+
+int sets[SetCount][BlockCount];
+int lru[SetCount];
+
+int already_in_p(int word, int set_index) {
+  int w = 0;
+  while (w < BlockCount) 
+    if (word == sets[set_index][w]) return True;
+    else w++;
+  return False;
+}
+
+int main() {
+  int reference_string[ ] = 
+    { 1, 4, 8, 5, 20, 17, 19, 56, 9, 11, 4, 43, 5, 6, 9, 17, 9, 56, 9, Empty };
+  char* set_names[ ] = {"S0", "S1", "S2", "S3"};
+
+  int i, j;
+  /* Initialize the cache to empty. */
+  for (i = 0; i < SetCount; i++) 
+    for (j = 0; j < BlockCount; j++)
+      sets[i][j] = Empty;
+
+  /* Initialize the LRU pointers to Empty */
+  for (i = 0; i < SetCount; i++)
+    lru[i] = Empty;
+
+  /* Iterate through the reference string. */
+  i = 0;
+  while (reference_string[i] != Empty) {
+    int next_word = reference_string[i];
+    int set_index = next_word % SetCount;
+
+    /* hit */
+    if (already_in_p(next_word, set_index))
+      printf("Hit for word %i in Set %i\n\n", next_word, set_index);
+    /* miss */
+    else {
+      printf("Miss for word %i in Set %i\n", next_word, set_index);
+      lru[set_index] = (lru[set_index] + 1) % BlockCount;
+      sets[set_index][lru[set_index]] = next_word;
+      printf("Word %i inserted into Set %i at position %i\n\n",
+	     next_word, set_index, lru[set_index]);
+    }
+    i++;
+  }
+  return 0;
+}
+/* output:
+
+Miss for word 1 in Set 1
+Word 1 inserted into Set 1 at position 0
+
+Miss for word 4 in Set 0
+Word 4 inserted into Set 0 at position 0
+
+Miss for word 8 in Set 0
+Word 8 inserted into Set 0 at position 1
+
+Miss for word 5 in Set 1
+Word 5 inserted into Set 1 at position 1
+
+Miss for word 20 in Set 0
+Word 20 inserted into Set 0 at position 2
+
+Miss for word 17 in Set 1
+Word 17 inserted into Set 1 at position 2
+
+Miss for word 19 in Set 3
+Word 19 inserted into Set 3 at position 0
+
+Miss for word 56 in Set 0
+Word 56 inserted into Set 0 at position 3
+
+Miss for word 9 in Set 1
+Word 9 inserted into Set 1 at position 3
+
+Miss for word 11 in Set 3
+Word 11 inserted into Set 3 at position 1
+
+Hit for word 4 in Set 0
+
+Miss for word 43 in Set 3
+Word 43 inserted into Set 3 at position 2
+
+Hit for word 5 in Set 1
+
+Miss for word 6 in Set 2
+Word 6 inserted into Set 2 at position 0
+
+Hit for word 9 in Set 1
+
+Hit for word 17 in Set 1
+
+Hit for word 9 in Set 1
+
+Hit for word 56 in Set 0
+
+Hit for word 9 in Set 1
+*/
+
+
+3. Use the same reference string as in question (1). Assume 
+   that cache C is 2-way set associative with 8 sets. Each block holds 1 word. 
+   Replacement is LRU (least recently used). A memory reference's cache set is the 
+   memory address modulus 8 (for example, the word at address 8 goes into set 0; 
+   the word at  address 11 goes into set 3; etc.) Do the same as in (1) and use the 
+   same assumptions as in (2).
+
+
+**** Solution: Time ticks are shown in columns for ease of tracing.
+               Accesses are marked with M or H for "miss" and "hit,"
+               respectively (e.g., 1M means 1 was accessed but was not
+               already in the cache but was put there as a result of the access.)
+               
+            1,  4,  8,  5,  20, 17, 19, 56, 9,  11, 4,  43, 5, 6,  9,  17, 9,  56, 9
+            t0  t1  t2  t3  t4  t5  t6  t7  t8  t9  ta  tb  tc td  te  tf  tg  th  ti  
+
+     S0 L1:         8M                                         
+        L2:                             56M                                    56H 
+
+     S1 L1: 1M                              9M                     9H      9H      9H
+        L2:                     17M                                    17H
+
+     S2 L1:
+        L2:
+
+     S3 L1:                         19M                 43M
+        L2:                                     11M  
+
+     S4 L1:     4M                                  4H
+        L2:                 20M
+
+     S5 L1:             5M                                  5H
+        L2:
+
+     S6 L1:                                                    6M
+        L2:
+
+     S7 L1:
+        L2:
+
+Here's the output from the C program, changed slightly for the new problem:
+
+Miss for word 1 in Set 1
+Word 1 inserted into Set 1 at position 0
+
+Miss for word 4 in Set 4
+Word 4 inserted into Set 4 at position 0
+
+Miss for word 8 in Set 0
+Word 8 inserted into Set 0 at position 0
+
+Miss for word 5 in Set 5
+Word 5 inserted into Set 5 at position 0
+
+Miss for word 20 in Set 4
+Word 20 inserted into Set 4 at position 1
+
+Miss for word 17 in Set 1
+Word 17 inserted into Set 1 at position 1
+
+Miss for word 19 in Set 3
+Word 19 inserted into Set 3 at position 0
+
+Miss for word 56 in Set 0
+Word 56 inserted into Set 0 at position 1
+
+Miss for word 9 in Set 1
+Word 9 inserted into Set 1 at position 0
+
+Miss for word 11 in Set 3
+Word 11 inserted into Set 3 at position 1
+
+Hit for word 4 in Set 4
+
+Miss for word 43 in Set 3
+Word 43 inserted into Set 3 at position 0
+
+Hit for word 5 in Set 5
+
+Miss for word 6 in Set 6
+Word 6 inserted into Set 6 at position 0
+
+Hit for word 9 in Set 1
+
+Hit for word 17 in Set 1
+
+Hit for word 9 in Set 1
+
+Hit for word 56 in Set 0
+
+Hit for word 9 in Set 1
+
+;;
+
+ 4. Computer system S uses 32-bit virtual addresses as cache addresses. The cache 
+    address has three fields, left to right:
+
+                tag bits    set identifier    word offset
+
+    So how many bits are used in each field given 1,024 sets each with 8 lines. 
+    Each line contains 32 8-bit words. (A "line" is the same as a "block.")
+
+
+**** Solution:  The "log" used here is to base 2.
+
+                log(1024) == 10: so 10 bits for the set index
+
+                log(32) == 5: so 5 bits for the word offset
+
+                32 - (10 + 5) == 17 bits for the tag
+
+                The layout is:
+
+                     17 bits         10 bits  5 bits
+                +-----------------+----------+-----+
+                |      tag        | set index| ind |
+                +-----------------+----------+-----+
+     
+
+ 5. A cache's total bit size is partitioned into "data bits" (that is, data or 
+    instructions) and "overhead bits" (bits for directory tags, the valid bit, 
+    the LRU bits, if used, and so on). For now, the only "overhead bits" of 
+    interest are the directory or tag bits. Consider two set-associative caches 
+    with the same capacity:
+
+	C1: 2048 sets, 8 blocks per set, 32 words per block, 8 bits per word
+        C2: 4096 sets, 4 blocks per set, 32 words per block, 8 bits per word
+
+    Contrast the difference between "data bit" capacity and "overhead bit" size
+    for the two caches. Assume that the word offset is log(M) low-order 
+    (rightmost) bits, where M is the number of words per block; and that set 
+    address is the middle log(N) low-order bits, where N is the number of sets. 
+    The remaining (leftmost) bits are directory tags. Each set uses 32-bit 
+    addresses.
+
+
+**** Solution: "log" again means "log to base 2."
+
+       cache capacity in bits = 
+           sets * lines per set * words per line * bits per word
+       directory bits = sets * lines per set * tag bits per line
+
+       C1:   cache capacity in bits == 2048 * 8 * 32 * 8 == 4,194,304
+             So capacity in bits is about 4M.
+
+             set index == log(2048) == 11 bits
+             word offset == log(32) ==  5 bits
+             tag == 32 - (11 + 5) ==   16 bits
+
+             There are 2048 sets, each with 8 lines or blocks, each of which
+             has a 16-bit tag; so the total for the tags (the "directory") is
+             2048 * 8 * 16 == 262,144 or roughly 262K bits.
+
+             So the ratio is  262,144 / 4,194,304 or roughly 6.25%.
+
+       C2:   cache capacity in bits == 4096 * 4 * 32 * 8 = 4,194,304
+             set index == log(4096) == 12 bits
+             word offset == log(32) ==  5 bits
+             tag == 32 - (12 + 5) ==   15 bits
+
+             There are 4,096 sets, each with 4 lines, each of which has a 
+             15-bit tag; so the total for the directory is 
+             4096 * 4 * 15 == 245,750 or roughly 246K bits.
+
+             So the ratio is 245,750 / 4,194,304 or roughly 5.86%.
+
+       Circuitry considerations aside, C1 has only a slighly larger directory
+       but has twice as many lines into which a block of memory bytes can go.
+       In effect, the cost of the extra directory bits is insignificant given
+       the potential reduction in conflict misses (that is, misses that occur
+       when multiple memory addresses map to the same cache set). Of course,
+       C2 has twice as many sets --- and defenders of C2's design would argue
+       that the doubling of sets likewise reduces the potential for conflict
+       misses. C2 also lowers the overhead from about 6.25 to 5.86, which frees
+       up capacity space.
+
+       Conclusion: it's a hard call. You can see how cache designers would
+       agonize over these decisions.
+
+ 6.  Consider the 32-bit virtual address 
+
+                   11110000 11110000 11110000 11110000
+
+     for an L2 cache with 4 blocks per set, 2048 sets, and 128 words per block. 
+     The address's low-order bits are on the right. Assume standard formatting for a 
+     cache address. (I've broken the address into four chunks of 8 bits apiece 
+     for readability only.)
+
+       1.  Mark the bits that give the word offset in the line.
+       2.  Mark the bits that specify the set.
+       3.  Mark the bits that constitute the tag or key.
+       4.  How many tags are in the directory as a whole?
+       5.  How many directory tags must be compared against this address’s tag bits 
+           when a cache lookup occurs?
+
+**** Solution:
+
+        Bits that mark the word offset have an 'o' above them.
+        Bits that mark the set index have an 's' above them.
+        Bits that mark the tag have a 't' above them.
+
+        log(1024) == 10     log(128) == 7    
+        Tag bits per line == 32 - (10 + 7) == 15
+
+              tttttttt ttttttts ssssssss sooooooo      
+              11110000 11110000 11110000 11110000
+
+ 7. Some cache designers are abandoning LRU as replacement policy and going instead
+    to random replacement. To see the problem, consider a fully associative
+    cache with six blocks, each holding 1 word. Now consider this reference string 
+    for a code segment in a loop:
+
+      1, 4, 7, 8, 9, 11, 13, 1, 4, 7, 8, 9, 11, 13, 1, 4, 7, 8, 9, 11, 13,...
+  
+    What problems does LRU cause given this reference string and our cache
+    capacity? (Assume that words enter the cache in the order in which they
+    arrive, for example, the word at address 1 goes into the first block in
+    a given set, the word at address 4 goes into the second slot, etc.) 
+
+    Make the case that random replacement would yield better performance than
+    does LRU for this reference string.
+
+**** I label the blocks (lines) L1, L2,...,L6 and assume that the lines are
+     filled in this order. (If you make some other explicit assumption, I'll
+     follow your assumption.) The initial references are all cold misses; and
+     a missed word is automatically placed in the cache. To follow the
+     cache insertions, I've a table with clock ticks (t1,t2,...,tl) as the
+     columns and the cache lines (L1,L2,...,L6) as the rows.
+
+     Here's the reference string:
+
+                1, 4, 7, 8, 9, 11, 13, 1, 4, 7, 8, 9, 11, 13, 1, 4, 7, 8, 9, 11, 13,...
+
+  Clock ticks:  t1 t2 t3 t4 t5 t6  t7  t8 t9 ta tb tc td  te  tf tg th ti tj tk  tl
+  
+         Line/Block   
+            L1: 1M                 13M                11M                 9M
+            L2:    4M                  1M                 13M                11M
+            L3:       7M                  4M                  1M                 13M
+            L4:          8M                  7M                  4M
+            L5:             9M                  8M                  7M             
+            L6:                11M                 9M                  8M
+
+
+  Conclusion: The "working set" of addresses is 
+
+                       1, 4, 7, 8, 9, 11, 13
+
+              and this repeats indefinitely. Under LRU, the word that gets kicked out
+              is the next word to be accessed. For example, the last word in the
+              working set is 13 and the first is 1; so, by definition, 1 is the
+              least recently used as it occurs only once before 13. So 13 kicks
+              out 1 in the cache. Immediately after 13 comes 1 again, which kicks
+              out 4, which comes next; and so on. Think of the working set as the
+              body of a loop that iterates thousands or even millions of times.
+              What a disaster!
+
+              If we just randomly selected one of the words to kick out, we
+              could not do any worse; indeed, there is then only a 1/6 chance that
+              we kick out the word needed next.
+             
+             
+
+

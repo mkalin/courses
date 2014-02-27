@@ -1,0 +1,100 @@
+<html>
+<head>
+<TITLE>CSC373: Computer Systems 1</TITLE>
+</head>
+
+<P>
+
+<H1>
+CSC373: Computer Systems 1
+</h1>
+<hr/>
+<p>
+<h3>Date of final exam: Wednesday, July 12, 2006</h3>
+<P>
+<HR>
+<H3>
+
+<UL>
+<li><a href="http://www.cti.depaul.edu/resources/nix.asp">How to access the Linux machines</a>
+<li><a href="http://www.dewassoc.com/support/msdos/decimal_hexadecimal.htm">
+Binary/Decimal/Hex Conversion Table</a>
+<li><a href="syl373.html">Syllabus</a>
+<li><a href="CYGWIN_INSTALL.txt">Instructions for installing Cygwin C compiler</a>
+<li><a href="Nums.jar">C code in an archive (use ZIP or jar xvf to extract contents)</a>
+<li><a href="Code1.txt">C code from handout, with the line numbers (useful for DL students)</a>
+<li><a href="Hwk1Code.txt">Homework code with line numbers</a>
+<li><a href="AmdahlsLaw.doc">Amdahl's Law (Word document)</a>
+<li><a href="AddressingModes.doc">Addressing Modes (Word document)</a>
+<li><a href="Endian.doc">Little-endian, big-endian (Word document)</a>
+<li><a href="Pipeline.doc">Pipelining overview (Word document)</a>
+<li><a href="AssemblyCode.txt">Assembly code with line numbers</a>
+<li><a href="AssemblyCode.jar">Assembly code in a JAR file</a>
+<li><a href="basicStack.txt">Stack illustration (in text on p. 140)</a>
+<li><a href="Hwk2LN.txt">Homework 2 text with line numbers</a>
+<li><a href="MoreAssembler2.txt">More assembler code with line numbers</a>
+<li><a href="MoreAssembler.jar">June 21st assembler code in a JAR</a>
+<li><a href="June26Code.jar">June 26th code in a JAR</a>
+<li><a href="June26Code.txt">June 26th code with line numbers</a>
+<li><a href="cacheHandout.txt">Cache Handout</a>
+<li><a href="NetworkingHandout.txt">Networking handout with line numbers</a>
+<li><a href="NetworkingCode.jar">NetworkingCode.jar</a>
+<li><a href="PortProbe.java">PortProbe.java</a>
+<li><a href="fpoint.c">fpoint.c</a>
+<li><a href="fpointL.c">fpoint.c with line numbers</a>
+<li><a href="Hwk4L.txt">Homework 4 with line numbers</a>
+<li><a href="July10Handouts.jar">Monday, July 10 handouts in a JAR</a>
+</ul>
+</H3>
+<P>
+
+<HR>
+
+<H2>Homework Assignments
+
+<H3>
+
+<UL>
+<li><a href="Hwk1.jar">Hwk1.jar with code and README (use ZIP or jar xvf to extract contents)</a>
+<ul>
+<li><a href="Answers1.jar">Answers to Hwk 1: JAR file (I give more detail than required.)</a>
+</ul>
+<li><a href="Hwk2.txt">Hwk 2 (version with line aboves in section above)</a>
+<ul>
+<li><a href="Ans2.txt">Answers to Hwk 2</a>
+</ul>
+<li><a href="Hwk3.txt">Hwk 3</a>
+<ul>
+<li><a href="Ans3.txt">Answers to Hwk 3</a>
+</ul>
+<li><a href="Hwk4.txt">Hwk 4 (version with line numbers is above)</a>
+<li><a href="MakeupHwk.txt">Makeup homework</a>
+</ul>
+
+</h3>
+
+
+
+
+<P>
+<HR>
+<H2>Instructor's E-mail Address
+<H3>
+<UL>
+
+<li><a href="mailto:kalin@cs.depaul.edu">kalin@cs.depaul.edu</a></p>
+
+</ul>
+
+</h3>
+
+
+
+</H3>
+
+
+
+
+
+
+

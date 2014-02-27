@@ -1,0 +1,320 @@
+     1	/* stack.c */
+     2	#include <stdio.h>
+     3	
+     4	/* global variables: shared among all calls to all functions 
+     5	   in this file.
+     6	*/
+     7	char* greeting_pieces[ ] = {"Hello", ",", " world", "!"};
+     8	int state = 4; /* number of strings in array greeting_pieces */
+     9	
+    10	int main() {
+    11	  if (--state < 0) return 0;        /* decrement status and return to invoker */
+    12	
+    13	  int i = state;                    /* make a local copy of status */
+    14	
+    15	  main();                           /* recursively invoke main */
+    16	  printf("%s", greeting_pieces[i]); /* print your greeting piece */
+    17	
+    18	  return 0;
+    19	}
+    20	/* Symbolic trace: current value of state is shown as an argument to main
+    21	   for trace purposes. In fact, state is a global variable that tracks the
+    22	   state of the application.
+    23	
+    24	   main(4) 
+    25	      i = 3
+    26	      invoke main(3)
+    27	         i = 2
+    28	         invoke main(2)
+    29	            i = 1
+    30	            invoke main(1)
+    31	               i = 0
+    32	               invoke main(0)
+    33	               return to main(1) because state is now -1 (return from the if)
+    34	            print greeting_pieces[0]
+    35	            return to main(2) (return at the end of main)
+    36	         print greeting_pieces[1]
+    37	         return to main(3) (return at the end of main)
+    38	      print greeting_pieces[2]
+    39	      return to main(4) (return at the end of main)
+    40	   print greeting_pieces[3]
+    41	   return to system (return at the end of main)
+    42	*/
+    43	/********************************************************************************/
+    44	
+    45	int swap_in_c(int* ptr, int swap_value) {
+    46	  int temp = *ptr;     /* save original value */
+    47	  *ptr = swap_value;   /* reset to swap value */
+    48	  return temp;         /* return original value */
+    49	}
+    50	
+    51	
+    52	
+    53	
+    54	
+    55	
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	int swap_in_asm(int* ptr, int swap_value) {
+    63	  /* ebp points to the "call frame" or "stack frame," which is
+    64	     area of the stack allocated for this particular call.
+    65	     eax, edx, and ecx are general-purpose registers. (By the way,
+    66	     the "e" in all of this is for "extended," which in turn means
+    67	     32 bits.) 
+    68	
+    69	     The 8 and the 12 are byte offsets from where ebp points, which is
+    70	     at the original TOP of the call frame. So, basically, the ptr parameter
+    71	     is stored 8 bytes from the frame pointer (ebp) and the swap_value
+    72	     parameter is stored 12 bytes from the frame pointer.
+    73	
+    74	     Self-test review question: What's the difference between (%eax) and %eax?
+    75	
+    76	     Finally, %eax is a "first among equals" when it comes to general-purpose
+    77	     registers in that it holds the return value. So the invoking function, in
+    78	     this case main(), gets the value that swap_in_asm stores in eax.
+    79	  */
+    80	
+    81	  asm("movl 8(%ebp),%eax");    /* fetch ptr, the pointer parameter */
+    82	  asm("movl 12(%ebp),%edx");   /* fetch swap_value, the other parameter */
+    83	  asm("movl (%eax),%ecx");     /* get the value that ptr points to */
+    84	  asm("movl %edx,(%eax)");     /* store swap_value at ptr */
+    85	  asm("movl %ecx,%eax");       /* return the original value of *ptr */
+    86	}
+    87	
+    88	int main() {
+    89	  int n1 = 7;
+    90	  int n2 = swap_in_c(&n1, -999);
+    91	  printf("n1 == %d and n2 == %d\n", n1, n2); /* output: n1 == -999 and n2 == 7 */
+    92	
+    93	  n1 = 7;
+    94	  n2 = swap_in_asm(&n1, -999);
+    95	  printf("n1 == %d and n2 == %d\n", n1, n2); /* output: n1 == -999 and n2 == 7 */
+    96	  return 0;
+    97	}
+    98	/****************************************************************************************/
+    99	
+   100	
+   101	
+   102	
+   103	
+   104	
+   105	
+   106	
+   107	
+   108	
+   109	
+   110	
+   111	
+   112	
+   113	
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	#include <limits.h>
+   123	
+   124	int safe_mult(int n1, int n2, int* dest) {
+   125	  int ret_val;
+   126	  *dest = n1 * n2;   /* potential overflow */
+   127	  
+   128	  /* setae %%bl sets the result of the overflow test in 
+   129	     a single-byte register, bl. 
+   130	
+   131	     movzbl %%bl,%0 moves the test result to 32-bit register
+   132	     of the compiler's choosing, indicated by %0.
+   133	
+   134	     In the entry after the first colon, 
+   135	
+   136	                 "=r" (ret_val)
+   137	
+   138	     is assembler for
+   139	
+   140	                 ret_val = %0
+   141	
+   142	     where %0 is the register (the "r" in "=r") that the compiler chose.
+   143	
+   144	     There are no additional inputs to the assembler code; hence, the 
+   145	     second colon has nothing following it.
+   146	
+   147	     The third and last colon indicates the register to use for
+   148	     scratchpad in the multiplication. Note that this register is not
+   149	     eax, which is "special purpose" in that it holds the return value
+   150	     of a function.
+   151	  */
+   152	  asm("setae %%bl; movzbl %%bl,%0"
+   153	      : "=r" (ret_val)               /* lvalue to set */
+   154	      :                              /* no inputs */
+   155	      : "%ebx");                     /* scratchpad */
+   156	
+   157	  return ret_val;
+   158	}
+   159	void print(const char* msg, int n) {
+   160	  printf("%s: returned product == %d\n", msg, n);
+   161	}
+   162	
+   163	int main() {
+   164	  int n;
+   165	  char* msg;
+   166	
+   167	  int flag = safe_mult(16, 48, &n);
+   168	  msg =  (!flag) ? "Overflow on 16 * 48" : "No overflow";
+   169	  print(msg, n);
+   170	
+   171	  flag = safe_mult(INT_MAX, INT_MAX, &n);
+   172	  msg = (!flag) ? "Overflow on INT_MAX * INT_MAX" : "No overflow.";
+   173	  print(msg, n);
+   174	  return 0;
+   175	}
+   176	/* output:
+   177	
+   178	    No overflow on 16 * 48: returned product == 768
+   179	    Overflow on INT_MAX * INT_MAX: returned product == 1
+   180	*/
+   181	
+   182	/* Memory layout on an Intel 32-bit microprocessor (hereafter, IA32) 
+   183	
+   184	  Process address space:
+   185	
+   186	  High Addresses (0xBFFFFFFF = 3,221,225,471)
+   187	
+   188	     environment pointer
+   189	
+   190	     DYNAMICALLY ALLOCATED STORAGE
+   191	
+   192	       stack grows down    ;; parameters and local variables: LIFO behavior
+   193	
+   194	       heap grows up       ;; dynamically allocated storage (malloc, calloc)
+   195	                           ;; that must be freed (free)
+   196	  
+   197	     SEGMENTS
+   198	
+   199	       .data               ;; static initialized data
+   200	
+   201	       .bss                ;; static uninitialized data
+   202	
+   203	       .text               ;; read only: holds program instructions
+   204	
+   205	     shared libraries      
+   206	
+   207	  Low Addresses (0x80000000 = 2,147,483,648)
+   208	
+   209	  High - Low = 3FFFFFFF (1,073,741,823) 
+   210	  So each process gets roughly 1G of virtual address space
+   211	*/
+   212	
+   213	int add(int n1, int n2) {
+   214	  int ans = n1 + n2;
+   215	  return ans;
+   216	}
+   217	
+   218	int main() {
+   219	  int x = add(8, 7);
+   220	  printf("%d\n", x);
+   221	  return 0;
+   222	} 
+   223	
+   224	/* Here's the steps I followed to get the output shown below. This file is 
+   225	   Memory.c. I'm using $ as the command-line prompt, which becomes (gdb) inside 
+   226	   the debugger. My comments begin with ;;, the traditional comment delimiter
+   227	   in assembler.
+   228	
+   229	      ;; The flag "preferred-stack-boundary" tells the compiler to increment the
+   230	      ;; stack pointer (%esp) by IA32 DWORD increments, that is, 4 bytes or 32 bits.
+   231	      ;; (In the original Intel architecure, a "word" was 16 bits; hence, a 
+   232	      ;; "double word" or dword is 32 bits and a "long word" is 64 bits.)
+   233	      ;; Without this flag, the compiler would do some funky optimizations and the
+   234	      ;; assembler would be much more difficult to read. The -ggdb option tells the
+   235	      ;; compiler to include debugging information.
+   236	      $ gcc -mpreferred-stack-boundary=2 -ggdb Memory.c -o Memory
+   237	
+   238	
+   239	
+   240	
+   241	
+   242	      ;; debug the compiled Memory program
+   243	      $ gdb Memory
+   244	      ;; in the debugger, disassemble the function main
+   245	      (gdb) disas main
+   246	
+   247	      ;; Here's the output. %ebp (extended base pointer) is the "frame pointer" and
+   248	      ;;                    %esp (extended stack pointer) is the "stack pointer"
+   249	      ;; Typically, the frame pointer serves as a fixed reference for offsets, much
+   250	      ;; as an array's name in Java (and C) serves as the base address for indexed
+   251	      ;; offsets. The frame pointer points to the "call frame," the part of the
+   252	      ;; stack allocated for a particular function call; so, in this example,
+   253	      ;; main gets its own call frame as does the function add. By contrast to the
+   254	      ;; frame pointer, the stack pointer moves around during the execution; and it
+   255	      ;; move anywhere in the stack but largely remains with a call frame.
+   256	  Dump of assembler code for function main:
+   257	  0x0804837c <main+0>:    push   %ebp       ;; first push EBP onto stack  
+   258	  0x0804837d <main+1>:    mov    %esp,%ebp  ;; then copy stack ptr into frame ptr
+   259	                                            ;; We now have a "call frame" for main.
+   260	
+   261	  0x0804837f <main+3>:    sub    $0x4,%esp  ;; decrement ESP by 4 (the stack
+   262	                                            ;; grows downwards so that this
+   263	                                            ;; sets the ESP to a new TOP position
+   264	                                            ;; (Note that 4 is one DWORD)
+   265	
+   266	  0x08048382 <main+6>:    push   $0x7       ;; push 7 (2nd parameter) onto stack
+   267	  0x08048384 <main+8>:    push   $0x8       ;; push 8 (1st parameter) onto stack
+   268	  0x08048386 <main+10>:   call   0x8048368 <add> ;; transfer control to add function
+   269	
+   270	  0x0804838b <main+15>:   add    $0x8,%esp       ;; add has returned: add 8 to ESP
+   271	                                                 ;; (Move down the stack two DWORDS)
+   272	                                                 ;; Basically, stack ptr is now back to
+   273	                                                 ;; where it was before the arguments
+   274	                                                 ;; 7 and 8 were pushed onto it
+   275	
+   276	  0x0804838e <main+18>:   mov    %eax,0xfffffffc(%ebp) ;; 4,294,967,292 
+   277	                                                       ;; 2*32 is 4,294,967,296
+   278	                                                       ;; So the contents of EAX is
+   279	                                                       ;; being moved from a base
+   280	                                                       ;; address + an offset
+   281	
+   282	  0x08048391 <main+21>:   pushl  0xfffffffc(%ebp)      ;; pushl decrements by 
+   283	                                                       ;; 2 DWORDs rather than 1
+   284	  0x08048394 <main+24>:   push   $0x8048488            ;; decrements stack ptr by 1 
+   285	  0x08048399 <main+29>:   call   0x80482b0             ;; DWORD. call to printf
+   286	  0x0804839e <main+34>:   add    $0x8,%esp             ;; move stack ptr down stack
+   287	  0x080483a1 <main+37>:   mov    $0x0,%eax             ;; put 0 in EAX
+   288	  0x080483a6 <main+42>:   leave                        ;; clear the call frame
+   289	  0x080483a7 <main+43>:   ret                          ;; return from function
+   290	  End of assembler dump.
+   291	
+   292	
+   293	
+   294	
+   295	
+   296	
+   297	
+   298	
+   299	
+   300	
+   301	
+   302	  ;; Now here's the dump of add:
+   303	  
+   304	  Dump of assembler code for function add:
+   305	  0x08048368 <add+0>:     push   %ebp        ;; prepare call frame
+   306	  0x08048369 <add+1>:     mov    %esp,%ebp   ;; ditto
+   307	
+   308	  0x0804836b <add+3>:     sub    $0x4,%esp   ;; new TOP for stack
+   309	
+   310	  0x0804836e <add+6>:     mov    0xc(%ebp),%eax ;; 1st arg into EAX
+   311	  0x08048371 <add+9>:     add    0x8(%ebp),%eax ;; add 2nd arg to EAX
+   312	
+   313	  0x08048374 <add+12>:    mov    %eax,0xfffffffc(%ebp) ;; return val location
+   314	  0x08048377 <add+15>:    mov    0xfffffffc(%ebp),%eax ;; copy return val into EAX
+   315	  0x0804837a <add+18>:    leave  ;; clear the call frame
+   316	  0x0804837b <add+19>:    ret    ;; return control to invoker
+   317	  End of assembler dump.
+   318	*/
+   319	
+   320	

@@ -1,0 +1,393 @@
+## More miscellany
+
+# IA-32 Addressing Modes
+
+Mode name              Example                          Meaning
+
+Global Symbol     movl x, %eax                    value of x into %eax
+(Direct)
+
+Immediate	  movl $56, %eax                  56 into %eax
+
+Register	  movl %ebx, %eax                 contents of %ebx into %eax
+Direct
+
+Register 
+Indirect	  movl (%esp), %eax               stack[%esp] into %eax
+
+Base-Relative	  movl -4(%ebp), %eax             stack[%ebp - 4] into %eax
+
+Offset-Scaled-    movl -12(%esi, %ebx, 4), %eax   stack[-12 + %esi + %ebx * 4] into 
+Base-Relative                                       %eax
+
+
+# Good, bad, and ugly C
+/* Options for passing arrays to functions, illustrated
+   with three implementations of a to_string function. */
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MaxName    (60)
+#define MaxString (250)
+
+typedef unsigned int bool;
+enum truth_values {false, true}; 
+
+typedef struct Emp {
+  unsigned char lname[MaxName + 1]; /* + 1 for '\0' */
+  unsigned char fname[MaxName + 1];
+  unsigned int  id;
+  unsigned char dept;
+  bool          married;
+} Emp; /* on a straight count, 131 bytes */
+
+void set_name(char* target, char* source) {
+  if (strlen(source) > MaxName) return;
+  strcpy(target, source);
+}
+
+void set_id(unsigned int* id_ptr) {
+  *id_ptr = rand();
+}
+
+void set_dept(unsigned char* dept_ptr, unsigned char code) {
+  *dept_ptr = code;
+}
+void set_married(unsigned int* married, unsigned int status) {
+  *married = status;
+}
+
+/* safest */
+void to_string(Emp* this, char* buffer) {
+  unsigned char temp[32];
+
+  printf("\n** Employee information **");
+  
+  strcpy(buffer, "");
+
+  strcat(buffer, "\nLast name:   "); /* strncat is even safer */
+  strcat(buffer, this->lname);
+  strcat(buffer, "\nFirst name:  ");
+  strcat(buffer, this->fname);  
+
+  sprintf(temp, "%i", this->id);
+  strcat(buffer, "\nEmployee id: ");
+  strcat(buffer, temp);
+
+  sprintf(temp, "%c", this->dept);
+  strcat(buffer, "\nDepartment:  ");
+  strcat(buffer, temp);
+
+  strcat(buffer, "\nMarried?:    ");
+  if (this->married) 
+    strcat(buffer, "yes");
+  else
+    strcat(buffer, "no");
+}
+
+/* ok */
+unsigned char* to_string2(Emp* this) {
+  unsigned char temp[256];
+
+  char* buffer = malloc(256);
+
+  printf("\n** Employee information **");
+  
+  strcpy(buffer, "");
+
+  strcat(buffer, "\nLast name:   "); 
+  strcat(buffer, this->lname);
+  strcat(buffer, "\nFirst name:  ");
+  strcat(buffer, this->fname);  
+
+  sprintf(temp, "%i", this->id);
+  strcat(buffer, "\nEmployee id: ");
+  strcat(buffer, temp);
+
+  sprintf(temp, "%c", this->dept);
+  strcat(buffer, "\nDepartment:  ");
+  strcat(buffer, temp);
+
+  strcat(buffer, "\nMarried?:    ");
+  if (this->married) 
+    strcat(buffer, "yes");
+  else
+    strcat(buffer, "no");
+  return buffer;
+}
+
+
+/* Disaster: never do this! (gcc compiler issues warning.) */
+unsigned char* to_string3(Emp* this) {
+  unsigned char buffer[256];
+  unsigned char temp[32];
+
+  printf("\n** Employee information **");
+  
+  strcpy(buffer, "");
+
+  strcat(buffer, "\nLast name:   "); 
+  strcat(buffer, this->lname);
+  strcat(buffer, "\nFirst name:  ");
+  strcat(buffer, this->fname);  
+
+  sprintf(temp, "%i", this->id);
+  strcat(buffer, "\nEmployee id: ");
+  strcat(buffer, temp);
+
+  sprintf(temp, "%c", this->dept);
+  strcat(buffer, "\nDepartment:  ");
+  strcat(buffer, temp);
+
+  strcat(buffer, "\nMarried?:    ");
+  if (this->married) 
+    strcat(buffer, "yes");
+  else
+    strcat(buffer, "no");
+
+  return buffer;
+}
+
+void dump_addresses(Emp* emp) {
+  printf("Address of Emp:     %p (%u)\n", emp, emp);
+  printf("Address of lname:   %p (%u)\n", emp->lname, emp->lname);
+  printf("Address of fname:   %p (%u)\n", emp->fname, emp->fname);
+  printf("Address of id:      %p (%u)\n", &emp->id, &emp->id);
+  printf("Address of dept:    %p (%u)\n", &emp->dept, &emp->dept);
+  printf("Address of married: %p (%u)\n", &emp->married, &emp->married);
+}
+
+int main() {
+  /* Seed the pseudo-random number generator with the current time. 
+     An Emp's id is set to a pseudo-random number. */
+  srand(time(0)); 
+
+  Emp fred;
+  /* sizeof(fred) also would work. */
+  printf("sizeof(Emp) is %i\n", sizeof(Emp)); /* 136 on my system */
+
+  dump_addresses(&fred);
+  /* on my system:
+
+     Address of Emp:     0xbff7b1a0 (3220681120)
+     Address of lname:   0xbff7b1a0 (3220681120)
+     Address of fname:   0xbff7b1dd (3220681181)
+     Address of id:      0xbff7b21c (3220681244)
+     Address of dept:    0xbff7b220 (3220681248)
+     Address of married: 0xbff7b224 (3220681252)
+  */
+
+  /* Give fred's properties some values */
+  set_name(fred.lname, "Flintstone");
+  set_name(fred.fname, "Fred");
+  set_id(&fred.id);
+
+  set_dept(&fred.dept, 'Z');
+  set_married(&fred.married, true);
+
+  /* preferred to_string */
+  unsigned char buffer[256];
+  to_string(&fred, buffer);
+  printf("%s\n", buffer);
+  /* output:
+
+      ** Employee information **
+      Last name:   Flintstone
+      First name:  Fred
+      Employee id: 2084589247
+      Department:  Z
+      Married?:    yes 
+  */
+
+  /* to_string2: same output as above */
+  unsigned char* ptr = to_string2(&fred);
+  printf("%s\n", ptr);
+  free(ptr);  /* critical */
+
+  /* to_string3: if it doesn't crash, it's pure luck.
+     (In this case, it's because nothing is called 
+     after to_string3.)
+  */
+  printf("%s\n", to_string3(&fred));
+  
+  return 0;
+}
+
+## ragged arrays
+
+#include <stdio.h>
+
+#define Size1 (4)
+#define Size2 (3)
+#define Size3 (5)
+
+int main() {
+  int* a1 = malloc(4 * sizeof(int));
+  int* a2 = malloc(3 * sizeof(int));
+  int* a3 = malloc(5 * sizeof(int));
+  a1[0] = 1; a1[1] = 2; a1[2] = 3; a1[3] = 4;
+  a2[0] = 9; a2[1] = 8; a2[3] = 7;
+  a3[0] = -1; a3[1] = -2; a3[2] = -3; a3[3] = -4; a3[4] = -5;
+
+  int sizes[ ] = {Size1, Size2, Size3, 0};
+
+  int** ptr2ptr = malloc(sizeof(int*) * 4);
+  ptr2ptr[0] = a1;
+  ptr2ptr[1] = a2;
+  ptr2ptr[2] = a3;
+  ptr2ptr[3] = 0;
+
+  int i = 0;
+  while (ptr2ptr[i]) {
+    int j;
+    for (j = 0; j < sizes[i]; j++)
+      printf("%i ", ptr2ptr[i][j]);
+    printf("\n");
+    i++;
+  }
+  return 0;
+}
+;;;;
+
+/* file: sum.c */
+int accumulator = 0;
+
+int sum(int n1, int n2) {
+  int t = n1 + n2;
+  accumulator += t;
+  return t;
+}
+/*
+  At the command prompt:  gcc -02 -S sum.c
+     -02 ==> level 2 optimization
+     -S  ==> generate assembly code file sum.s, shown below
+
+ 	.file	"sum.c"
+.globl accumulator
+	.bss
+	.align 4
+	.type	accumulator, @object
+	.size	accumulator, 4
+accumulator:
+	.zero	4
+	.text
+	.p2align 2,,3
+.globl sum
+	.type	sum, @function
+sum:
+	pushl	%ebp
+	movl	%esp, %ebp
+	movl	12(%ebp), %eax
+	addl	8(%ebp), %eax
+	addl	%eax, accumulator
+	leave
+	ret
+	.size	sum, .-sum
+	.section	.note.GNU-stack,"",@progbits
+	.ident	"GCC: (GNU) 4.1.1 20111201"
+;;;;
+
+  Again at the command prompt, on my Linux box:
+
+          gcc -02 -c sum.c    ;; produces sum.o
+
+          objdump -d sum.o    ;; produces what's shown below
+                              ;; (stuff that starts with _ is an annotation)
+
+sum.o:     file format elf32-i386
+
+
+Disassembly of section .text:
+
+_offset _bytes                 _equivalent in assembly
+
+00000000 <sum>:
+   0:   55                      push   %ebp
+   1:   89 e5                   mov    %esp,%ebp
+   3:   8b 45 0c                mov    0xc(%ebp),%eax
+   6:   03 45 08                add    0x8(%ebp),%eax
+   9:   01 05 00 00 00 00       add    %eax,0x0
+   f:   c9                      leave
+  10:   c3                      ret
+
+   Explanation: 
+
+   The _offsets are from the start of the file.
+
+   The _bytes are the byte sequence, broken into seven groupings, each grouping 
+   is an instruction. An IA32 instruction can be from 1 to 15 byes in size.
+   
+   The _equivalent column is the equivalent assembly instruction to the byte code.
+
+*/
+;;;;
+
+/* system-level I/O */
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+
+#define FILE_NAME "nums.bin"
+
+void report_and_die(const char* msg) {
+  fprintf(stderr, msg);
+  exit(-1);
+}
+
+int main() {
+  const int bad_io = 0xffffffff;
+  char error_msg[512];
+
+  int file_descriptor = open(FILE_NAME,         /* name */
+			     O_CREAT | O_RDWR,  /* create for read/write */
+			     0);                /* permissions */
+
+  if (file_descriptor == bad_io) {
+    sprintf(error_msg, "Couldn't open file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+
+  /* Write some data. */
+  int n[ ] = { 9, 7, 5, 3, 1 };
+  int read_in[5 * sizeof(int)];
+
+
+
+
+  int flag = write(file_descriptor, n, sizeof(n));
+  if (flag == bad_io) {
+    sprintf(error_msg, "Couldn't write to file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+  
+  flag = close(file_descriptor);
+  if (flag == bad_io) {
+    sprintf(error_msg, "Couldn't close file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+  
+  ssize_t in_flag = read(file_descriptor, read_in, sizeof(read_in));
+  
+  if (in_flag == bad_io) {
+    sprintf(error_msg, "Couldn't read from file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+
+  file_descriptor = open(FILE_NAME, O_RDONLY, 0);
+  if (file_descriptor == bad_io) {
+    sprintf(error_msg, "Couldn't open file %s for reading.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+
+  flag = read(file_descriptor, read_in, sizeof(read_in));
+ 
+  return 0;
+}
+;;;;
+
+

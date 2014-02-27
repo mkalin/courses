@@ -1,0 +1,391 @@
+                                CSC373: Computer Systems 1
+                                        Homework 4
+Points: 100
+Due:    Before midnight, July 16 (that's Friday, not Thursday)
+
+1. Consider this code segment
+
+         int   n = 1234;
+         float f = 1234.0f;
+
+   Here's the internal representation of each in big endian, with the
+   most significant byte to the left:
+
+         n: 00 00 04 d2
+   
+         f: 44 9a 40 00
+
+   Explain how the bits in the integer variable n and the floating-point variable
+   f are correlated. It may be easiest to show how to derive f from n.
+
+2. Consider this code segment:
+
+         int   n = 1234;
+         float f = 1234.0f;
+	 if (n == f) printf("They're equal.\n");
+	 else printf("They're not equal.\n");
+
+   When executed, the output is
+
+         They're equal.
+
+   The == operator simply checks that the bit patterns are the same.
+   What must the compiler be doing so that the program produces the
+   output that it does?
+
+3. Here's a short C program:
+
+/* This program uses the pow function, which is part of the run-time
+        math library. To enable its use, this file (fpointHwk.c) was
+        compiled/linked as follows:
+	
+	gcc -o fpointHwk -lm fpointHwk.c
+	
+        In "-lm", that's a lowercase L rather than a one.
+*/
+
+#include <stdio.h>
+#include <math.h>
+
+int main() {
+  /* first printf statements */
+  double d1 = 1.0 / 10.0;
+  printf("d1 == %f\n", d1);
+  
+  double d2 = pow(2.0, -20.0) * d1;
+  printf("d2 == %f\n", d2);
+  
+  double d3 = 9.54 * pow(10.0, -8.0);
+  printf("d3 == %f\n", d3);
+  printf("\n");
+  
+  /* second printf statements */
+  if (d1 == d2) printf("d1 == d2\n");
+  else printf("d1 != d2\n");
+  
+  if (d1 == d3) printf("d1 == d3\n");
+  else printf("d1 != d3\n");
+  
+  if (d2 == d3) printf("d2 == d3\n");
+  else printf("d2 != d3\n");
+
+  return 0;
+}
+
+    Here's the output:
+
+    d1 == 0.100000
+    d2 == 0.000000
+    d3 == 0.000000
+
+    d1 != d2
+    d1 != d3
+    d2 != d3
+
+    Explain what's going on. In particular, the first printf statements give the
+    same value for d2 and d3: 0.000000. However, the comparisons using ==
+    all evaluate to false, as shown in the second group of printf statements.
+    Explain, then, why the system thinks that d2 != d3.
+
+
+
+
+
+
+
+
+
+
+4. In the net.c program (included in Class8.zip on the home site), 
+   there's a call to gethostbyname, which takes a string and returns a
+   pointer to a struct hostent. Here's a code segment to illustrate:
+
+      struct hostent* host_ptr = gethostbyname("condor.depaul.edu");
+
+   This pointer is passed to the function dump_host_aux, which prints 
+   information about the host with the given name. In the case of
+   www.yahoo.com, for instance, here's the output:
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+          Official name: www.yahoo.akadns.net
+          Aliases: www.yahoo.com
+          Host type: AF_INET
+          Address length: 4
+          Addresses: 68.142.197.86
+                     68.142.197.87
+                     68.142.197.90
+                     68.142.197.67
+                     68.142.197.69
+                     68.142.197.75
+                     68.142.197.77
+                     68.142.197.84
+ 
+   The structure itself looks like this:
+
+     struct hostent {
+        char*    h_name;       ;; official name
+        char**   h_aliases;    ;; alias list
+        int      h_addrtype;   ;; host address type 
+        int      h_length;     ;; length of address 
+        char**   h_addr_list;  ;; list of addresses 
+     };
+
+
+   Of interest here is the second field in the structure, h_aliases, which
+   is a list of alternative names. (The official name for yahoo is not
+   www.yahoo.com but rather www.yahoo.akadns.net; hence, www.yahoo.com is an
+   alias for this official name.) Here's the loop that prints the aliases:
+
+         printf("Aliases: ");
+         int i = 0;
+         while (host_ptr->h_aliases[i] != NULL) {
+            printf("%.21s\n", host_ptr->h_aliases[i]);
+            i++;
+         }
+
+   So the loop terminates when the ith entry is NULL, which is defined as 0
+   in the header file stdlib.h. 
+
+   Here's a simpler example of what's going on. The data type of strings
+   is char**, that is, strings points to an array of strings. Note that the
+   last entry in the list is NULL, which is 0. (Putting the integer 0 in there
+   works the same.) If you put, say, -1 in place of NULL, you get a 
+   compiler warning. Explain why the compiler is willing to accept an
+   array initialization in which the last element is not a string, like the
+   others, but rather an integer. 
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+         /* output from this program:
+
+               foo
+               bar
+               baz
+          */
+          #include <stdlib.h>
+          #include <stdio.h>
+
+          int main() {
+            char* strings[ ] = { "foo", "bar", "baz", NULL };
+            int i = 0;
+            while (strings[i] != NULL)
+               printf("%s\n", strings[i++]);
+            return 0;
+          }
+
+
+5. Here's a short program, echo.c, that prompts the user to enter a string 
+   from the standard input and then echos the string back to the standard
+   output:
+       
+      #include <stdio.h>
+      #include <stdlib.h>
+
+      char buffer[1024 + 1];
+
+      char* prompt_and_read() {
+         printf("\nPlease enter a string (-1 to exit): ");
+         fgets(buffer, 1024, stdin);
+         return buffer;
+      }
+
+      int main() {
+         while (1) {
+           char* ptr = prompt_and_read();
+           int flag = atoi(ptr);    /* converts string to int */
+           if (flag < 0) break;     /* break out of the loop */
+           printf("You entered: %s\n", ptr);
+         }
+         return 0;
+      }
+
+   Note that array named buffer is not a local variable in 
+   prompt_and_read but rather is defined outside of all functions.
+   (In C jargon, buffer is an extern variable.) Why? In particular,
+   what's the problem with defining buffer inside of prompt_and_read,
+   as show here?
+
+     char* prompt_and_read() {
+         char buffer[1024 + 1];
+         printf("\nPlease enter a string (-1 to exit): ");
+         fgets(buffer, 1024, stdin);
+         return buffer;
+      }
+
+
+
+
+
+6. Here is a C program. For review, the malloc function takes one argument,
+   the number of bytes to allocate dynamically from the heap (as opposed to
+   the stack) and returns a pointer to the first byte of allocated storage
+   or NULL (0) if the requested storage cannot be allocated.
+
+   The program compiles and runs. Answer the questions
+   below the program. (The code itself is in the ZIP file so you don't have
+   to extract it from this handout.)
+
+#include <stdio.h>
+#include <stdlib.h>
+
+void f1(int** arg, int n1, int n2) {
+  int i;
+  for (i = 0; i < n1; i++) {
+    int j;
+    for (j = 0; j < n2; j++)
+      *(*(arg + i) + j) = rand() % 100;
+  }
+}
+
+int** f2(int** arg, int n) {
+  int** t = malloc(n * sizeof(int*));
+  int i, k = 0;
+  for (i = n - 1; i >= 0; i--)
+    t[k++] = arg[i];
+  
+  return t;
+}
+
+int main() {
+  int n = 0xffffffff;
+
+  do {
+    printf("Enter a positive integer: ");
+    scanf("%i", &n);
+  } while (n < 0);
+  
+  int** q = malloc(n * sizeof(int*));
+  
+  int i;
+  for (i = 0; i < n; i++)
+    *(q + i) = malloc(n * sizeof(int));
+  f1(q, n, n);
+
+  int** r = f2(q, n);
+  
+  for (i = 0; i < n; i++)
+    free(*(q + i));
+  free(q);
+
+  return 0;
+}
+
+
+
+
+
+
+
+1. Draw a diagram that depicts what q points to after the first for
+   loop in main executes.
+
+2. Explain what f1 does and how it does it. You can do so by documenting
+   the code. Of particular interest is anything having to do with
+   pointers.
+
+3. Are q and q[0] of the same type? Explain.
+
+4. Explain what f2 does and how it does it.
+;;;;;
+
+7. Answer the questions posed in the documentation:
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define D1 (3)
+#define D2 (2)
+#define D3 (3)
+#define UB (100)
+
+/* Output from a sample run:
+
+     24 9 24 98 39 21 29 56 59 21 86 6 76 93 44 21 37 58 
+*/
+
+
+/* Explain, in words and/or pictures, how this loop works. 
+   The syntax is correct and the loop does what it should.
+
+   Why does the compiler need D2 and D3 in the argument
+   but not D1?
+*/
+void dump_array(int a[][D2][D3]) {
+  int i, j, k;
+  for (i = 0; i < D1; i++)
+    for (j = 0; j < D2; j++)
+      for (k = 0; k < D3; k++)
+      printf("%i ", a[i][j][k]);
+  printf("\n");
+}
+
+int main() {
+  /* Uncomment the next line if you'd prefer different output every time. */
+  /* srand(time(0)); */
+
+  int d3[D1][D2][D3];
+
+  /* 
+     What is the data type of d3?
+     What is the data type of *d3?
+     What is the data type of **d3?
+     What is the data type of ***d3?
+
+     What is the data type of ptr?
+  */
+  int* ptr = (int*) d3;
+
+  /* 
+     Your compiler should not issue any warning/error on the line above.
+     What not?
+
+     What if the line changes to:
+
+     int* ptr = d3;
+
+     What happens then with the compiler and why?
+  */
+
+  
+  int n =  D1 * D2 * D3 * sizeof(int) - sizeof(int);
+
+  /* What does this line do? In particular, why is d3 cast to an int? */
+  /* Why, in the initialization of n above, do I subtract sizeof(int) at the end? */
+  int* foo = (int*) ((int) d3 + n);
+
+  /* Explain, in words and/or pictures, what this loop does. */
+  while (foo > ptr) {
+    *foo = rand() % UB; /* generate and assign a 1-digit or 2-digit integer */
+    foo--;              /* Explain in words or pictures what's going on here. */
+  }
+  
+  dump_array(d3); /* Could I call dump_array(ptr) here? Explain. */
+
+  return 0;
+}
+
+

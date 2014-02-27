@@ -1,0 +1,374 @@
+     1	                              HTTP Basics
+     2	
+     3	-- Overview
+     4	
+     5	This handpoint provides a very quick look at HTTP to underscore how web
+     6	development frameworks simply "wrap" HTTP messages to make life easier 
+     7	on programmers. HTTP consists of two message types:
+     8	
+     9	                      request
+    10	  Requests:  client ---------------> server
+    11	
+    12	                      response
+    13	  Responses: server ---------------> client
+    14	
+    15	For requests, there are standard HTTP methods ('verbs'):
+    16	
+    17	               POST   == Create
+    18	               GET    == Read
+    19	               PUT    == Update
+    20	               DELETE == Delete
+    21	
+    22	These 'verbs' cover the standard CRUD (create/read/update/delete) operations so 
+    23	common in all of programming.
+    24	
+    25	Responses have status codes (e.g., 200 means "OK", 404 means "Not Found") to 
+    26	indicate how the request was handled.
+    27	
+    28	Among requests, GET and DELTE are "bodyless" but POST and PUT always have bodies, 
+    29	even if empty. Here's the structure of a request:
+    30	
+    31	   start-line
+    32	   headers (key:value pairs)
+    33	   \n\n
+    34	   [body]  (in POST and PUT only)
+    35	
+    36	-- Identifiers ('nouns')
+    37	
+    38	HTTP has URIs == Uniform Resource Identifiers. There are two subtypes:
+    39	
+    40	   URL: Uniform Resource Locator 
+    41	   URN: Uniform Resource Name
+    42	
+    43	-- Sample
+    44	
+    45	Here's part of a session that I captured using a JavaScript utility, http-console. 
+    46	I'm hitting our college's homepage (http://cdm.depaul.edu). My comments begin
+    47	with two semicolons.
+    48	
+    49	$ http-console http://www.cdm.depaul.edu
+    50	  ;; www.cdm.depaul.edu is the "symbolic IP address" whose actual IP address
+    51	  ;; is 140.192.32.137
+    52	
+    53	> http-console 0.6.0
+    54	> Welcome, enter .help if you're lost.
+    55	> Connecting to www.cdm.depaul.edu on port 80.
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	GET /Pages/default2.aspx  ;; my entry
+    63	
+    64	HTTP/1.1 200 OK
+    65	Cache-Control: private, max-age=0
+    66	Content-Type: text/html; charset=utf-8
+    67	Expires: Wed, 20 Jun 2012 19:17:20 GMT
+    68	Last-Modified: Thu, 27 Jun 2013 09:15:20 GMT
+    69	Server: Microsoft-IIS/7.0
+    70	Sprequestguid: 4b83ce4b-8cdb-4ac7-bef3-eaece5d89b71
+    71	X-Sharepointhealthscore: 0
+    72	X-Aspnet-Version: 2.0.50727
+    73	X-Powered-By: ASP.NET
+    74	Microsoftsharepointteamservices: 14.0.0.4762
+    75	Date: Thu, 27 Jun 2013 09:17:20 GMT
+    76	Connection: close
+    77	Content-Length: 48476
+    78	
+    79	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+    80	  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+    81	...
+    82	
+    83	-- Parsing a URL
+    84	
+    85	If you enter the URL
+    86	
+    87	  http://www.cdm.depaul.edu
+    88	
+    89	in a browser, you're redirected to
+    90	
+    91	 http://www.cdm.depaul.edu/Pages/default2.aspx
+    92	
+    93	This whole thing is a URL. Here's a parse:
+    94	
+    95	    * http == the "scheme" or protocol
+    96	
+    97	    * www.cdm.depaul.edu == the symbolic IP address
+    98	
+    99	    At a command prompt (Windows or Unix), I do
+   100	
+   101	      nslookup www.cdm.depaul.edu
+   102	
+   103	    and get 
+   104	
+   105	      Server:  bach.cti.depaul.edu
+   106	      Address:  140.192.36.3
+   107	
+   108	      Name:    wwwprod.cti.depaul.edu
+   109	      Address:  140.192.32.137
+   110	      Aliases:  www.cdm.depaul.edu
+   111	
+   112	    from the DNS (Domain Name Service) lookup.
+   113	
+   114	    /Pages/default2.aspx == the path URI, that is,
+   115	    the path to the "resource" that I'm requesting
+   116	;;;;
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	#include <stdio.h>
+   123	#include <sys/types.h>
+   124	#include <sys/socket.h>
+   125	#include <netinet/in.h>
+   126	#include <netdb.h> 
+   127	#include <stdlib.h>
+   128	#include <string.h>
+   129	
+   130	#define BuffSize (4096)
+   131	
+   132	void error_msg(const char* msg, int halt_flag) {
+   133	    perror(msg);
+   134	    if (halt_flag) exit(-1);
+   135	}
+   136	
+   137	int main() {
+   138	  const int port = 80;  /* default port for a Web server */
+   139	
+   140	  const char* request = 
+   141	    "GET /mkalin/index.html HTTP/1.1\nhost: condor.depaul.edu\n\n";
+   142	  /* GET /mkalin/index.html    ;; first-line in request
+   143	     host: condor.depaul.edu   ;; first and only line of header, a hash
+   144	     <newline>                 ;; two newlines signal end of header
+   145	     <newline>
+   146	                               ;; a GET request has no body -- end of request
+   147	  */
+   148	  
+   149	  int                sock, n;
+   150	  struct sockaddr_in serv_addr;
+   151	  struct hostent*    server;
+   152	  char               buffer[BuffSize + 1];
+   153	 
+   154	  /* get the server information */
+   155	  server = gethostbyname("condor.depaul.edu");
+   156	  if (server == NULL) error_msg("No such host.", -1);
+   157	
+   158	  /* create socket descriptor */
+   159	  sock = socket(AF_INET,        /* address family */
+   160			SOCK_STREAM,    /* type: in this case, TCP based */
+   161			0);             /* protocol: 0 means get from 2nd arg */
+   162	  if (sock < 0) error_msg("Can't get socket descriptor.", -1);
+   163	
+   164	  /* fill in the fields of the server's address structure */
+   165	  bzero(&serv_addr, sizeof(serv_addr)); /* zero everything out: memset is better */
+   166	
+   167	  serv_addr.sin_family = AF_INET;       /* address family */
+   168	
+   169	  /* copy from the hostent structure into the server address structure */
+   170	  bcopy((unsigned char*) server->h_addr, 
+   171		(unsigned char*) &serv_addr.sin_addr.s_addr,
+   172		server->h_length);
+   173	  serv_addr.sin_port = htons(port); /* host endian to network endian */
+   174	
+   175	  /* try to connect to the server */
+   176	  if (connect(sock, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) 
+   177	    error_msg("Can't connect.", -1);
+   178	
+   179	
+   180	
+   181	
+   182	  /* write to the socket */
+   183	  n = write(sock, request, strlen(request));
+   184	  if (n < 0) error_msg("Can't write to socket.", -1);
+   185	
+   186	  /* read from the socket and print what comes back from server */
+   187	  bzero(buffer, BuffSize + 1); /* memset is better */
+   188	  n = read(sock, buffer, BuffSize);
+   189	  if (n < 0)  error_msg("Can't read from socket.", -1);
+   190	  printf("%s\n", buffer);
+   191	
+   192	  if (close(sock) < 0) error_msg("Can't close socket.", -1);
+   193	
+   194	  return 0;
+   195	}
+   196	/* output
+   197	
+   198	HTTP/1.1 200 OK
+   199	Date: Wed, 20 Jun 2012 21:55:28 GMT
+   200	Server: Apache/2.2.3 (Red Hat)
+   201	Last-Modified: Thu, 27 Jun 2013 10:39:10 GMT
+   202	ETag: "5820d3-a93-4c24c75699780"
+   203	Accept-Ranges: bytes
+   204	Content-Length: 2707
+   205	Content-Type: text/html
+   206	Connection: close
+   207	
+   208	<html>
+   209	   <title>Home page</title>
+   210	   <head>
+   211	   <style type = "text/css">
+   212	    .body  {background-color: rgb(225, 225, 225);}
+   213	    .links {text-decoration: none;}
+   214	    .bullets {background-color: rgb(225, 225, 225); }
+   215	    .raw {background-color: wheat; }
+   216	    h3 { color: black;}
+   217	    a { color: #151b8d; text-decoration:none; }
+   218	    a:visited { color: #151b8d; }
+   219	    a:hover { color: #fff; background-color: #666; }
+   220	    .legend {color:#990000;}
+   221	</style>
+   222	<title>Textbook and Course Listings</title>
+   223	</head>
+   224	
+   225	<body>
+   226	<p>
+   227	<fieldset><legend class = 'legend'>Basics</legend>
+   228	<span>Martin Kalin</span><br/>
+   229	<span>Professor and Associate Dean, 
+   230	      College of Computing and Digital Media</span><br/>
+   231	<span>DePaul University</span><br/>
+   232	<span>1 East Jackson</span><br/>
+   233	<span>Chicago, IL 60604</span><br/>
+   234	<p>
+   235	<span>PhD, Northwestern University</span>
+   236	</p>
+   237	</fieldset>
+   238	</p>
+   239	
+   240	
+   241	
+   242	<p>
+   243	<fieldset><legend class = 'legend'>Books</legend>
+   244	
+   245	<div><a href="http://oreilly.com/catalog/9780596521127/">
+   246	  Java Web Services: Up and Running</a></div>
+   247	<div><a HREF="ed3/">Applications Programming in ANSI C (3rd edition)</a><div>
+   248	<div><a HREF="cse/">C for Scientists and Engineers</a><div>
+   249	<div><a HREF="apc/">Applications Programming in C++</a><div>
+   250	<div><a HREF="oop2/">Object-Oriented Programming in C++ (2nd edition)</a><div>
+   251	<div><a HREF="oopj/">Object-Oriented Programming in Java</a><div>
+   252	...
+   253	*/
+   254	
+   255	-- An interativer web server in C
+   256	
+   257	/* utils.h */
+   258	#define BUFF_SIZE (1024)   /* for client read/write */
+   259	#define BACKLOG     (12)   /* maximum number of concurrent clients */
+   260	enum {false, true};        /* 0 and 1, respectively */
+   261	typedef unsigned bool;     /* bool aliases unsigned int */
+   262	/* end of utils.h */
+   263	
+   264	/* utils.c */
+   265	#include <stdio.h>
+   266	#include <stdlib.h>
+   267	#include <string.h>
+   268	#include <sys/socket.h>
+   269	#include <netinet/in.h>
+   270	#include <fcntl.h>
+   271	#include "utils.h"
+   272	
+   273	void error_msg(const char* msg, bool halt_flag) {
+   274	    perror(msg);
+   275	    if (halt_flag) exit(-1); 
+   276	}
+   277	
+   278	/* listening socket */
+   279	int create_server_socket(bool non_blocking) {
+   280	  /* Modify as needed. */
+   281	  const int port = 3000;  
+   282	  
+   283	  struct sockaddr_in server_addr;
+   284	  
+   285	  /* create, bind, listen */
+   286	  int sock = socket(AF_INET,     /* family */
+   287			    SOCK_STREAM, /* TCP */
+   288			    0);          
+   289	  if (socket < 0) error_msg("Problem with socket call", true);
+   290	
+   291	  /* non-blocking? */
+   292	  if (non_blocking) fcntl(sock, F_SETFL, O_NONBLOCK);
+   293	  
+   294	  /* bind */
+   295	  bzero(&server_addr, sizeof(server_addr));
+   296	  server_addr.sin_family = AF_INET;
+   297	  server_addr.sin_addr.s_addr = INADDR_ANY;
+   298	  server_addr.sin_port = htons(port); /* host to network endian */
+   299	  if (bind(sock, (struct sockaddr*) &server_addr, sizeof(server_addr)) < 0) 
+   300	    error_msg("Problem with bind call", true);
+   301	
+   302	  /* listen */  
+   303	  fprintf(stderr, "Listening for requests on port %i...\n", port);
+   304	  if (listen(sock, BACKLOG) < 0)
+   305	    error_msg("Problem with listen call", true);
+   306	
+   307	  return sock;
+   308	}
+   309	
+   310	void announce_client(struct in_addr* addr) {
+   311	  char buffer[BUFF_SIZE + 1];
+   312	
+   313	  inet_ntop(AF_INET, addr, buffer, sizeof(buffer));
+   314	  fprintf(stderr, "Client connected from %s...\n", buffer);
+   315	}
+   316	
+   317	void generate_echo_response(char request[ ], char response[ ]) {
+   318	  strcpy(response, "HTTP/1.1 200 OK\n");        
+   319	  strcat(response, "Content-Type: text/*\n");
+   320	  strcat(response, "Accept-Ranges: bytes\n"); 
+   321	  strcat(response, "Connection: close\n\n");
+   322	  strcat(response, request);
+   323	}
+   324	/* end of utils.c */
+   325	
+   326	/* iterative_server.c */
+   327	#include <stdio.h>
+   328	#include <stdlib.h>
+   329	#include <string.h>
+   330	#include <netinet/in.h>
+   331	#include "utils.h"
+   332	
+   333	int main() {
+   334	  /* Buffer for I/O operations. */
+   335	  char buffer[BUFF_SIZE + 1];      
+   336	
+   337	  /* Arguments for the accept call. */
+   338	  struct sockaddr_in client_addr;
+   339	  socklen_t len = sizeof(struct sockaddr_in);
+   340	
+   341	  /* Create a server socket to accept client connections. */
+   342	  int sock = create_server_socket(false);
+   343	
+   344	  /* Accept requests indefinitely. */
+   345	  while (true) {
+   346	    /* Get the client socket for reading/writing. */
+   347	    int client = accept(sock, 
+   348				(struct sockaddr*) &client_addr, 
+   349				&len);
+   350	    if (client < 0) error_msg("Problem accepting a client request", true);
+   351	
+   352	    announce_client(&client_addr.sin_addr);
+   353	
+   354	    /* Read a client request. */
+   355	    bzero(buffer, sizeof(buffer));
+   356	    int bytes_read = recv(client, buffer, sizeof(buffer), 0); 
+   357	    if (bytes_read < 0) error_msg("Problem with recv call", false);
+   358	
+   359	
+   360	
+   361	    
+   362	    /* Send a response. */
+   363	    char response[BUFF_SIZE * 2]; /* twice as big to be safe */
+   364	    bzero(response, sizeof(response));
+   365	    generate_echo_response(buffer, response);
+   366	    int bytes_written = send(client, response, strlen(response), 0); 
+   367	    if (bytes_written < 0) error_msg("Problem with send call", false);
+   368	
+   369	    close(client); 
+   370	  } /* while(true) */
+   371	
+   372	  return 0; 
+   373	}
+   374	/* end of iterative_server.c */

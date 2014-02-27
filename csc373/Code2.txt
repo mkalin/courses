@@ -1,0 +1,297 @@
+     1	#include <stdio.h>
+     2	#include <stdlib.h>
+     3	#include <time.h>
+     4	
+     5	#define M  (5)
+     6	#define N  (4)
+     7	
+     8	/* sumTable1 has good "spatial locality" because the access order
+     9	   is the same as the memory layout, that is, "row major" order.
+    10	*/
+    11	int sumTable1(int a[M][N]) {
+    12	  int i, j, sum = 0;
+    13	  for (i = 0; i < M; i++)
+    14	    for (j = 0; j < N; j++)
+    15	      sum += a[i][j];
+    16	  return sum;
+    17	}
+    18	
+    19	/* sumTable2 has poor spatial locality because the access order
+    20	   is "column major," which is not the memory layout 
+    21	*/
+    22	int sumTable2(int a[M][N]) {
+    23	  int i, j, sum = 0;
+    24	  for (i = 0; i < M; i++)
+    25	    for (j = 0; j < N; j++)
+    26	      sum += a[i][j];
+    27	  return sum;
+    28	}
+    29	
+    30	int my_rand() {
+    31	  return rand() % 100;
+    32	}
+    33	
+    34	int main() {
+    35	  int array[M][N];
+    36	
+    37	  srand(time(0));  /* seed the random number generator */
+    38	
+    39	  /* populate array with random ints */
+    40	  int i, j;
+    41	  for (i = 0; i < M; i++)
+    42	    for (j = 0; j < N; j++)
+    43	      array[i][j] = my_rand();
+    44	
+    45	  printf("Sum from sumTable1 is %i\n", sumTable1(array));
+    46	  printf("Sum from sumTable2 is %i\n", sumTable2(array));
+    47	  return 0;
+    48	}
+    49	/* output from sample run:
+    50	
+    51	   Sum from sumTable1 is 991
+    52	   Sum from sumTable2 is 991
+    53	*/
+    54	/* arrays, structs, and alignment issues */
+    55	
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	#include <stdio.h>
+    63	
+    64	void array_stuff();     /* declaration */
+    65	void struct_stuff();    /* declaration */
+    66	void function_stuff();  /* declaration */
+    67	
+    68	int main() {
+    69	  array_stuff();
+    70	  struct_stuff();
+    71	  function_stuff();
+    72	  return 0;
+    73	}
+    74	
+    75	void array_stuff() {
+    76	  /* First, a quick look at how N-dimensional arrays are stored.
+    77	     A "table" or "matrix" is a 2-dimensional array, whereas a
+    78	     "vector" is a 1-dimensional array. However, at the implemenation
+    79	     level 1-dimensional and multi-dimensional arrays are laid out the
+    80	     same way --- as contiguous elements in memory. In C, a table or
+    81	     matrix is stored in "row major" order. In this example, the first
+    82	     row consists of 1 and 2 and the first column consists of 1, 3, and
+    83	     5; hence, the C layout is 1 2 3 4 5 6 rather than 1 3 5 2 4 6.
+    84	  */
+    85	  int table[3][2] =
+    86	    { {1, 2},
+    87	      {3, 4},
+    88	      {5, 6}
+    89	    };
+    90	  int i, j;
+    91	
+    92	  /* cast because table's type is "pointer to an array of arrays." */
+    93	  int* ptr = (int*) table;
+    94				      
+    95	  /* normal way to access elements: row-major order in IA32 */
+    96	  for (i = 0; i < 3; i++)
+    97	    for (j = 0; j < 2; j++)
+    98	      printf("table[%i][%i] == %i\n", i, j, table[i][j]);
+    99	  /* output:
+   100	     
+   101	     table[0][0] == 1
+   102	     table[0][1] == 2
+   103	     table[1][0] == 3
+   104	     table[1][1] == 4
+   105	     table[2][0] == 5
+   106	     table[2][1] == 6  */
+   107	
+   108	  /* treating an N-dimensional array as a 1-dimensional array */
+   109	  printf("\n");
+   110	  for (i = 0; i < (3 * 2); i++) 
+   111	    printf("table[%i] == %i\n", i, ptr[i]);
+   112	   /* output:
+   113	     table[0] == 1
+   114	     table[1] == 2
+   115	     table[2] == 3
+   116	     table[3] == 4
+   117	     table[4] == 5
+   118	     table[5] == 6
+   119	  */
+   120	}
+   121	
+   122	void struct_stuff() {
+   123	  struct Sample {
+   124	    int n1;   /* 4 bytes */
+   125	    char c;   /* 1 byte */
+   126	    int n2;   /* 4 bytes */
+   127	  };
+   128	
+   129	  /* code to illustrate use */
+   130	  struct Sample* ptr_s1 = malloc(sizeof(struct Sample));
+   131	  ptr_s1->n1 = 1;
+   132	  ptr_s1->c = 'A';
+   133	  ptr_s1->n2 = 2;
+   134	  (*ptr_s1).n2 += 4; /* same as ptr_s1->n2 += 4 */
+   135	  free(ptr_s1);
+   136	
+   137	  printf("A struct Sample instance requires %d bytes\n",
+   138		 sizeof(struct Sample));
+   139	  /* Output on my Linux box: A struct Sample instance requires 12 bytes */
+   140	
+   141	  /* layout issues:
+   142	                              
+   143	                      Bytes:     4       1      4
+   144	     Minimalist possibility: +--------+----+--------+
+   145	                             |  n1    |  c |   n2   |
+   146	                             +--------+----+--------+
+   147	
+   148	     If you disassemble struct Sample, you'll likely see the pertinent 
+   149	     assembler begins with the directive
+   150	
+   151	         .align 4
+   152	
+   153	     The directive means that the struct's fields are laid out in memory
+   154	     on DW0RD (that is, 4-byte) boundaries. So the picture becomes
+   155	
+   156	                                4        4        4
+   157	                            +--------+--------+--------+
+   158	                            |   n1   |   c    |   n2   |
+   159	                            +--------+--------+--------+
+   160	
+   161	     This layout "wastes" 3 bytes, as the char requires only 4; but the
+   162	     resulting processing is simpler in that memory fetches are always from
+   163	     addresses on DWORD boundaries.
+   164	  */
+   165	}
+   166	
+   167	int f(int n) {          /* definition */
+   168	  return n * 2 + 1;
+   169	}
+   170	
+   171	
+   172	
+   173	
+   174	
+   175	
+   176	
+   177	
+   178	
+   179	
+   180	
+   181	
+   182	void function_stuff() {
+   183	  int ans;
+   184	  struct Object {
+   185	    int id;
+   186	    int (*method)(int);
+   187	  };
+   188	  typedef struct Object Obj;
+   189	
+   190	  Obj obj1;
+   191	  obj1.id = 1234;
+   192	  obj1.method = f;
+   193	
+   194	  ans = (*obj1.method)(25);  /* technically correct */
+   195	  ans = obj1.method(27);     /* now allowed in standard C */
+   196	  printf("%i\n", ans);  
+   197	}
+   198	#include <stdio.h>
+   199	#include <setjmp.h>
+   200	#include <stdlib.h>
+   201	#include <signal.h>
+   202	
+   203	/* output from a sample run:
+   204	
+   205	   SIGFPE is defined as 8
+   206	   Two integers: 100 10
+   207	   100 / 10 == 10
+   208	   Two integers: 100 0
+   209	        Control to jumper: signal status == 8.
+   210	   Two integers: 100 4
+   211	   100 / 4 == 25
+   212	   Two integers:  ;; I entered Control-C to terminate program
+   213	*/
+   214	
+   215	/* Define a jump buffer to handle error conditions.
+   216	   Data type jmp_buf defined in setjmp.h.
+   217	*/
+   218	static jmp_buf env;       /* file scope; type is defined in setjmp.h */
+   219	
+   220	void jumper(int);         /* callback for SIGFPE errors */
+   221	void divisionInt(void);   /* alternative to void divisionInt() */
+   222	int guard(void);          /* guards divisonInt */
+   223	
+   224	void trace_and_die(const char* msg) {
+   225	  fprintf(stderr, msg);
+   226	  exit(EXIT_FAILURE);
+   227	}
+   228	
+   229	
+   230	
+   231	
+   232	
+   233	
+   234	
+   235	
+   236	
+   237	
+   238	
+   239	
+   240	
+   241	
+   242	int main() {
+   243	  /* Trap signals generated by arithmetic errors such as 
+   244	     division by zero. The statement
+   245	                                      signal(SIGINT, SIG_IGN);
+   246	
+   247	     would instruct the program to ignore (SIG_IGN) interrupts such
+   248	     as hitting Control-C while the program is in execution.
+   249	     In this example, we want to suppress floating-point exceptions
+   250	     from the system and instead handle the matter ourselves.
+   251	     Withtout this setup, the division of, say, 100 by 0 would generate
+   252	     a "floating-point exception" and terminate execution. */
+   253	  signal(SIGFPE, jumper); 
+   254	  printf("SIGFPE is defined as %i\n", SIGFPE);
+   255	
+   256	  /* Loop until error condition occurs. */
+   257	  while (0 == guard())
+   258	    ;
+   259	  return 0;
+   260	}
+   261	
+   262	/* Jump out of this function to the jump destination,
+   263	   which is the point after the call to setjmp. In
+   264	   our case, the jump point occurs right after the
+   265	   if-test in function guard. */
+   266	void jumper(int status) {
+   267	  printf("\t Control to jumper: signal status == %d.\n", status);
+   268	  longjmp(env, 1);  /* 1 indicates with setjmp would have returned.
+   269			       If successful, longjmp forces control to return
+   270			       to the next statement after setjmp, in this case
+   271			       a call to divisionInt. */
+   272	  /* This code is executed only if longjmp fails. Normally, longjmp
+   273	     does not return. */
+   274	  trace_and_die("longjmp returned: trouble\n");
+   275	}
+   276	
+   277	/* Set a jump point for return from an error  condition, in this case 
+   278	   an error resulting from a floating-point operation. The function
+   279	   signal is invoked in main to trap such errors. Return 0 (ok) if the 
+   280	   floating-point operation succeeds; otherwise, the nonlocal jump
+   281	   of longjmp intervenes. */
+   282	int guard(void) {
+   283	  /* Set jump point, which is right after the if-test */
+   284	  setjmp(env);
+   285	  divisionInt();
+   286	  return 0;
+   287	}
+   288	 
+   289	/* Scan the standard input for two floats and
+   290	   divide the first by the second. */
+   291	void divisionInt(void) {
+   292	  int n1, n2;
+   293	  printf("Two integers: ");
+   294	  scanf("%i %i", &n1, &n2);
+   295	  printf("%i / %i == %i\n", n1, n2, n1 / n2);
+   296	}
+   297	

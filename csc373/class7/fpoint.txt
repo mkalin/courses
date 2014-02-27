@@ -1,0 +1,286 @@
+     1	#include <stdio.h>
+     2	#include <float.h>
+     3	/* the next include, for math.h, includes the header file; but the C
+     4	   linker does not automatically link in the corresponding math library,
+     5	   which is libm.a, libm.so, or the like on a Unix/Linux system. 
+     6	   To force the link, you'd
+     7	
+     8	         gcc -o fpoint -lm fpoint.c
+     9	
+    10	   where fpoint.c is this file.
+    11	*/
+    12	#include <math.h>
+    13	
+    14	/* The industry standard for floating-point numbers is called IEEE 754.
+    15	
+    16	   Short and dirty overview:
+    17	
+    18	   Sign bit: 1 for negative, 0 for nonnegative (just like 2's complement)
+    19	   
+    20	   Significand ("mantissa"): fractional binary number
+    21	
+    22	   Exponent: weights the value of the significand by a power of 2
+    23	
+    24	   C representations:
+    25	
+    26	   The IEEE 754 single-precision type is a C float. There's a 1-bit sign,
+    27	   an 8-bit exponent, and a 23-bit fraction value for a 32-bit floating
+    28	   point type. For the IEEE 754 double-precision type, C has double. Again
+    29	   there's a 1-bit sign but the exponent is now 11 bits and the fraction
+    30	   value is 52 bits for a 64-bit type.
+    31	
+    32	   Here's the layout for single-precision:
+    33	
+    34	    s exponent   significand
+    35	   +-+--------+-----------------------+
+    36	   | |        |                       |
+    37	   +-+--------+-----------------------+
+    38	
+    39	   Normalized Values:
+    40	   
+    41	   The exponent's bit pattern is neither all zeros 00..000 nor all ones 11..111.
+    42	   In this case, the exponent represents a signed integer in "biased" form; that
+    43	   is, the exponent's value 
+    44	
+    45	   E = e - bias
+    46	
+    47	   where e is the value of the exponent bit pattern and bias is 127 for 
+    48	   single-precision and 1023 for double-precision. The upshot is that the
+    49	   biased exponent now ranges between -126 to +127 for single-precision and
+    50	   between -1022 to +1023 for double-precision floating points.
+    51	
+    52	   In normalized values, the fractional part F represents a value 
+    53	
+    54	   0 <= F < 1
+    55	
+    56	   or 0.xxxxxxx...xxx in binary. Note that the binary point is to the left of
+    57	   the most significant bit, the leftmost "x" in this example. The signficand M
+    58	   is then definted to be
+    59	
+    60	   M = 1 + F
+    61	
+    62	   sometimes called the "implied leading 1" representation. This representation
+    63	   saves a bit (the assumed 1), which then can be used in the exponent.
+    64	
+    65	   Example 1:
+    66	 
+    67	   The problem: To represent the decimal number -118.625 in IEEE 754 
+    68	                single-precision format.
+    69	
+    70	   The solution:
+    71	
+    72	   ** The number is negative so that the sign bit must be 1.
+    73	
+    74	   ** -118.6 in decimal is -1110110.101 in binary.
+    75	
+    76	   ** If we move the binary point left so that there is a single 1 to its left
+    77	      (the "implied leading 1"), we get -1.110110101 * 2**6 (where the power 6
+    78	      represents the number of positions that the the binary point moved to the
+    79	      left).
+    80	
+    81	   ** So the unbiased exponent is 6 and the bias is -127 (that is, 2**(8 - 1) - 1).
+    82	      Adding 6 to 127 gives 133 so that subtracing the bias (133 - 127) gives us
+    83	      the exponent, 6. In binary, 133 is 10000101 as an unsigned integer.
+    84	 
+    85	   ** The significand is 110110101. Right fill with zeros until the length is
+    86	      23 bits. This yields 11011010100000000000000.
+    87	
+    88	   ** The full representation (with spaces for readability) is
+    89	
+    90	   sign exponent      significand
+    91	      1 10000101 11011010100000000000000
+    92	   
+    93	
+    94	   Example 2:
+    95	
+    96	   Show the layout of 
+    97	
+    98	           float  pi_f = 3.1415f;
+    99	           double pi_d = 3.14.15;
+   100	
+   101	   in IEEE 754 single and extended precision.
+   102	
+   103	      Single precision:
+   104	
+   105	                +  128 - 127          1.57575 in decimal
+   106	         sign bit  exponent           significand
+   107	
+   108	                0  10000000     1.10010010000111001010110
+   109	
+   110	             [31]  [30]-[23]    [22]    ...            [0]
+   111	
+   112	         -3.1415 is exactly the same except for the sign bit, 
+   113	         which becomes 1
+   114	
+   115	      Note that the internal representation is little endian in the
+   116	      exponent, with the left side as the least significant. The value
+   117	      is 1, 128 - 127.
+   118	
+   119	
+   120	
+   121	
+   122	      Double precision:
+   123	
+   124	                +  1024 - 1023
+   125	         sign bit  exponent
+   126	
+   127	                0  10000000000  1.1001001000011100101011000000100000110001001001101111
+   128	
+   129	             [63]  [62]...[52]  [51]    ...                                        [0]
+   130	
+   131	   Denormalized Values:
+   132	
+   133	   If the exponent field is all zeros, the represented number is "denormalized." 
+   134	   In this cae, the exponent value is 
+   135	
+   136	            E = 1 - bias   
+   137	
+   138	   and the significand value is 
+   139	
+   140	            M = f
+   141	
+   142	   or the fraction without the "implied leading 1."
+   143	
+   144	   Denormalized numbers are needed for two reasons:
+   145	
+   146	      (1) To represent zero. In a normalized number, note that M >= 1 because
+   147	          of the "implied leading 1."
+   148	
+   149	      (2) To support "gradual underflow." Numbers very close to zero can be
+   150	          represented in denormalized form.
+   151	
+   152	   One result of denormalized numbers is that, for floating points as for 
+   153	   integers, -0.0 == +0.0. -0.0 is all zeros except for the sign bit, whereas
+   154	   +0.0 is all zeros. 
+   155	
+   156	   Special Values and NaN:
+   157	
+   158	   Consider the case in which the exponent field is all 1s and the fraction field
+   159	   is all 0s. If the sign is 0, then we have "positive infinity"; and if the 
+   160	   sign is 1, then we have "negative infinity". If the exponent is all 1s but the
+   161	   fraction is non-zero, the result is NaN (Not a Number). An example would be
+   162	
+   163	                    3.1415 / 0.0
+   164	
+   165	*/
+   166	
+   167	void show_bytes(char* msg, unsigned char* ptr, int how_many) {
+   168	  printf("%s\n", msg);
+   169	  int i;
+   170	  for (i = 0; i < how_many; i++) printf(" %.2x", ptr[i]);
+   171	  printf("\n");
+   172	}
+   173	
+   174	#define POS_INFINITY (1e5000)
+   175	#define NEG_INFINITY (-POS_INFINITY)
+   176	#define NEG_ZERO     (-1.0 / POS_INFINITY)
+   177	
+   178	
+   179	
+   180	
+   181	
+   182	int main() {
+   183	
+   184	  int n = 3490593;     /* 3,490,593 */
+   185	  float f = (float) n; /* 3,490,593.0 */
+   186	
+   187	  show_bytes("n = 3490593", (unsigned char*) &n, 
+   188		     sizeof(int)); /* n = 3490593 21 43 35 00 */
+   189	
+   190	  show_bytes("f = 3490593", (unsigned char*) &f, 
+   191		     sizeof(int)); /* f = 3490593 84 0c 55 4a */
+   192	
+   193	  float f1 = 100000.0f;
+   194	  float f2 = (f1 * 1e-5) * 1e5;
+   195	  printf("%f %f\n", f1, f2);
+   196	  
+   197	  printf("Integer -0 equals +0: %d\n", 
+   198		 -0 == +0);         /* true */
+   199	  printf("F-point -0.0 equals +0.0: %d\n", 
+   200		 -0.0 == +0.0);     /* true */
+   201	
+   202	  printf("pi / 0 is %f\n", 
+   203		 3.1415f / 0.0f);              /* pi / 0 is inf */
+   204	
+   205	  printf("pi / -0 is %f\n", 
+   206		 3.1415f / -0.0f);             /* pi / -0 is -inf */
+   207	
+   208	  printf("-INF == +INF: %d\n", 
+   209		 1.1f / 0.0f == 1.1f / -0.0f); /* false */
+   210	
+   211	  printf("square root of -1 is %f\n", 
+   212		 sqrt(-1.0));                  /* square root of -1 is nan */
+   213	
+   214	  printf("Macroed +inf: %f\tMacroed -inf: %f\t Macroed -0: %f\n",
+   215		 POS_INFINITY, NEG_INFINITY, NEG_ZERO); /* inf, -inf, -0 */
+   216	
+   217	  /* cheap C trick: introduce a block so that we can redefine some
+   218	     variables definted above
+   219	  */
+   220	  {
+   221	    float f1 = 0.666667f;
+   222	    float f2 = 0.666666f;
+   223	    float f3 = 0.6666666f;
+   224	    float f4 = 2.0f / 3.0f;
+   225	    float f5 = 2.00001f / 3.000001f;
+   226	    
+   227	    printf("f1 == %f\tf2 == %f\tf3 == %f\nf4 == %f\tf5 == %f\n", 
+   228		   f1, f2, f3, f4, f5);
+   229	    
+   230	    printf("%f == %f ==> %i\n", f4, f5, f4 == f5);
+   231	    printf("%f == %f ==> %i\n", f4, f5, f4 - f5 <= FLT_EPSILON);
+   232	    /* output:
+   233	       
+   234	    f1 == 0.666667  f2 == 0.666666  f3 == 0.666667
+   235	    f4 == 0.666667  f5 == 0.666670
+   236	    0.666667 == 0.666670 ==> 0
+   237	    0.666667 == 0.666670 ==> 1
+   238	    */
+   239	  }
+   240	
+   241	
+   242	  {
+   243	    float f1 = 0.666667f;
+   244	    show_bytes("f1: 0.666667f:", (unsigned char*) &f1, sizeof(float));
+   245	    
+   246	    float f2 = 0.666666f;
+   247	    show_bytes("f2: 0.666666f:", (unsigned char*) &f2, sizeof(float));
+   248	    
+   249	    float f3 = 0.6666666f;
+   250	    show_bytes("f3: 0.666666f:", (unsigned char*) &f3, sizeof(float));
+   251	    
+   252	    float f4 = 2.0f / 3.0f;
+   253	    show_bytes("f4: 2.0f / 3.0f:", (unsigned char*) &f3, sizeof(float));
+   254	    
+   255	    float f5 = 2.00001f / 3.000001f;
+   256	    show_bytes("f5: 200001f / 3.000001f:", (unsigned char*) &f5, sizeof(float));
+   257	    
+   258	    printf("f1 == %f\tf2 == %f\tf3 == %f\nf4 == %f\tf5 == %f\n", 
+   259		   f1, f2, f3, f4, f5);
+   260	    
+   261	    printf("%f == %f ==> %i\n", f4, f5, f4 == f5);
+   262	    printf("fabs(%f - %f) > FLT_EPSILON ==> %d\n",
+   263		   f4, f5, fabs(f4 - f5) > FLT_EPSILON);
+   264	    
+   265	    printf("FLT_EPSILON == %f\nFLT_EPSILON  == 0.0f ==> %d\n", 
+   266		   FLT_EPSILON, FLT_EPSILON == 0.0f);
+   267	    /* output:
+   268	       
+   269	    f1: 0.666667f: b0 aa 2a 3f
+   270	    f2: 0.666666f: b0 aa 2a 3f
+   271	    f3: 0.666666f: b0 aa 2a 3f
+   272	    f4: 2.0f / 3.0f:         b0 aa 2a 3f
+   273	    f5: 200001f / 3.000001f: b0 aa 2a 3f
+   274	    
+   275	    f1 == 0.666667  f2 == 0.666666  f3 == 0.666667
+   276	    f4 == 0.666667  f5 == 0.666670
+   277	    0.666667 == 0.666670 ==> 0
+   278	    
+   279	    fabs(0.666667 - 0.666670) > FLT_EPSILON ==> 1
+   280	    
+   281	    FLT_EPSILON == 0.000000
+   282	    FLT_EPSILON == 0.0f ==> 0
+   283	    */
+   284	  }
+   285	  return 0;
+   286	}

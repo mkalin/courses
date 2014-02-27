@@ -1,0 +1,180 @@
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+
+#define FILE_NAME "nums.bin"
+
+void report_and_die(const char* msg) {
+  fprintf(stderr, msg);
+  exit(-1);
+}
+
+int main() {
+  const int bad_io = 0xffffffff;
+  char error_msg[512];
+
+  int file_descriptor = open(FILE_NAME,         /* name */
+			     O_CREAT | O_RDWR,  /* create for read/write */
+			     0);                /* permissions */
+  if (file_descriptor == bad_io) {
+    sprintf(error_msg, "Couldn't open file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+
+  /* Write some data. */
+  int n[ ] = { 9, 7, 5, 3, 1 };
+  int read_in[5 * sizeof(int)];
+
+  int flag = write(file_descriptor, n, sizeof(n));
+  if (flag == bad_io) {
+    sprintf(error_msg, "Couldn't write to file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+  
+  flag = close(file_descriptor);
+  if (flag == bad_io) {
+    sprintf(error_msg, "Couldn't close file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+  
+  ssize_t in_flag = read(file_descriptor, read_in, sizeof(read_in));
+  
+  if (in_flag == bad_io) {
+    sprintf(error_msg, "Couldn't read from file %s.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+
+  file_descriptor = open(FILE_NAME, O_RDONLY, 0);
+  if (file_descriptor == bad_io) {
+    sprintf(error_msg, "Couldn't open file %s for reading.\n", FILE_NAME);
+    report_and_die(error_msg);
+  }
+
+  flag = read(file_descriptor, read_in, sizeof(read_in));
+  
+  
+
+  return 0;
+}
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h> 
+
+#define BuffSize (4096)
+
+void error_msg(const char* msg, int halt_flag) {
+    perror(msg);
+    if (halt_flag) exit(-1);
+}
+
+int main() {
+  
+  const int port = 80;  /* default port for a Web server */
+
+  /* a very simple GET request */
+  const char* request = 
+    "GET /~mkalin/index.html HTTP/1.1\nhost: condor.depaul.edu\n\n";
+  /* GET /~mkalin/index.html   ;; first-line in request
+     host: condor.depaul.edu   ;; first and only line of header, a hash
+     <newline>                 ;; two newlines signal end of header
+     <newline>
+                               ;; a GET request has no body
+  */
+  
+  int sock, n;
+  struct sockaddr_in serv_addr;
+  struct hostent* server;
+  char buffer[BuffSize + 1];
+ 
+  /* get the server information */
+  server = gethostbyname("condor.depaul.edu");
+  if (server == NULL) error_msg("No such host.", 1);
+
+  /* create socket descriptor */
+  sock = socket(AF_INET,        /* address family */
+		SOCK_STREAM,    /* type: in this case, TCP based */
+		0);             /* protocol: 0 means get from 2nd arg */
+  if (sock < 0) error_msg("Can't get socket descriptor.", 1);
+
+  /* fill in the fields of the server's address structure */
+  bzero(&serv_addr, sizeof(serv_addr));  /* zero everything out to begin */
+  serv_addr.sin_family = AF_INET;        /* address family */
+  /* copy from the hostent structure into the server address structure */
+  bcopy((unsigned char*) server->h_addr, 
+	(unsigned char*) &serv_addr.sin_addr.s_addr,
+	server->h_length);
+  serv_addr.sin_port = htons(port); /* host endian to network endian */
+
+  /* try to connect to the server */
+  if (connect(sock, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) 
+    error_msg("Can't connect.", 1);
+
+  /* write to the socket */
+  n = write(sock, request, strlen(request));
+  if (n < 0) error_msg("Can't write to socket.", 0);
+
+  /* read from the socket and print what comes back from server */
+  bzero(buffer, BuffSize + 1);
+  n = read(sock, buffer, BuffSize);
+  if (n < 0)  error_msg("Can't read from socket.", 0);
+  printf("%s\n", buffer);
+
+  if (close(sock) < 0) error_msg("Can't close socket.", 0);
+
+  return 0;
+}
+/* output from sample run:
+
+HTTP/1.1 200 OK
+Date: Mon, 02 Jul 2007 19:31:37 GMT
+Server: Apache/2.0.53  HP-UX_Apache-based_Web_Server (Unix) PHP/4.3.8
+Last-Modified: Tue, 12 Jun 2007 23:00:32 GMT
+ETag: "edf4-449-76e88400"
+Accept-Ranges: bytes
+Content-Length: 1097
+Content-Type: text/html
+
+<title>Course Listings</title>
+
+<head>
+<style type = "text/css">
+    .body  {background-color: rgb(225, 225, 225);}
+    .links {text-decoration: none;}
+    .bullets {background-color: rgb(225, 225, 225); }
+    .raw {background-color: wheat; }
+    h3 { color: black; font-style: italic; }
+</style>
+<title>Textbook and Course Listings</title>
+</head>
+
+<p>
+
+<hr>
+
+<h2>WWW Pages for Textbooks</h2>
+
+<h3>
+
+<body>
+
+<p>
+
+<ul>
+
+<li><a HREF="ed3/">Applications Programming in ANSI C (3rd edition)</a><p>
+
+<li><a HREF="cse/">C for Scientists and Engineers</a><p>
+
+<li><a HREF="apc/">Applications Programming in C++</a><p>
+
+<li><a HREF="oop2/">Object-Oriented Programming in C++ (2nd edition)</a><p>
+
+<li><a HREF="oopj/">Object-Oriented Programming in Java</a><p>
+...
+*/
+

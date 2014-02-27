@@ -1,0 +1,220 @@
+     1	#include <stdio.h>
+     2	#include <stdlib.h>
+     3	#include <float.h>
+     4	#include <math.h>
+     5	
+     6	/* This program illustrates various issues with arbitrary-precision arithmetic
+     7	   in C, in particular with the floating-point types float and double. The
+     8	   general solution is a library such as the one from GNU available at
+     9	
+    10	      http://gmplib.org/
+    11	*/
+    12	
+    13	/* This program uses the fabs function, which is part of the run-time
+    14	   math library. To enable its use, this file (math.c) was
+    15	   compiled/linked as follows:
+    16	
+    17	             gcc -o snotation snotation.c -lm
+    18	
+    19	   In "-lm", that's a lowercase L rather than a one.
+    20	 */
+    21	
+    22	void run_test(float f) {
+    23	  printf("\nRunning test on %f\n", f);
+    24	  float incr = 0.0f;
+    25	  int i = 1;
+    26	  while (1) {  /* loop indefinitely */
+    27	    incr += FLT_EPSILON; /* incr = incr + FLT_EPSILON */
+    28	    float t = f + incr;  /* t is f + the current increment */
+    29	    printf("iteration == %d: incr = %f  f == %f  t == %f\n", i++, incr, f, t);
+    30	
+    31	    /* exit the while loop if the absolute difference between t and f
+    32	       is equal to or greater than FLT_EPSILON 
+    33	    */
+    34	    if (fabs(t - f) >= FLT_EPSILON) break; 
+    35	  }
+    36	}
+    37	
+    38	int main() {  
+    39	  /** some basic problems illustrated **/
+    40	  double d1 = 2.2, d2 = 1234.5678;
+    41	  double d3 = d1 * d2;
+    42	  
+    43	  /* In my calculator: 2.2 * 1234.5678 = 2716.04916 */
+    44	  if (2716.04916 == d3) 
+    45	    printf("As expected.\n");
+    46	  else 
+    47	    printf("Nope: %f\n", d3); /* Nope: 2716.049160 */
+    48	  printf("\n");
+    49	
+    50	
+    51	
+    52	
+    53	
+    54	
+    55	
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	  /* Expected output: 10.1 
+    63	    1.010000
+    64	    2.020000
+    65	    3.030000
+    66	    4.040000
+    67	    5.050000
+    68	    6.060000
+    69	    7.070001   ;; evident rounding now appears
+    70	    8.080001
+    71	    9.090001
+    72	   10.100001
+    73	  */
+    74	  float num = 1.01f;
+    75	  int i = 0;
+    76	  while (i++ < 10) {
+    77	    printf("%12f\n", num);
+    78	    num += 1.01f;
+    79	  }
+    80	
+    81	  /* In exact arithmetic, left-hand sides of the comparisons are equal to 1; hence,
+    82	     we'd expect the answers to be 0 (false). In fact, both answers are true.
+    83	  */
+    84	  printf("((double)(1 / 103.0)) * 103.0 < 1.0 is %i.\n", 
+    85	          ((double)(1 / 103.0))  * 103.0 < 1.0);
+    86	  printf("((float)(1 / 103.0F)) * 103.0 > 1.0 is %i.\n", 
+    87	          ((float) (1 / 103.0f)) * 103.0 > 1.0);
+    88	  printf("\n");
+    89	
+    90	  /** Floating-point constants available in float.h **/
+    91	
+    92	  /* max in 32 bits */
+    93	  printf("Max:\n");
+    94	  float data = FLT_MAX;
+    95	  printf("data = %f\n", data); 
+    96	    /* data = 340282346638528859811704183484516925440.000000 */
+    97	  printf("data = %e\n", data); 
+    98	    /* data = 3.402823e+38 */
+    99	  printf("data = %e\n", data);
+   100	  printf("\n");
+   101	
+   102	  /* min in 32 bits */
+   103	  printf("Min:\n");
+   104	  data = FLT_MIN;
+   105	  printf("data = %f\n", data); /* data = 0.000000 */
+   106	  printf("data = %e\n", data); /* data = 1.175494e-38 */
+   107	  printf("\n");
+   108	
+   109	  /* formatting */
+   110	  printf("\n");
+   111	  printf("Formatting:\n");
+   112	  data = 0.01234;
+   113	  printf ("data = %e\n", data);    /* data = 1.234000e-02 */
+   114	  printf( "data = %.2e\n", data ); /* data = 1.23e-02 */
+   115	
+   116	  /** floating-point comparisions: perils and fixes **/
+   117	  printf("\n");
+   118	  printf("Epsilon:\n");
+   119	  data = FLT_EPSILON;             /* least signficant representable digit */
+   120	  printf("epsilon = %e\n", data); /* epsilon = 1.192093e-07 */
+   121	
+   122	  printf("\n");
+   123	  float f1 = 10000.0; 
+   124	  float f2 = 10000.00009; 
+   125	  if (f1 == f2) printf("Yes, f1 and f2 are equal...\n"); /* printed */
+   126	
+   127	  /* try again */
+   128	  float diff = fabs(f1 - f2); 
+   129	  printf("diff (%e - %e) = %e\n", 
+   130		 f1, f2, diff); /* diff (1.000000e+04 - 1.000000e+04) = 0.000000e+00 */
+   131	  if (diff) printf("f1 and f2 differ...\n"); /* not printed */
+   132	  printf("\n");
+   133	
+   134	  /* two adjacent floats */
+   135	  float expected = 10000.0f;
+   136	  float result =   10000.000977f; /* closest 4-byte float to 10,000 */
+   137	  diff = fabs(result - expected); 
+   138	
+   139	  /* 10000.000000	10000.000977	0.000977 */
+   140	  printf("%f\t%f\t%f\n", expected, result, diff); 
+   141	
+   142	  /* Note that the difference is 97.7 times the epsilon of 0.00001 */
+   143	  if (fabs(result - expected) < 0.00001) printf("They differ.\n"); 
+   144	  else printf("They don't differ enough.\n"); /* printed */
+   145	  
+   146	  /* FLT_EPSILON is the minimum positive floating point number of type float such 
+   147	     that 1.0 + FLT_EPSILON != 1.0 is true. Should be no greater than 1E-5.   
+   148	  */
+   149	  if (fabs(result - expected) < FLT_EPSILON) printf("They differ.\n"); 
+   150	  else printf("They don't differ enough.\n"); /* printed */
+   151	
+   152	  if (fabs(result - expected) - 0.001 < FLT_EPSILON) 
+   153	    printf("They differ.\n"); /* printed */
+   154	  else 
+   155	    printf("They don't differ enough.\n"); 
+   156	
+   157	  /* How long does it take? */
+   158	  run_test(10.0f);  /* 10.0f is a float (32-bit) constant */
+   159	  run_test(100.0f); /* ditto */
+   160	  printf("\n");
+   161	
+   162	  /* output (slightly formatted for readability):
+   163	
+   164	     Running test on 10.000000
+   165	     iteration ==  1: incr = 0.000000  f == 10.000000  t == 10.000000
+   166	     iteration ==  2: incr = 0.000000  f == 10.000000  t == 10.000000
+   167	     iteration ==  3: incr = 0.000000  f == 10.000000  t == 10.000000
+   168	     iteration ==  4: incr = 0.000000  f == 10.000000  t == 10.000000
+   169	     iteration ==  5: incr = 0.000001  f == 10.000000  t == 10.000001
+   170	     
+   171	     Running test on 100.000000
+   172	     iteration ==  1: incr = 0.000000  f == 100.000000  t == 100.000000
+   173	     iteration ==  2: incr = 0.000000  f == 100.000000  t == 100.000000
+   174	     iteration ==  3: incr = 0.000000  f == 100.000000  t == 100.000000
+   175	     ...
+   176	     iteration == 11: incr = 0.000001  f == 100.000000  t == 100.000000
+   177	     iteration == 12: incr = 0.000001  f == 100.000000  t == 100.000000
+   178	     iteration == 13: incr = 0.000002  f == 100.000000  t == 100.000000
+   179	     iteration == 14: incr = 0.000002  f == 100.000000  t == 100.000000
+   180	     ...
+   181	
+   182	     iteration == 28: incr = 0.000003  f == 100.000000  t == 100.000000
+   183	     iteration == 29: incr = 0.000003  f == 100.000000  t == 100.000000
+   184	     iteration == 30: incr = 0.000004  f == 100.000000  t == 100.000000
+   185	     iteration == 31: incr = 0.000004  f == 100.000000  t == 100.000000
+   186	     iteration == 32: incr = 0.000004  f == 100.000000  t == 100.000000
+   187	     iteration == 33: incr = 0.000004  f == 100.000000  t == 100.000008
+   188	  */
+   189	
+   190	  /** currency **/
+   191	
+   192	  /* 10.12 in decimal is .... */
+   193	  printf("%0.50f\n", 10.12); 
+   194	    /* 10.11999999999999921840299066388979554176330566406250 */
+   195	
+   196	  float a = 1.25;
+   197	  float b = 0.06;	
+   198	  float c = a * b;
+   199	  float d = a + c;
+   200	  printf("Expected answer is 1.33. Computed answer is %f.\n", d); 
+   201	    /* Computed answer = 1.325000 */
+   202	  
+   203	  /* Expected value: $84.83 */
+   204	  float price = 4.99f;
+   205	  int quantity = 17;
+   206	  float total = price * quantity;
+   207	  printf("The total price is $%f.\n", total); /* The total price is $84.829994. */
+   208	
+   209	  /* Expected value: $90 */
+   210	  int fullPrice = 100;
+   211	  float discount = 0.1f;
+   212	  int finalPrice = (int)(fullPrice * (1 - discount));
+   213	  printf("The discounted price is $%i.\n", finalPrice); /* $89 */
+   214	  
+   215	  /* e and pi */
+   216	  double ans = pow(M_E, M_PI) - M_PI; /* e and pi, respectively */
+   217	  printf("%lf\n", ans); /* 19.999100 prints: expected is 19.99909997 */
+   218	
+   219	  return 0;
+   220	}

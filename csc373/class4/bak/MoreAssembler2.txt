@@ -1,0 +1,121 @@
+     1	#include <stdio.h>
+     2	
+     3	unsigned find_ESP() {
+     4	  asm("movl %esp, %eax");
+     5	}
+     6	
+     7	unsigned find_EBP() {
+     8	  asm("movl %ebp, %eax");
+     9	}
+    10	
+    11	void dump_registers(const char* msg ) {
+    12	  unsigned esp = find_ESP();
+    13	  unsigned ebp = find_EBP();
+    14	
+    15	  printf("%s\nesp ==> %x\nebp ==> %x\n", msg, esp, ebp);
+    16	}
+    17	
+    18	/* p. 146 in text */
+    19	int arith(int x, int y, int z) {
+    20	  dump_registers("\nstart of arith");
+    21	  int t1 = x + y;   /* movl 12(%ebp), %eax        ;; %eax = y */
+    22	                    /* addl  8(%ebp), %eax        ;; t1 = x + y */
+    23	
+    24	  dump_registers("\ninside arith");
+    25	
+    26	  int t2 = z * 48;  /* movl 16(%ebp), %edx        ;; %edx = z */
+    27	                    /* leal means "load effective address," that is,
+    28	                       load a memory address into a register. Howerver,
+    29	                       it also can used as a hack to express basic arithmetic
+    30	                       operations. In the example below, the expression
+    31	                       leal (%edx, %edx, 2) means "add %edx to itself twice."
+    32	                       Note that one copy of z is already in %edx so that, in
+    33	                       effect, we're tripling z. The second operand is %edx, 
+    34	                       the destination.
+    35	                    /* leal (%edx, %edx, 2), %edx ;; z = z * 3 */
+    36	
+    37	                        /* sall $4, %edx  ;; t2 = z * 48 (sall is SHIFT LEFT) */
+    38	
+    39	  int t3 = t1 & 0xffff; /* andl $65535, %eax ;; 0xffff == 65,535 */
+    40	
+    41	  int t4 = t2 * t3;     /* imull %eax, %edx  ;; t4 = t2 * t3 */
+    42	
+    43	  dump_registers("\nend of arith");
+    44	
+    45	  return t4;            /* movl %edx, %eax   ;; %eax holds return value */
+    46	}
+    47	
+    48	int main() {
+    49	  dump_registers("\nstart of main");
+    50	  int ans = arith(1, 2, 3);
+    51	  dump_registers("\nmiddle of main");
+    52	  printf("return from arith is %d\n", ans);  /* 432 */
+    53	  dump_registers("\nend of main");
+    54	
+    55	  return 0;
+    56	}
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	/* output on a sample run (commas added for readability):
+    63	start of main
+    64	esp ==> bfe3caa8
+    65	ebp ==> bfe3caa8
+    66	
+    67	start of arith
+    68	esp ==> bfe3ca78
+    69	ebp ==> bfe3ca78
+    70	
+    71	inside arith
+    72	esp ==> bfe3ca78
+    73	ebp ==> bfe3ca78
+    74	
+    75	end of arith
+    76	esp ==> bfe3ca78
+    77	ebp ==> bfe3ca78
+    78	
+    79	middle of main
+    80	esp ==> bfe3caa8
+    81	ebp ==> bfe3caa8
+    82	return from arith is 432
+    83	
+    84	end of main
+    85	esp ==> bfe3caa8
+    86	ebp ==> bfe3caa8
+    87	*/
+    88	
+    89	/********************************************************************************/
+    90	
+    91	;  hello.asm 
+    92	;  (You'll need the NASM compiler if you want to run, which you
+    93	;  can get from the URL below:
+    94	;       http://sourceforge.net/project/showfiles.php?group_id=6208 
+    95	;
+    96	; assemble:	nasm -f elf -l hello.lst  hello.asm
+    97	; link:		gcc -o hiASM  hello.o
+    98	; run:	        hello 
+    99	; output is:	Hello World 
+   100	
+   101		SECTION .data                      ; data section
+   102	msg:	db "Hello, world! (from asm)",10   ; the string to print, 10 is CR
+   103	len:	equ $-msg		           ; "$" means "here"
+   104					           ; len is a value, not an address
+   105	
+   106		SECTION .text	                   ; code section
+   107	        global main	                   ; make label available to linker 
+   108	main:			                   ; standard  gcc  entry point
+   109		
+   110		mov	edx,len	                   ; arg3, length of string to print
+   111		mov	ecx,msg	                   ; arg2, pointer to string
+   112		mov	ebx,1	                   ; arg1, where to write, screen
+   113		mov	eax,4	                   ; write command to int 80 hex
+   114		int	0x80	                   ; interrupt 80 hex, call kernel
+   115		
+   116		mov	ebx,0	                   ; exit code, 0 = normal
+   117		mov	eax,1	                   ; exit command to kernel
+   118		int	0x80	                   ; interrupt 80 hex, call kernel
+   119	
+   120	
+   121	

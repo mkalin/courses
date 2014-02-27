@@ -1,0 +1,224 @@
+4. PushPop
+
+There are two parts to this exercise:
+
+   1. What is the experiment trying to show?
+   2. Does the experiment succeed?
+
+The answer to (2) is "No." The answer to (1) is slightly
+more complicated.
+
+Consider the following C program, which implements a simple stack in two ways:
+
+#include <stdio.h>
+
+#define Size (12)
+
+char stack[Size];
+int top1 = 0;
+int top2 = -1;
+
+/* push to current TOP and then change TOP*/
+void push1(char item) {
+  if (top1 >= Size) return;     /* return if stack is full */
+
+  /* push and then move top */
+  stack[top1] = item;
+  top1++;
+}
+
+/* change TOP and then push */
+void push2(char item) {
+  if (top2 + 1 >= Size) return; /* return if stack is full */
+
+  /* move top and then push */
+  top2++;
+  stack[top2] = item;
+}
+
+/* change TOP and then pop */
+char pop1() {
+  if (top1 - 1 < 0) return '\0';
+
+  /* move top and then pop */
+  top1--;
+  return stack[top1];
+}
+
+/* pop and then change TOP */
+char pop2() {
+  if (top2 - 1 < -1) return '\0';
+
+  /* pop and then move top */
+  char retval = stack[top2];
+  top2--;
+  return retval;
+}
+
+void dump_stack1() {
+  char c;
+  while ((c = pop1()) != '\0') printf("%c ", c);
+  printf("\n");
+}
+
+void dump_stack2() {
+  char c;
+  while ((c = pop2()) != '\0') printf("%c ", c);
+  printf("\n");
+}
+
+void clear_stack() {
+  int i;
+  for (i = 0; i < Size; i++) stack[i] = '\0';
+}
+
+int main() {
+  char c = 'A';
+  
+  printf("1st approach:\n");
+  int i = 0;
+  while (i++ < Size) push1(c++);
+  dump_stack1();
+
+  clear_stack();
+
+  printf("\n2nd approach:\n");
+  c = 'A';
+  i = 0;
+  while (i++ < Size) push2(c++);
+  dump_stack2();
+
+  return 0;
+}
+/* output:
+
+1st approach:
+L K J I H G F E D C B A 
+
+2nd approach:
+L K J I H G F E D C B A 
+
+*/
+ 
+;;;;
+
+In the first way, the TOP points to the next available slot on the stack. The push operation is
+
+        -- insert the item at TOP
+        -- move TOP to the next open position (in my case, increment top)
+
+The corresponding pop operation is
+
+        -- move TOP back to last insert position (in my case, decrement top)
+        -- return the item at TOP 
+
+The alternative push is
+
+        -- move TOP to the next open position (in my case, increment top)
+        -- insert the item at TOP
+
+The alternative pop is
+
+        -- get the item at TOP to return
+        -- move TOP to the next item (in my case, decrement top)
+        -- return the item
+
+** Short answer **
+
+So PushPop is an experiment to determine which approach IA-32 takes on a 32-bit machine.
+Here's a documented version of the assembler:
+
+int push_test() {
+  int ret_val;
+  /* movl %esp, %eax    ;; save stack pointer
+     pushl %esp         ;; push stack pointer: original value or decremented?
+     popl %edx          ;; pop the top value back into %edx
+     subl %edx, %eax    ;; subtract the two values: 0 or 4 results
+     movl %eax, ret_val ;; set up the return value
+  */
+  asm("movl %%esp, %%eax; pushl %%esp; popl %%edx; subl %%edx, %%eax; movl %%eax, %0"
+      : "=r" (ret_val)
+      : /* not input */
+      : "%edx", "%eax");
+  return ret_val;
+}
+
+The key issue is how the second statment
+
+   pushl %esp 
+
+works. In particular, does pushl first adjust %esp and then push? Or does pushl push and then adjust?
+On an Intel box, "adjust" means "decrement," of course. In my C program, "adjust" means "add."
+
+If pushl first decrements and then pushes, then value of %esp saved in %eax should differ from the
+pushed version by 4 bytes. If pushl pushes and then decrements, the saved-in-%eax and the pushed
+versions will be the same and the subtraction in the 4th line will yield zero. On my IA-32 box,
+0 is returned. So pushl _seems_ to work like push1 in the C program above; but pushl actually
+works like push2.
+
+;;;;
+
+The pop_test is similar. Here's a docmented version:
+
+int pop_test() {
+  int ret_val = 0xffffffff;
+  /* pushl ret_val       ;; save ret_val on the stack
+     movl %esp, %edx     ;; save the stack pointer
+     popl %esp           ;; pop to the stack pointer: original value or incremented?
+     movl %esp, ret_val  ;; set the popped value as the return value
+     movl %edx, %esp     ;; restore original stack pointer
+  */
+  asm("pushl %1; movl %%esp, %%edx; popl %%esp; movl %%esp, %0; movl %%edx, %%esp"
+      : "=r" (ret_val)
+      : "r" (ret_val)
+      : "%edx");
+  return ret_val;
+}
+
+The action here starts with pushing -1, all 1s in binary and so a distinctive pattern, onto the stack.
+The current stack pointer is saved only to restore it after the experiment, which is done on the
+last line of the ASM. This experiment is neutral about how the push works. We know, in any case, that
+the push will move (that is, decrement) %esp. The question is about
+
+    popl %esp 
+
+Does popl first save the top-of-the-stack value in %esp and then adjust (that is, increment)? Or does
+popl first adjust (increment) and then save? If it first saves, we should get something other than -1.
+If it first adjusts, thereby pointing back at the pushed -1, we should get -1. On my IA-32 box, I get
+-1. So popl _seems_ to be pop1 in my C program above (except that IA-32 increments %esp and 
+I decrement top1); but popl actually works like pop2 in my code.
+
+Explanation:
+
+My experiment fails -- miserably, in fact, because the experiment is  misleading. 
+As the text notes (p. 173), the pushl instruction is equivalent to
+
+   ;; Example of pushing the %ebp onto the stack
+   subl $4, %esp     ;; adjust stack pointer
+   movl %ebp, (%esp) ;; push a value onto the stack at the new TOP
+
+This is my push2 in the C program above. 
+
+The popl instruction is then the inverse:
+
+   ;; Example of getting a value from the stack to return
+   movl (%esp), %eax  ;; copy value at TOP into %eax
+   addl $4, %esp      ;; adjust stack pointer
+
+This is my pop2 in the C program above. 
+
+The problem is that when I push the stack pointer itself onto the stack
+
+   pushl %esp
+
+the system first _copies_ the current value of the %esp and then does the
+push, including the adjustment of %esp. So my experiment doesn't pick up 
+the adjusted stack pointer but rather the stack pointer _before_ it's adjusted. 
+
+It's a well-intentioned experiment that misleads rather than informs.
+
+
+
+
+
+

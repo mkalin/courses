@@ -1,0 +1,6 @@
+Global Symbol                   MOVL x, %eax
+Immediate	                MOVL $56, %eax
+Register	                MOVL %ebx, %eax
+Indirect	                MOVL (%esp), %eax
+Base-Relative	                MOVL -4(%ebp), %eax
+Offset-Scaled-Base-Relative	MOVL -12(%esi,%ebx,4), %eax 

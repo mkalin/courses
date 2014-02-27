@@ -1,0 +1,476 @@
+                                     Caches
+
+-- To cache or to compute?
+
+Most programming languages have built-in data structures for key/value lookups. For
+instance, Java has the various Map implementations and C# has the Hashtable. In the 
+Web, the hashtable is the dominant data structure. For instance, query strings 
+attached to GET requests are hashes, as are the HTTP forms in a POST request. 
+
+In computer systems, caches are hardware implementations of hashes, that is, of
+key/value pairs. The keys are typically (but not exclusively) virtual addresses and
+the values are data, addresses, or instructions that a process needs. To begin,
+we look at some code examples of caches and their challenges.
+
+# GIF images uses RGB (red-green-blue) encodings for colors, whereas
+# modern printers use CMYK (cyan-magenta-yellow-black) encoding.
+# This Perl program illustrates, in a translation of RGB to CMYK,
+# the advantages of caching.
+
+# The color rosy red is 188-143-143 in RGB but
+# 0-45-45-67 in CMYK
+sub rgb_to_cmyk_bf {      # bf for "brute force"
+    my ($r, $g, $b) = @_; # 3 arguments: red, green, blue
+    my ($c, $m, $y) = (255 - $r, 255 - $g, 255 - $b);
+    my $k = ($c < $m) ? ($c < $y ? $c : $y)
+	              : ($m < $y ? $m : $y);
+    for ($c, $m, $y) { 
+	$_ -= $k; # subtract $k from each
+    }
+    return [$c, $m, $y, $k]; # an array reference
+}
+
+# Take a GIF image that's 1024 (height) by 768 (width) pixels
+# for 1024 * 768 = 786,432 pixels in all. Each pixel has an
+# RGB value. GIF images are restricted to 256 colors; hence, 
+# 786,432 - 256 = 786,176 of the computations will be redundant.
+# So here's a better version: one that _caches_ results.
+sub rgb_to_cmyk { 
+    my ($r, $g, $b) = @_;
+
+    my $key = join ',', $r, $g, $b; # stringify the three
+    # Return if already computed.
+    return $cache{$key} if exists $cache{$key};
+
+    my ($c, $m, $y) = (255 - $r, 255 - $g, 255 - $b);
+    my $k = ($c < $m) ? ($c < $y ? $c : $y)
+	              : ($m < $y ? $m : $y);
+    for ($c, $m, $y) { 
+	$_ -= $k; # subtract $k from each
+    }
+
+    # Otherwise, cache the computed value and return it.
+    return $cache{$key} = [$c, $m, $y, $k]; 
+}
+#  Let f = the amount of time required to call rgb_to_cmyk_bf
+#  Let g = the amount of time required for the cache operation
+#  Let h = the "hit ratio," the probability that a value has
+#          been computed already and therefore is in the cache
+#
+#  If g > f, there's no point in caching, as g occurs on every call.
+
+#
+#  The difference between rgb_to_cmyk_bf and rgb_to_cymk is
+#
+#       g - hf
+#
+#  That is, every time you find the goodies in the cache, you
+#  save f; and h is the liklihood that you'll find the goodies.
+#  At the start, h is 0 but approaches 1 with each cache addition.
+#  So if g < hf, caching is worth it.
+;;;
+
+#include <stdio.h>
+
+#define N (60) /* number of people */
+
+int main() {
+  const float temp = 366.0f;
+  const float days_in_year = 365.0f; /* ignore leap years */
+  float prob = 1.0f; /* initial probability */
+
+  /* probability of a unique birthday given N persons:
+
+         1         2         3         4   ...
+      365/365 * 364/365 * 363/365 * 362/365...
+
+     The loop computes the probability of not having a
+     unique birthday for values 1 through N. 
+   */
+  int i;
+  for (i = 1; i <= N; i++) {
+    prob *= (temp - i) / days_in_year;
+    printf("%4i - %5.3f", i, 1.0f - prob);
+    if (i % 5 == 0) printf("\n");
+  }
+  return 0;
+}
+/* 
+ Probabilities of shared birthdays == cache conflict
+
+   1 - 0.000   2 - 0.003   3 - 0.008   4 - 0.016   5 - 0.027
+   6 - 0.040   7 - 0.056   8 - 0.074   9 - 0.095  10 - 0.117
+  11 - 0.141  12 - 0.167  13 - 0.194  14 - 0.223  15 - 0.253
+  16 - 0.284  17 - 0.315  18 - 0.347  19 - 0.379  20 - 0.411
+  21 - 0.444  22 - 0.476  23 - 0.507  24 - 0.538  25 - 0.569
+  26 - 0.598  27 - 0.627  28 - 0.654  29 - 0.681  30 - 0.706
+  31 - 0.730  32 - 0.753  33 - 0.775  34 - 0.795  35 - 0.814
+  36 - 0.832  37 - 0.849  38 - 0.864  39 - 0.878  40 - 0.891
+  41 - 0.903  42 - 0.914  43 - 0.924  44 - 0.933  45 - 0.941
+  46 - 0.948  47 - 0.955  48 - 0.961  49 - 0.966  50 - 0.970
+  51 - 0.974  52 - 0.978  53 - 0.981  54 - 0.984  55 - 0.986
+  56 - 0.988  57 - 0.990  58 - 0.992  59 - 0.993  60 - 0.994
+
+Semantics:
+
+Among N people (for N from 1 through 60), what is the liklihood that
+any will share a birthday? This is the cache collision problem. Note
+that, with 23 people, the probability of a shared birthday > 50%.
+With 60 people, it's a near certainty.
+*/
+
+Sections 6.2/6.3/6.4 in text
+
+Typical caches:
+
+CPU registers:        4-byte words (0 latency)
+TLB:                  address translations (32-bits per address) (0 latency)
+L1 cache:             32-byte blocks (0-2 latency)
+
+L2 cache:             32-byte blocks (2 - 10 latency)
+
+Virtual memory:       4-KB page (100 latency in RAM)
+Buffer cache:         Parts of files (100 latency in RAM) 
+
+Network buffer cache: Parts of files (disk)        (10,000,000 latency = 10M)
+Browser cache:        Web pages (disk, client)
+Web cache:            Web pages (disk, remote server) (1,000,000,000 = 1G)
+ 
+
+--L1 and L2 issues: expensive SRAM and more transitors per bit stored
+
+Program Locality: temporal (reusing pre-cached objects) and spatial (cost of
+                  fetching a block amortized across subsequent accesses to that
+                  block).
+
+Cache Misses
+
+   -- cold or compulsory miss: cache is empty WRT process P so that P's
+      instruction/data must be loaded into the cache
+
+   -- conflict miss: blocks from memory level K + 1 (e.g., RAM) 
+      map to blocks at memory level K (e.g., L1), sizeof(K) < sizeof(K + 1).
+      For example, RAM blocks 0, 4, 8, and 12 map to cache block 0.
+      Now suppose that process P requires blocks in this order:
+ 
+               0,8,0,8,...,08
+
+      RAM block 0 and 8 both map to cache block 0; hence, the loading of
+      each RAM block causes a subsequent "conflict miss"
+
+   -- capacity miss: a process typically uses a "working set" of cache
+      blocks (e.g., blocks b1, b2, b3, and b4). But the cache cannot hold
+      the entire working set; that is, 
+      sizeof(working set) > sizeof(allocated cache).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Cache structure:
+
+  Cache is partitioned into sets. If just one set (fully associative), if more 
+  than one set (set-associative).
+
+  N = number of sets
+
+  A cache set is divided into lines, the analogs of memory pages. Each line 
+  includes a block of bytes. Each set has the same number of blocks.
+
+  K = lines per set
+
+  Each line has a certain number of words (bytes).
+
+  L = bytes per line
+
+     Example:   N = 256
+                K = 4
+                L = 64
+
+                Capacity = N * K * L = 32,768 bytes
+
+  The larger K, the more overhead bits == the larger the directory
+
+  Definitions:
+
+     N = 1           ==> fully associative
+     N > 1 and K = 1 ==> direct mapped
+     N > 1 and K > 1 ==> K-way set-associative
+
+  In modern designs, TLB is often fully associative, L1s tend to be 
+  K-way set-associative, and L2 tend to be set-associative or direct-mapped.
+  
+
+  "Generic" is set-associative:
+
+     Multiple sets, each set consists of multiple lines:
+     Each line:
+               +------+-----------+--------------------------------------+
+               | vbit | tag = key |  block of bytes                      |
+               +------+-----------+--------------------------------------+
+
+     The m address bits in the cache address are partitioned into
+
+            -- set index bits
+            -- tag bits
+            -- block offset
+
+     The vbit + tag bits = "overhead bits"
+     The block of bytes  = "data bits"
+
+     Cache capacity ignores overhead bits, e.g., a 256K cache = 256K of blocks.
+
+
+
+
+
+
+
+
+Definitions:
+
+  The collection of all tag bits is called the cache directory.
+
+  ** Direct-Mapped Cache: 1 line per set  (simplest to design/implement)
+     
+     Address format for DM cache:
+
+                  +-----+-----------+-------------+
+                  | tag | set index | byte offset |  
+                  +-----+-----------+-------------+
+                          middle bits so that contiguous blocks in memory
+                          don't map to the same cache block
+
+     A direct-mapped cache is just an array with a set index
+
+
+  ** Set-Associative Cache: > 1 lines per set (E)
+                            4, 8,...,128,256
+             
+     Replacement policy: (doesn't arise in DM) LRU, LFU, or random
+     
+     A set-associative cache is an associative memory (key/value pairs)
+
+  ** Fully Associative: 1 set 
+
+     Each line's tag must be searched in fully associative.
+     Used only in TLBs, which tend to be small.
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  Definitions: A cache is "write through" if a write to the cache also writes
+               back to main memory. 
+
+               If a write to the cache does not automatically trigger a write
+               to RAM, then the write to RAM occurs only when required (e.g.,
+               another processes needs to access the RAM location); at this
+               point, the cache contents are written back.
+
+  Write issues: write through versus write back (dirty bit)
+                no-write-allocate ==> write only to RAM, not to the cache
+                    
+                write-through are typically no-write-allocate
+                write-back are typically write-allocate
+
+  i-cache, d-cache, unified cache
+
+  Typically, L1 has an i-cache and a d-cache
+             L2 has a unified cache
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+
+
+
+
+
+
+  Metrics:
+
+      -- miss rate
+      -- hit rate
+      -- hit time
+      -- miss penalty
+
+  Cache design and metrics:
+
+    -- the larger the cache, the higher the hit rate
+    -- the larger the cache, the higher the hit time (more searching)
+
+    -- the larger the block size, the more potential for locality
+    -- the larger the block size, the smaller the sets or the lines per set
+ 
+    -- the higher the associativity, the lower the conflict misses
+    -- the higher the associativity, the higher the ratio of tag to data bits
+     
+
+  Classic space/time tradeoff: Enhancing the hit rate may require large
+                               associativity, that is, large directory.
+
+  ****************************
+
+  Cache addressing: most processors use virtual addresses but some 
+                    (e.g., the Alpha) use physical addresses
+
+  Example with a 32-bit virtual address:
+
+     512 sets, 4 lines per set, and 128 bytes per line
+
+     log(512)   =  9 bits for the set
+     log(128)   =  7 bits for the word offset
+     32 - 9 - 7 = 16 bits for the tag
+
+        16 bits          9 bits   7 bits
+     +----------------+---------+-------+
+     |   tag          |  set    | byte  |
+     +----------------+---------+-------+      
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Example of DM versus K-way SA:
+
+     C1 is K-way set associative: 512 sets, 8 lines per set, 2 words per line
+                                  (Assume a 32-bit word)
+
+     C1's capacity is 512 * 8 * 32 = 262,144 bits
+        -- 9 bits for the set ID
+        -- 1 bit for the word offset
+        -- 22 bits for the tag
+
+        -- directory size = 512 * 8 * 22 = 90,112 bits (34% of all bits)
+
+     
+     C2 is direct mapped: 4,096 sets, 1 line per set, 2 words per line
+                          (Again assume a 32-bit word)
+
+     C2's capacity i9s 4096 * 1 * 32 = 262,144 bits
+        -- 12 bits for the set ID 
+        -- 1 bit for the word offset
+        -- 19 bits for the tag
+
+        -- directory size = 4096 * 19 = 77,824 (30% of all bits)
+
+-- Caches and Concurrency
+
+"Cache Coherence" is the usual name given to the hardware protocol that
+maintains data consistency among caches. The protocol has two 
+fundamental operations:
+
+   -- load (read)
+   -- store (write)
+
+The dominant cache-coherence protocol is MESI, which supports the 
+following states per cache line (block):
+
+   -- Modified:  the data in memory are stale but no other cache has
+                 a copy of this line
+
+   -- Exclusive: the data are up-to-date in memory and no other cache
+                 has a copy of this line
+
+   -- Shared:    the data are up-to-date in memory but other caches
+                 might have a copy of this line
+
+   -- Invalid:   the data are invalid
+
+The protocol requires the appropriate operations, loads and stores, to
+maintain coherence across these states
+
+
+
+
+
+
+
+
+
+
+
+
+Example in C of the MESI complexities:
+
+;;;
+/* sum1 and sum2 likely wind up in same cache line */
+int sum1; 
+int sum2;
+
+/* repeatedly update sum1 */
+void thread1(int v[], int n) {
+    sum1 = 0;
+    int i;
+    for (i = 0; i < n; i++) sum1 += v[i];
+}
+
+/* repeatedly update sum2 */
+void thread2(int v[], int n) {
+    sum2 = 0;
+    int i;
+    for (i = 0; i < n; i++) sum2 += v[i];
+}
+;;;          
+
+Note that variables sum1 and sum2 are defined close together, which
+makes it likely that the two will wind up in the same cache line. Here's
+the scenario, sometimes called "false sharing". In this scenario, there
+are two separate caches (C1 and C2) but each holds the same line L, which
+in turn contains sum1 and sum2. C1 is thread1's cache and C2 is 
+thread2's cache.
+
+1. thread1 loads sum1 (in L) into its cache C1. L is in Exclusive state 
+   because no other cache holds L.
+
+2. thread2 loads L sum2 into its cache C so that L, now in C1 and C2,
+   goes from Exclusive to Shared.
+
+3. thread1 updates sum1. L, currently in Shared state in both C1 and C2, now 
+   goes into Invalid state in C2 because L has changed.
+
+4. thread2 now updates sum2, which means that L in C1 now goes into Invalid
+   state.
+
+5. C1 does a write-back to memory with the new sum1 but the old sum2.
+   When thread2 tries to access sum2 in L, there will be a coherence miss
+   because the C2 L is out-of-sync with the memory version.
+
+6. C2 must save the new sum2 (in the same L as the old sum1) before
+   synchronizing with memory by reloading L. The C2 write-back
+   will cause a coherence miss in C1 the next time that L is 
+   accessed in C1.
+...
+
+In short, there will be ongoing coherence write-backs and coherence 
+misses as thread1 and thread2 update sum1 and sum2, respectively.
+
+

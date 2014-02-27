@@ -1,0 +1,357 @@
+                                 Concurrent HTTP Servers
+
+# Overview
+
+The three servers forking_server, threading_server, and polling_server illustrate three
+approaches to concurrent versus iterative web servers. The underlying goal is to multiple
+multiple client requests at the same time.
+
+# Code examples: shared stuff
+
+/* utils.h */
+#define BUFF_SIZE (1024)   /* for client read/write */
+#define BACKLOG     (12)   /* maximum number of concurrent clients */
+enum {false, true};        /* 0 and 1, respectively */
+typedef unsigned bool;     /* bool aliases unsigned int */
+
+/* utils.c */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <fcntl.h>
+#include "utils.h"
+
+void error_msg(const char* msg, bool halt_flag) {
+    perror(msg);
+    if (halt_flag) exit(-1); 
+}
+
+/* listening socket */
+int create_server_socket(bool non_blocking) {
+  /* Modify as needed. */
+  const int port = 3000;  
+  
+  struct sockaddr_in server_addr;
+  
+  /* create, bind, listen */
+  int sock = socket(AF_INET,     /* family */
+		    SOCK_STREAM, /* TCP */
+		    0);          
+  if (socket < 0) error_msg("Problem with socket call", true);
+
+  /* non-blocking? */
+  if (non_blocking) fcntl(sock, F_SETFL, O_NONBLOCK);
+  
+  /* bind */
+  bzero(&server_addr, sizeof(server_addr));
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_addr.s_addr = INADDR_ANY;
+  server_addr.sin_port = htons(port); /* host to network endian */
+  if (bind(sock, (struct sockaddr*) &server_addr, sizeof(server_addr)) < 0) 
+    error_msg("Problem with bind call", true);
+
+  /* listen */  
+  fprintf(stderr, "Listening for requests on port %i...\n", port);
+  if (listen(sock, BACKLOG) < 0)
+    error_msg("Problem with listen call", true);
+  return sock;
+}
+
+void announce_client(struct in_addr* addr) {
+  char buffer[BUFF_SIZE + 1];
+
+  inet_ntop(AF_INET, addr, buffer, sizeof(buffer));
+  fprintf(stderr, "Client connected from %s...\n", buffer);
+}
+
+void generate_echo_response(char request[ ], char response[ ]) {
+  strcpy(response, "HTTP/1.1 200 OK\n");        
+  strcat(response, "Content-Type: text/*\n");
+  strcat(response, "Accept-Ranges: bytes\n"); 
+  strcat(response, "Connection: close\n\n");
+  strcat(response, request);
+}
+;;;;;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* forking_server.c */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include "utils.h"
+
+int main() {
+  /* Avoid zombies. */
+  signal(SIGCHLD, SIG_IGN);
+
+  char buffer[BUFF_SIZE + 1];      
+
+  struct sockaddr_in client_addr;
+  socklen_t len = sizeof(struct sockaddr_in);
+
+  /* listening socket */
+  int sock = create_server_socket(false);
+
+  /* connections + requests */
+  while (true) {
+     int client = accept(sock, 
+			(struct sockaddr*) &client_addr, 
+			&len);
+    if (client < 0) error_msg("Problem with accept call", true);
+
+    announce_client(&client_addr.sin_addr);
+
+    /* fork child */
+    pid_t pid = fork();
+    if (pid < 0) error_msg("Problem with fork call", false);
+
+    /* 0 to child, child's PID to parent */
+    if (0 == pid) {  /** child **/
+      close(sock);   /* child's listening socket */
+
+      /* request */
+      bzero(buffer, sizeof(buffer));
+      int bytes_read = recv(client, buffer, sizeof(buffer), 0); 
+      if (bytes_read < 0) error_msg("Problem with recv call", false);
+      
+      /* response */
+      char response[BUFF_SIZE * 2]; 
+      bzero(response, sizeof(response));
+      generate_echo_response(buffer, response);
+      int bytes_written = send(client, response, strlen(response), 0); 
+      if (bytes_written < 0) error_msg("Problem with send call", false);
+
+      close(client); 
+      exit(0);       /* terminate */
+    } 
+    else             /** parent **/
+      close(client); /* parent's read/write socket. */
+  } 
+
+  return 0; 
+}
+
+/* threading_server.c */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <pthread.h>
+#include "utils.h"
+
+/* thread routine */
+void* handle_client(void* client_ptr) {
+  pthread_detach(pthread_self()); /* terminates on return */
+
+  /* read/write socket */
+  int client = *((int*) client_ptr);
+
+  /* request */
+  char buffer[BUFF_SIZE + 1];
+  bzero(buffer, sizeof(buffer));
+  int bytes_read = recv(client, buffer, sizeof(buffer), 0); 
+  if (bytes_read < 0) error_msg("Problem with recv call", false);
+
+  /* response */
+  char response[BUFF_SIZE * 2]; 
+  bzero(response, sizeof(response));
+  generate_echo_response(buffer, response);
+  int bytes_written = send(client, response, strlen(response), 0); 
+  if (bytes_written < 0) error_msg("Problem with send call", false);
+
+  close(client); 
+
+  return NULL;
+} /* detached thread terminates on return */
+
+int main() {  
+  char buffer[BUFF_SIZE + 1];      
+  
+  struct sockaddr_in client_addr;
+  socklen_t len = sizeof(struct sockaddr_in);
+
+  /* listening socket */
+  int sock = create_server_socket(false);
+
+  /* connections */
+  while (true) {
+    int client = accept(sock, 
+			(struct sockaddr*) &client_addr, 
+			&len);
+    if (client < 0) error_msg("Problem accepting a client request", true);
+
+    announce_client(&client_addr.sin_addr);
+
+
+
+
+
+
+
+
+    /* client handler */
+    pthread_t tid;
+    int flag = pthread_create(&tid,          /* id */
+			      NULL,          /* attributes */
+			      handle_client, /* routine */
+			      &client);      /* routine's arg */
+    if (flag < 0) error_msg("Problem creating thread", false);
+  } 
+
+  return 0; 
+}
+;;;;
+
+/* polling_server.c */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <sys/epoll.h>
+#include <fcntl.h>
+#include <errno.h>
+#include "utils.h"
+
+#define MAX_BUFFERS (BACKLOG + 1) /* max clients + listener */
+
+int main() {
+  char buffer[BUFF_SIZE + 1];      
+
+  /* epoll structures */
+  struct epoll_event event,     /* server2epoll */
+    event_buffers[MAX_BUFFERS]; /* epoll2server */
+  
+  int epollfd = epoll_create(MAX_BUFFERS); /* arg just a hint */ 
+  if (epollfd < 0) error_msg("Problem with epoll_create", true);
+
+  struct sockaddr_in client_addr;
+  socklen_t len = sizeof(struct sockaddr_in);
+
+  int sock = create_server_socket(true); /* non-blocking */
+
+  /* polling */
+  event.events = EPOLLIN | EPOLLET; /* incoming, edge-triggered */
+  event.data.fd = sock;             /* register listener */
+  if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &event) < 0) 
+    error_msg("Problem with epoll_ctl call", true);
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  /* connections + requests */
+  while (true) {
+    /* event count */
+    int n = epoll_wait(epollfd, event_buffers, MAX_BUFFERS, -1);
+    if (n < 0) error_msg("Problem with epoll_wait call", true);
+
+    /*
+       -- If connection, add to polling: may be none or more
+       -- If request, read and echo 
+    */
+    int i;
+    for (i = 0; i < n; i++) {
+      /* listener? */
+      if (event_buffers[i].data.fd == sock) {
+	while (true) {
+	  socklen_t len = sizeof(client_addr);
+	  int client = accept(sock,
+			      (struct sockaddr *) &client_addr, 
+			      &len);
+
+	  /* no client? */
+	  if (client < 0 && (EAGAIN == errno || EWOULDBLOCK == errno)) break;
+	  
+	  /* client */
+	  fcntl(client, F_SETFL, O_NONBLOCK); /* non-blocking */
+	  event.events = EPOLLIN | EPOLLET;   /* incoming, edge-triggered */
+	  event.data.fd = client;
+	  if (epoll_ctl(epollfd, EPOLL_CTL_ADD, client, &event) < 0)
+	    error_msg("Problem with epoll_ctl ADD call", false);	  
+	  
+	  announce_client(&client_addr.sin_addr);
+	}
+      }
+      /* request */
+      else {
+	bzero(buffer, sizeof(buffer));
+	int bytes_read = recv(event_buffers[i].data.fd, buffer, sizeof(buffer), 0); 
+
+	/* echo request */
+	if (bytes_read > 0) {
+	  char response[BUFF_SIZE * 2]; 
+	  bzero(response, sizeof(response));
+	  generate_echo_response(buffer, response);
+	  int bytes_written = 
+	    send(event_buffers[i].data.fd, response, strlen(response), 0); 
+	  if (bytes_written < 0) error_msg("Problem with send call", false);
+	
+	  close(event_buffers[i].data.fd); /* epoll stops polling fd */
+	}  
+      } 
+    } 
+  } 
+
+  return 0;
+}
+

@@ -1,0 +1,661 @@
+                                CSC373: Computer Systems 1
+                                        Homework 4
+Points: 100
+Due:    Before midnight, July 16 (that's Friday, not Thursday)
+
+1. Consider this code segment
+
+         int   n = 1234;
+         float f = 1234.0f;
+
+   Here's the internal representation of each in big endian, with the
+   most significant byte to the left:
+
+         n: 00 00 04 d2
+   
+         f: 44 9a 40 00
+
+   Explain how the bits in the integer variable n and the floating-point variable
+   f are correlated. It may be easiest to show how to derive f from n.
+
+Answer:
+
+It may be useful to show the hex bytes in binary so that int n and
+float f can be lined up in both bases. Here's the binary, with each hex
+digit as four binary digits:
+
+n: 0000 0000  0000 0000  0000 0100  1101 0010
+f: 0100 0100  1001 1010  0100 0000  0000 0000
+
+Because f is nonnegative, its MSB (leftmost bit) is 0. Further, an IEEE 754
+has an "implicit leading 1" in the significand. Taking that into account,
+n's bits and f's bits line up as follows (I've used a * to mark where f's implicit
+leading 1 would have been):
+
+n: 0000...010011010010...
+f: ........*0011010010...
+
+The extraneous 0s have been omitted from both for readability. Note that, with the
+implicit leading bit omitted, the two patterns are the same. Although the bits are
+not in the same positions in n and f, they do match. So far, we've basically handled
+the fractional part (significand).
+Now to the next step, the exponent. The deciminal integer 1,234 is
+
+in binary. The binary point is implicit and at the right end:
+
+.0
+
+To remove the implicit leading 1, we need to move the binary point ten places to the
+left, which gives us
+
+.0011010010
+
+So the floating point magnitude is 1.0011010010 * 2**10 and the implicit leading 1
+will be dropped.  The unbiased exponent is 10 and the the biased exponent is 137
+because the bias is -127 (that is, 137 - 127 = 10). So the exponent is
+
+in binary. Now let's lay the whole thing out, padding with 0s on the right:
+
+ 10001001 00110100100000000000000
+
+Next we break this into 4-bit junks, as before, and put the hex digits below:
+
+ 0100 1001 1010 0100 0000 0000 0000
+    4    9    a    4    0    0    0
+
+The hex by itself is
+
+ 9a 40 00
+
+This is the original hex dump of f.
+
+2. Consider this code segment:
+
+         int   n = 1234;
+         float f = 1234.0f;
+	 if (n == f) printf("They're equal.\n");
+	 else printf("They're not equal.\n");
+
+   When executed, the output is
+
+         They're equal.
+
+   The == operator simply checks that the bit patterns are the same.
+   What must the compiler be doing so that the program produces the
+   output that it does?
+Answer:
+The compiler promotes the int to a float. In effect, the code executes as if
+it had been written
+
+if ((float) n == f) ...
+
+At the machine-language level, comparisons are at the bit level; because ints and
+floats have different bit formats, one type must be converted to the other in order
+to get a reasonable comparision. Were the compiler not to make the conversion, the
+bit patterns would be different in this example and the result would be false
+rather than true.
+
+3. Here's a short C program:
+
+/* This program uses the pow function, which is part of the run-time
+        math library. To enable its use, this file (fpointHwk.c) was
+        compiled/linked as follows:
+	
+	gcc -o fpointHwk -lm fpointHwk.c
+	
+        In "-lm", that's a lowercase L rather than a one.
+*/
+
+#include <stdio.h>
+#include <math.h>
+
+int main() {
+  /* first printf statements */
+  double d1 = 1.0 / 10.0;
+  printf("d1 == %f\n", d1);
+  
+  double d2 = pow(2.0, -20.0) * d1;
+  printf("d2 == %f\n", d2);
+  
+  double d3 = 9.54 * pow(10.0, -8.0);
+  printf("d3 == %f\n", d3);
+  printf("\n");
+  
+  /* second printf statements */
+  if (d1 == d2) printf("d1 == d2\n");
+  else printf("d1 != d2\n");
+  
+  if (d1 == d3) printf("d1 == d3\n");
+  else printf("d1 != d3\n");
+  
+  if (d2 == d3) printf("d2 == d3\n");
+  else printf("d2 != d3\n");
+
+  return 0;
+}
+
+    Here's the output:
+
+    d1 == 0.100000
+    d2 == 0.000000
+    d3 == 0.000000
+
+    d1 != d2
+    d1 != d3
+    d2 != d3
+
+    Explain what's going on. In particular, the first printf statements give the
+    same value for d2 and d3: 0.000000. However, the comparisons using ==
+    all evaluate to false, as shown in the second group of printf statements.
+    Explain, then, why the system thinks that d2 != d3.
+
+Answer:
+
+The interesting case involves d2 and d3. For each, the external
+representation (that is, what printf outputs) is 0 to six places, that
+is,
+
+.000000
+
+This is the printf("%f",...) output but C also has a %e, which is more
+suitable in this case. If you change to printf("%e",...) you'll get
+
+d1 == 0.100000
+d2 == 9.536743e-08
+d3 == 9.540000e-08
+
+which is a far better external representation and which, of course, shows
+that d2 != d3.
+
+If you take the comparison to the bit level, it's even clearer. Here's the hex
+dump of d2 and d3, using show_bytesBE ('big endian'):
+
+d2: 3e 79 99 99 99 99 99 9a
+d3: 3e 79 9b d6 8c 73 7e 42
+
+Both d2 and d3 are doubles (IEEE 754 extended floating-point types), which have
+a fractional part of 52 bits and an exponent of 11 bits. Recall that each hex
+digit is four binary digits. Starting from the right, it's clear from
+inspection that the two numbers differ in the rightmost hex pair
+
+d2: 9a
+d3: 42
+
+Indeed, the rightmost 4 bits differ: a in d2 is 1010, whereas 2 in d3 is 0010.
+These digits clearly belong to the fractional part or significand. There
+are further differences, of course, but this difference is sufficient. It's
+worth noting that the sign, exponent fields, and high-order significand bits
+are identical in the two. The problem is that printf("%f",...) doesn't capture
+the difference.
+
+In summary, although the %f external representation does not capture the
+difference in the internal (that is, binary) representation, the
+bitwise == comparison and the %e external representation do capture the
+difference.
+
+
+4. In the net.c program (included in Class8.zip on the home site), 
+   there's a call to gethostbyname, which takes a string and returns a
+   pointer to a struct hostent. Here's a code segment to illustrate:
+
+      struct hostent* host_ptr = gethostbyname("condor.depaul.edu");
+
+   This pointer is passed to the function dump_host_aux, which prints 
+   information about the host with the given name. In the case of
+   www.yahoo.com, for instance, here's the output:
+
+
+          Official name: www.yahoo.akadns.net
+          Aliases: www.yahoo.com
+          Host type: AF_INET
+          Address length: 4
+          Addresses: 68.142.197.86
+                     68.142.197.87
+                     68.142.197.90
+                     68.142.197.67
+                     68.142.197.69
+                     68.142.197.75
+                     68.142.197.77
+                     68.142.197.84
+ 
+   The structure itself looks like this:
+
+     struct hostent {
+        char*    h_name;       ;; official name
+        char**   h_aliases;    ;; alias list
+        int      h_addrtype;   ;; host address type 
+        int      h_length;     ;; length of address 
+        char**   h_addr_list;  ;; list of addresses 
+     };
+
+
+   Of interest here is the second field in the structure, h_aliases, which
+   is a list of alternative names. (The official name for yahoo is not
+   www.yahoo.com but rather www.yahoo.akadns.net; hence, www.yahoo.com is an
+   alias for this official name.) Here's the loop that prints the aliases:
+
+         printf("Aliases: ");
+         int i = 0;
+         while (host_ptr->h_aliases[i] != NULL) {
+            printf("%.21s\n", host_ptr->h_aliases[i]);
+            i++;
+         }
+
+   So the loop terminates when the ith entry is NULL, which is defined as 0
+   in the header file stdlib.h. 
+
+   Here's a simpler example of what's going on. The data type of strings
+   is char**, that is, strings points to an array of strings. Note that the
+   last entry in the list is NULL, which is 0. (Putting the integer 0 in there
+   works the same.) If you put, say, -1 in place of NULL, you get a 
+   compiler warning. Explain why the compiler is willing to accept an
+   array initialization in which the last element is not a string, like the
+   others, but rather an integer. 
+
+
+         /* output from this program:
+
+               foo
+               bar
+               baz
+          */
+          #include <stdlib.h>
+          #include <stdio.h>
+
+          int main() {
+            char* strings[ ] = { "foo", "bar", "baz", NULL };
+            int i = 0;
+            while (strings[i] != NULL)
+               printf("%s\n", strings[i++]);
+            return 0;
+          }
+
+Answer:
+
+In C, the integer 0 is "overloaded"; that is, it represents the number zero,
+the null address (NULL itself is a C macro: define NULL 0), and the representation
+of boolean false (any non-zero integer value represents boolean true). The
+while loop thus could be simplified to
+while (strings[i])
+...
+As written, each member of strings[i] but the last points to the (stack) address of
+the first character in the strings "foo", "bar", and "baz" (that is, to the addresses
+of 'f', 'b', and 'b', respectively); the last pointer has the value 0, NULL.
+In different words, the array strings is really an array of pointers: three
+pointers to char and one null pointer. The compiler thus accepts all four members of
+the array strings as valid pointers, with the last as a void* pointer; and any void*
+pointer can be converted, automatically, to a pointer of some other type (e.g., char*).
+That's why the compiler will accept a void* pointer such as NULL in any array of
+pointers.
+
+No other integer value would get by the compiler. If you change 0 to, say, 1, the code
+won't compile.
+
+
+
+5. Here's a short program, echo.c, that prompts the user to enter a string 
+   from the standard input and then echos the string back to the standard
+   output:
+       
+      #include <stdio.h>
+      #include <stdlib.h>
+
+      char buffer[1024 + 1];
+
+      char* prompt_and_read() {
+         printf("\nPlease enter a string (-1 to exit): ");
+         fgets(buffer, 1024, stdin);
+         return buffer;
+      }
+
+      int main() {
+         while (1) {
+           char* ptr = prompt_and_read();
+           int flag = atoi(ptr);    /* converts string to int */
+           if (flag < 0) break;     /* break out of the loop */
+           printf("You entered: %s\n", ptr);
+         }
+         return 0;
+      }
+
+   Note that array named buffer is not a local variable in 
+   prompt_and_read but rather is defined outside of all functions.
+   (In C jargon, buffer is an extern variable.) Why? In particular,
+   what's the problem with defining buffer inside of prompt_and_read,
+   as show here?
+
+     char* prompt_and_read() {
+         char buffer[1024 + 1];
+         printf("\nPlease enter a string (-1 to exit): ");
+         fgets(buffer, 1024, stdin);
+         return buffer;
+      }
+
+Answer:
+In the 2nd version, buffer[1024 + 1] is allocated on the stack and
+thus is in the call frame of prompt_and_read. When prompt_and_read
+returns, the storage for buffer thus can be reallocated to some
+other use (e.g., the caller might call another function whose
+call frame then overwrites buffer). The guiding rule is this:
+In a function, never return a pointer to a stack address.
+In the first version, buffer is basically part of the program's
+load module. In particular, storage for buffer is not allocated on
+the stack and thus exists independently of calls to prompt_and_read.
+Note on Java/C#, etc. In these languages, arrays are like objects
+in that they are newed:
+
+// Java prompt_and_read
+char[ ] prompt_and_read() {
+char[ ] buffer = new char[1024 + 1];
+...
+return buffer; // OK, buffer points to storage on the heap, not the stack
+}
+
+The Java buffer will be garbage-collected from the heap.
+
+
+
+6. Here is a C program. For review, the malloc function takes one argument,
+   the number of bytes to allocate dynamically from the heap (as opposed to
+   the stack) and returns a pointer to the first byte of allocated storage
+   or NULL (0) if the requested storage cannot be allocated.
+
+   The program compiles and runs. Answer the questions
+   below the program. (The code itself is in the ZIP file so you don't have
+   to extract it from this handout.)
+
+#include <stdio.h>
+#include <stdlib.h>
+
+void f1(int** arg, int n1, int n2) {
+  int i;
+  for (i = 0; i < n1; i++) {
+    int j;
+    for (j = 0; j < n2; j++)
+      *(*(arg + i) + j) = rand() % 100;
+  }
+}
+
+int** f2(int** arg, int n) {
+  int** t = malloc(n * sizeof(int*));
+  int i, k = 0;
+  for (i = n - 1; i >= 0; i--)
+    t[k++] = arg[i];
+  
+  return t;
+}
+
+int main() {
+  int n = 0xffffffff;
+
+  do {
+    printf("Enter a positive integer: ");
+    scanf("%i", &n);
+  } while (n < 0);
+  
+  int** q = malloc(n * sizeof(int*));
+  
+  int i;
+  for (i = 0; i < n; i++)
+    *(q + i) = malloc(n * sizeof(int));
+  f1(q, n, n);
+
+  int** r = f2(q, n);
+  
+  for (i = 0; i < n; i++)
+    free(*(q + i));
+  free(q);
+
+  return 0;
+}
+
+
+
+1. Draw a diagram that depicts what q points to after the first for
+   loop in main executes.
+
+2. Explain what f1 does and how it does it. You can do so by documenting
+   the code. Of particular interest is anything having to do with
+   pointers.
+
+3. Are q and q[0] of the same type? Explain.
+
+4. Explain what f2 does and how it does it.
+;;;;;
+
+
+Answer: shown in the documentation. I added a dump function, which makes clear
+        what's happending, along with a sample dump. Note that the dump
+        function paramater is declared as
+
+               int** array
+
+        but that, in the loop, I used standard array "sugar-coated" syntax:
+
+               array[i][j]
+
+        By the way, I should've freed all of the storage, including the
+        storage that function f2 allocates: a typical oversight in real-world
+        C programming.
+
+#include <stdio.h>
+#include <stdlib.h>
+
+void dump(int** array, int rows, int cols) {
+  int i, j;
+  for (i = 0; i < rows; i++) {
+    printf("\n");
+    int j;
+    for (j = 0; j < cols; j++)
+      printf("%i ", array[i][j]);
+  }
+  printf("\n");
+}
+
+void f1(int** arg, int n1, int n2) {
+  int i;
+  for (i = 0; i < n1; i++) {
+    int j;
+    for (j = 0; j < n2; j++)
+      *(*(arg + i) + j) = rand() % 100;
+  }
+}
+
+int** f2(int** arg, int n) {
+  int** t = malloc(n * sizeof(int*));
+  int i, k = 0;
+  for (i = n - 1; i >= 0; i--)
+    t[k++] = arg[i];
+  
+  return t;
+}
+
+int main() {
+  int n = 0xffffffff;
+
+  do {
+    printf("Enter a positive integer: ");
+    scanf("%i", &n);
+  } while (n < 0);
+  
+  /* Create an N x N matrix using heap storage */
+  int** q = malloc(n * sizeof(int*));
+  
+  int i;
+  for (i = 0; i < n; i++)
+    *(q + i) = malloc(n * sizeof(int));
+
+  /* Fill the matrix with randomly generated integers */
+  f1(q, n, n);
+
+  dump(q, n, n);
+
+  /* Create a new N x N matrix with the rows in reverse order
+     of the rows in the argument matrix: the last row becomes
+     the first, and so on. */
+  int** r = f2(q, n);
+
+  dump(r, n, n);
+  
+  for (i = 0; i < n; i++)
+    free(*(q + i));
+  free(q);
+
+  return 0;
+}
+/* output from sample run:
+
+
+Enter a positive integer: 4
+
+83 86 77 15 
+93 35 86 92 
+49 21 62 27 
+90 59 63 26 
+
+90 59 63 26 
+49 21 62 27 
+93 35 86 92 
+83 86 77 15 
+*/
+
+
+7. Answer the questions posed in the documentation:
+
+Answer: given as additional documentation that is marked with ##
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define D1 (3)
+#define D2 (2)
+#define D3 (3)
+#define UB (100)
+
+/* Output from a sample run:
+
+     24 9 24 98 39 21 29 56 59 21 86 6 76 93 44 21 37 58 
+*/
+
+
+/* Explain, in words and/or pictures, how this loop works. 
+   The syntax is correct and the loop does what it should.
+
+   Why does the compiler need D2 and D3 in the argument
+   but not D1?
+*/
+
+
+/* ## This is the "natural" way to print the contents of a
+      3-dimensional loop, with the outer loop iterating 
+      across the 2-dimensional arrays, the 1st inner loop
+      iterating across the 1-dimensional arrays, and the
+      2nd inner loop iterating across the integers in each
+      1-dimensional array.
+
+      All C arrays are stored in memory as one-dimensional.
+      The compiler needs the know the "inner" dimensions in
+      order to understand how the array is "chunked." In this
+      case, the array has two chunnks (D2) of size D3 apiece.
+      The first dimension need not (indeed, should not) be 
+      given because it's the programmer's responsibility not
+      to go out of bounds.
+
+*/
+void dump_array(int a[][D2][D3]) {
+  int i, j, k;
+  for (i = 0; i < D1; i++)
+    for (j = 0; j < D2; j++)
+      for (k = 0; k < D3; k++)
+      printf("%i ", a[i][j][k]);
+  printf("\n");
+}
+
+int main() {
+  /* Uncomment the next line if you'd prefer different output every time. */
+  /* srand(time(0)); */
+
+  /* What is sizeof(d3)?           ## 72 (D1 * D2 * D3)
+     What is sizeof(d3[1])?        ## 24 == 1/3 of d3's size
+     What is sizeof(d3[1][0]?      ## 12 == 1/2 of d3[1]'s size
+     What is sizeof(d3[1][1][1]?   ##  4 == a single int in the array == sizeof(int)
+  */
+  int d3[D1][D2][D3];
+
+  /* 
+     In words, what is the data type of d3?     ## Acceptable is: pointer to pointer to pointer to int
+     In words, what is the data type of *d3?    ##                pointer to pointer to int
+     In words, what is the data type of **d3?   ##                pointer to int
+     In words, what is the data type of ***d3?  ##                int
+
+     ## Extra credit for more precise descriptions.
+
+     In words, what is the data type of ptr?    ## pointer to int
+  */
+  int* ptr = (int*) d3;
+
+  /* 
+     Your compiler should not issue any warning/error on the line above.
+     What not?
+
+     What if the line changes to:
+
+     int* ptr = d3;
+
+     What happens then with the compiler and why?
+
+     ## The compiler complains of "incompatible pointer types" because the
+        left-hand side is of type pointer to int, whereas the right-hand side
+        is pointer to pointer to pointer to int (roughly).
+  */
+
+  
+  int n =  D1 * D2 * D3 * sizeof(int) - sizeof(int);
+
+  /* What does this next C statement do? In particular, why is d3 cast to an int? */
+  /* Why, in the initialization of n above, do I subtract sizeof(int) at the end? */
+  int* foo = (int*) ((int) d3 + n);
+
+  /*
+    ## foo points to the last int in the one-dimensional implementation of d3. 
+       d3 is cast to an int so that the + n, which is the size of the array in bytes,
+       goes n ints from start of the array, that is, from the point to which d3 points.
+       If d3 were not cast to an int, then pointer arithmetic would ensure that
+       n multi-int chunks (to be precise, D2-sized chunks) were added to d3, which
+       would take us beyond the end of the array.
+
+       The sizeof(int) is subtracted so that foo does not point beyond the end of the
+       array but rather at the last int in it. 
+  */
+
+  /* Explain, in words and/or pictures, what this loop does. */
+  /*
+     ## The array is being populated, one int at a time, from the end to the beginning
+        rather than in the other direction. In the first iteration, *foo is the
+        last integer cell in the array and is assigned a random value. The
+        pointer foo is decremented, in the statement --foo, so that foo moves one int closer to the start of
+        array. In effect, foo moves "right to left" instead of "left to right."
+
+        Once foo moves to the left of where ptr points, the loop terminates. At the end, then,
+        foo points out of the array's bounds but no harm is caused because nothing is stored there.
+  */
+  while (foo >= ptr) {
+    *foo = rand() % UB; /* generate and assign a 1-digit or 2-digit integer */
+    foo--;              /* Explain in words or pictures what's going on here. */
+  }
+  /* What would happen if the while test were changed to
+ 
+          while (foo > ptr)
+          ## The first int cell in the array would not be initialized with a random value.
+  */
+  
+  dump_array(d3); /* Could I call dump_array(ptr) here? Explain. 
+                     ## No. dump_array does not expect a pointer to an int but rather a
+                            pointer to array of D2 arrays, each with D3 ints.
+                  */
+
+  return 0;
+}
+
+

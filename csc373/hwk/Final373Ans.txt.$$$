@@ -1,0 +1,444 @@
+                                 CSC 373: Computer Systems 1
+                                       Summer I, 2011
+                                         Final Exam
+
+Instructions: Open book, open notes. 
+              No machines: calculators, computers, phones, etc.
+Time:         Two hours thirty minues
+
+
+
+Please respond to all questions. Assume throughout the exam that C uses
+2's complement representation for signed integers.
+
+1. Consider the code segment
+
+       /* get_number_from_user prompts the user for a C int
+          and returns this int.
+       */
+       int n = get_number_from_user();
+
+       /* result will be either 1 (true) or 0 (false) */
+       int result = (~n == -n); 
+
+   For any value of n, is it possible for result to be 1? Explain.
+   (In the == expression it's "tilde n" on the left and "negative sign n" on
+   the right.)
+
+## NO -- -n is defined as ~n + 1
+
+
+2. The function 
+
+     void show_bytesBE(char* msg, unsigned char* ptr, int how_many) {
+       printf("%s ==> ", msg);
+       int i;
+       for (i = how_many - 1; i >= 0; i--) printf(" %.2x", ptr[i]);
+       printf("\n");
+     }
+
+   has "BE" in the name to indicate "big endian." Given the code segment
+
+     int n = 0xaabbccdd;
+     show_bytesBE("n", (unsigned char*) &n, sizeof(int));
+
+   the function show_bytesBE produces, on my home computer, the output
+
+     n ==>  aa bb cc dd
+
+   Note that the most significant bytes (in this case, the hex aa) are on the
+   left and that the least significant bytes (in this case, the hex dd) are on
+   the right.
+   Would this output be produced on any platform that supports C? Explain?
+
+## NO -- just the opposite on a BE machine
+
+
+3. Consider the function
+
+     int foo(short int a, short int b) {
+       printf("sizeof(short) is %u\n", sizeof(short));
+       printf("a's address is %u\nb's address is %u\n", &a, &b);
+       int c = a - b + (2 * a);
+       return c;
+     }
+
+   On a sample call, I get the output
+
+       sizeof(short) is 2         /* 2 bytes == 16 bits */
+       a's address is 3220509190  /* 3,220,509,190 */
+       b's address is 3220509188  /* 3,220,509,188 */
+
+   (The comments, of course, were added later.)
+
+   What does the output tell us about alignment with respect to how
+   the compiler translated this code? Explain.
+
+## Not longword (DWORD) aligned as two shorts share 4 bytes
+
+
+4. Assume that sizeof(int) == sizeof(float) == 4 bytes or 32 bits. This is 
+   typical in a C implementation. Now I declare two variables
+
+          int n;
+          float f;
+
+   Now pick one of the following three options and defend it, based on the 
+   assumption given above:
+
+      (a) The number of distinct values that the floating-point variable f
+          can hold is roughly the same number of distinct values that the
+          integer variable n can hold, although the ranges of these 
+          values may differ.
+
+      (b) The floating-point variable f can hold significantly more
+          distinct values than can the integer variable n.
+
+      (c) The integer variable n can hold significantly more distinct
+          values than can the floating-point variable f.
+
+   Far more important than the option you pick are the reasons you offer
+   in defense of this option.
+
+## (a) or there had better be some very good reasoning. :)
+
+
+5. Consider the function
+
+     unsigned int bar(unsigned int n) {
+        /* sizeof(unsigned int) == 4 */
+        printf("sizeof(unsigned int) == %u\n", 
+               sizeof(unsigned int)); 
+        unsigned char* ptr = (unsigned char*) &n;
+        unsigned char t1 = *(ptr + sizeof(unsigned int) - 1);
+        unsigned char t2 = *(ptr + 1);
+        *(ptr + sizeof(unsigned int) - 1) = t2;
+        *(ptr + 1) = t1;
+        return n;  
+     }
+
+
+   In a sample run, I called the function in this code segment
+
+     unsigned int k = 0xff11aa22;
+     printf("k in hex == %x\n", k);  /* output: k in hex == ff11aa22 */
+     unsigned int r = bar(k);
+     printf("r in hex == %x\n", r);
+
+   What does the second printf statement output? Explain why. In 
+   particular, would the output be the same on every platform? If not,
+   what can you say would always be the case about what the second
+   printf statement outputs?
+
+## Output: sizeof(unsigned int) == 4
+           0xaa11ff22
+   
+   Flips 1st and 3rd bytes, in this case ff and aa, on LE machine
+
+6. Here's a depiction of the IA32 stack at a certain point in a process's
+   execution, in particular during the invocation of the function foo. To
+   the left of each stack location is its address in hex. The register
+   %edx is also depicted. For simplicity, let's assume that %edx holds 0
+   to begin.
+
+       Address   Stack contents
+               +---------------+
+       0x123C  | caller's %ebp |<----------  foo's %ebp
+               +---------------+  
+       0x1238  |      7        |
+               +---------------+
+       0x1234  |      9        |             +------------+
+               +---------------+             |     0      |
+                                             +------------+
+                                                 %edx
+
+  Now consider is code segment of assembler:
+
+       movl -8(%ebp), %edx     ;; movl is copy: 
+                               ## 9 goes into edx from 0x1234
+
+       leal -4(%ebp), %eax     ;; leal is load effective address 
+                               ## eax points to 7 at 0x1238
+
+       addl %edx, (%eax)       ;; addl is add  
+                               ## 16 replaces 7 at 0x1238
+
+  Show any changes to either %edx or the stack and explain. 
+  ## edx holds 9, 0x1238 holds 16
+
+
+7. Same starting assumptions as in question 6. Now, however, the assembler changes
+   to 
+        movl -8(%ebp), %edx ## 9 goes into edx
+                           
+        leal -4(%ebp), %eax ## eax points to 7 at 0x1238
+        addl %eax, %edx     ## edx holds 9 + 0x1238 = 4673
+
+   Show any changes to either %edx or the stack and explain.
+
+
+8. Assume that an L1 cache is set associative with two lines per
+   set. There are three sets: S0, S1, and S2. Below is a reference string, with
+   each number representing the address of one word. For simplicity, assume that
+   a cache line holds only one word and that words are loaded individually into
+   the cache. The set index is the word address mod 3. So, for example, if the
+   reference string contained the address 38, we'd have 
+
+          38 % 3 == 2
+
+   because 3 goes into 38 twelve times with a remainder of 2. Keep in mind that
+   
+           0 % 3 == 0
+
+   Reference string: 
+
+       31 26 2 11 22 12 4 18 17 39 28 11 22 12 4 31 26 39 17
+
+
+   Initially the cache is empty. For each address in the reference string, show
+   whether it's a HIT or a MISS and show where it goes into the cache. In case of
+   conflict, resolve the conflict using LRU.
+
+## 
+
+Miss for word 31 in Set 1
+Word 31 inserted into Set 1 at position 0
+
+Miss for word 26 in Set 2
+Word 26 inserted into Set 2 at position 0
+
+Miss for word 2 in Set 2
+Word 2 inserted into Set 2 at position 1
+
+Miss for word 11 in Set 2
+Word 11 inserted into Set 2 at position 0
+
+Miss for word 22 in Set 1
+Word 22 inserted into Set 1 at position 1
+
+Miss for word 12 in Set 0
+Word 12 inserted into Set 0 at position 0
+
+Miss for word 4 in Set 1
+Word 4 inserted into Set 1 at position 0
+
+Miss for word 18 in Set 0
+Word 18 inserted into Set 0 at position 1
+
+Miss for word 17 in Set 2
+Word 17 inserted into Set 2 at position 1
+
+Miss for word 39 in Set 0
+Word 39 inserted into Set 0 at position 0
+
+Miss for word 28 in Set 1
+Word 28 inserted into Set 1 at position 1
+
+Hit for word 11 in Set 2
+
+Miss for word 22 in Set 1
+Word 22 inserted into Set 1 at position 0
+
+Miss for word 12 in Set 0
+Word 12 inserted into Set 0 at position 1
+
+Miss for word 4 in Set 1
+Word 4 inserted into Set 1 at position 1
+
+Miss for word 31 in Set 1
+Word 31 inserted into Set 1 at position 0
+
+Miss for word 26 in Set 2
+Word 26 inserted into Set 2 at position 0
+
+Hit for word 39 in Set 0
+
+Hit for word 17 in Set 2
+
+
+9. Consider this sequence of instructions, written here in pseudo-assembler,
+   each involving integer operands (e.g., q and r have integers as values
+   and p is then assigned an integer)
+
+             p = q * r
+             r = x + y
+             a = b - d
+
+   What challenges does this code sequence present for pipelining?
+
+## Data hazard: r in 1st instruction and in 2nd
+   Resequence putting 3rd inbetween 1st and 2nd             
+
+
+10. Explain how the following program generates the output given. In particular,
+    explain what's going on in the comp function that is the qsort callback.
+
+#include <stdio.h>
+
+
+/* the operator % is the C modulus operator, which returns a
+   remainder. For instance, 
+
+                0 % 3 == 0
+                1 % 3 == 1
+                2 % 3 == 2
+                3 % 3 == 0
+                4 % 3 == 1
+                ...
+
+   the operator && is the boolean AND operator
+*/
+
+int comp(const void* p1, const void* p2) {
+  const int* ptr1 = (const int*) p1;
+  const int* ptr2 = (const int*) p2;
+
+  if (*ptr1 % 2 == 0 && *ptr2 % 2 == 0) return 0;
+  else return *ptr2 - *ptr1;
+}
+
+void dump(int a[ ], int n) {
+  int i;
+  for (i = 0; i < 9; i++) printf("%i ", a[i]);
+  printf("\n");
+}
+
+int main() {
+  int a[ ] = {9, 4, 3, 7, 1, 8, 6, 2, 5};
+  dump(a, 9);
+
+  qsort(a, 9, sizeof(int), comp);
+  dump(a, 9);
+ 
+  return 0;
+}
+/* Here's the output:
+
+    9 4 3 7 1 8 6 2 5
+    9 8 7 4 6 5 3 2 1
+
+   Explain how this output results from the qsort. Be as specific
+   as possible. Hint: Start by carefully documenting qsort.
+*/
+
+## comp treats two ints the same if they are both even, else calls for descending sort
+
+11. Here are two functions, one named loop and the other named recur:   
+
+   void loop() {
+     while (1) {
+       printf("Hello, world!\n");
+     }
+   }
+
+   void recur() {
+     if (1) recur();
+     printf("Hello, world!\n");
+   }
+
+If invoked, what would the behavior of each function be? For example,
+what would each function output?
+
+## loop prints "Hello, world!" indefinitely
+   recur prints nothing and there's a stack overflow
+
+
+12. Here's a function:
+
+   void f(unsigned int x) {
+     unsigned int i = 0;
+     while (i <= x) {
+       printf("hi\n");
+       i = i - 1;
+     }
+     printf("bye\n");
+   }
+
+Suppose we invoke it as follows:
+
+   f(4);
+
+What would the output be?
+
+## ANS
+
+hi
+bye
+
+Would the output be the same if we invoked f with an argument of 8 instead of 4? 
+Explain.
+
+## ANS
+
+hi
+bye
+
+When i as 0 is decremented, it becomes UINT_MAX. If that's passed as an arg,
+then the loop is infinite.
+
+
+13. Here's a program:
+
+#include <stdio.h>
+
+unsigned char convert(unsigned char x) {
+  unsigned char y;
+  y = (x / 10) << 4; /* << is left shift */
+  y = y | (x % 10);  /* | is bitwise or, % is modulus */
+  return y;
+}
+
+/* Hex  Binary Decimal
+
+   0 	0000    0	  
+   1 	0001    1	  
+   2 	0010    2	  
+   3 	0011    3	 
+   4 	0100    4	 
+   5 	0101    5	 
+   6 	0110    6	 
+   7 	0111    7	 
+   8 	1000    8	 
+   9 	1001    9	 
+   a 	1010   10 	
+   b 	1011   11
+   c 	1100   12	
+   d 	1101   13	
+   e 	1110   14	
+   f 	1111   15	 
+*/
+
+int main() {
+  unsigned char c = 241;         /* 11110001 in binary, f1 in hex */
+  unsigned char r = convert(c);
+  printf("%x\n", c);             /* f1 */
+  printf("%x\n", r);             /* ? */
+
+  c = 243;                       /* 11110011 in binary, f3 in hex */
+  r = convert(c);
+  printf("%x\n", c);             /* f3 */
+  printf("%x\n", r);             /* ?  */
+
+  c = 255;                       /* 11111111 in binary, ff in hex */
+  r = convert(c);
+  printf("%x\n", c);             /* ff */
+  printf("%x\n", r);             /* ?  */
+
+  return 0;
+}
+
+
+Show the output where the ? marks now occur. The function convert does
+something useful. If it strikes you what this is, describe it -- but 
+for bonus points rather than for required points.
+
+## ANS -- binary coded decimal
+
+f1
+81
+
+f3
+83
+
+ff
+95

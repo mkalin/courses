@@ -1,0 +1,178 @@
+     1	/* fibonacci number N is defined recursively as
+     2	
+     3	               1 if n <= 2
+     4	   Fib(n) =
+     5	               Fib(n - 1) + Fib(n - 2) if n > 2
+     6	
+     7	   The sequence starts 1, 1, 2, 3, 5, 8, 13, 21, 34, 55,...
+     8	*/
+     9	int fib_recursive(int n) {
+    10	  if (n <= 2) return 1;
+    11	  return fib_recursive(n - 1) + fib_recursive(n - 2);
+    12	}
+    13	
+    14	int fib_dw(int n) {
+    15	  int i = 0;         /* loop counter */
+    16	  int val = 0;   
+    17	  int next = 1;  
+    18	
+    19	  /* Assembler for the loop:
+    20	
+    21	       ;; %eax holds temp
+    22	       ;; %ebx holds val
+    23	       ;; %edx holds next
+    24	       ;; %ecx holds i
+    25	       ;; %esi holds the parameter, n
+    26	
+    27	     .L6:
+    28	         leal (%edx, %ebx), %eax  ;; temp = val + next
+    29		 movl %edx, %ebx          ;; val = next
+    30		 movl %eax, %edx          ;; next = temp
+    31	         incl %ecx                ;; i += 1
+    32	         cmpl %esi, %ecx          ;; (i < n) ?
+    33	         jl .L6                   ;; if (i < n) goto .L6
+    34	         movl %ebx, %eax          ;; return val
+    35	  */
+    36	  do {
+    37	    int temp = val + next;
+    38	    val = next;
+    39	    next = temp;
+    40	    i++;
+    41	  } while(i < n);
+    42	
+    43	  return val;
+    44	}
+    45	
+    46	
+    47	
+    48	
+    49	
+    50	
+    51	
+    52	
+    53	
+    54	
+    55	
+    56	
+    57	
+    58	
+    59	
+    60	
+    61	
+    62	int fib_w(int n) {
+    63	  /* Assembler for fib_w:
+    64	
+    65	       ;; %eax holds n and then temp (after .L10)
+    66	       ;; %ebx holds val
+    67	       ;; %ecx holds next
+    68	       ;; %edx holds i
+    69	
+    70	           movl 8(%ebp), %eax       ;; get parameter n
+    71		   movl $1, %ebx            ;; val = 1
+    72	           movl $1, %ecx            ;; next = 1
+    73		   cmpl %eax, %ebx          ;; (val > n) ?
+    74	           jge .L9                  ;; if (val >= n) return
+    75	           leal -1(%eax), %edx      ;; i = n - 1
+    76	     .L10:
+    77	           leal (%ecx, %ebx), %eax  ;; temp = next + val
+    78	           movl %ecx, %ebx          ;; val = next
+    79	           movl %eax, %ecx          ;; next = temp
+    80		   decl %edx                ;; i--
+    81	           jnz  .L10                ;; if (i != 0) goto .L10
+    82	     .L9:       
+    83	  */
+    84	  int i = 1;
+    85	  int val = 1;
+    86	  int next = 1;
+    87	
+    88	  while (i < n) {
+    89	    int temp = val + next;
+    90	    val = next;
+    91	    next = temp;
+    92	    i++;
+    93	  }
+    94	  
+    95	  return val;
+    96	}
+    97	
+    98	int main() {
+    99	  int i;
+   100	  for (i = 1; i < 8; i++) {
+   101	    printf("Fib(%i) == %i (recursive) and %i (dw) and %i (w)\n",
+   102		   i, fib_recursive(i), fib_dw(i), fib_w(i));
+   103	  }
+   104	
+   105	  return 0;
+   106	}
+   107	/******************************************************************************/
+   108	
+   109	
+   110	
+   111	
+   112	
+   113	
+   114	
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	#include <stdio.h>
+   123	char* my_gets(char* buffer) {
+   124	  int c;  /* getchar() returns the int value 0xffffffff on end-of-file */
+   125	  char* dest = buffer;
+   126	  
+   127	  /* read until newline or end-of-file (Control-Z for the standard input) */
+   128	  while ((c = getchar()) != '\n' && c != EOF)
+   129	    *dest++ = c; /* store next character in buffer and move pointer */
+   130	  
+   131	  if (c == EOF) return NULL; /* NULL is 0, the invalid address */
+   132	  return buffer; /* now filled with characters from getchar() */
+   133	}
+   134	
+   135	int main() {
+   136	  char buf[4];                   /* big trouble waiting to happen */
+   137	  char* flag = my_gets(buf);     /* flag is NULL or non-NULL */
+   138	  if (flag) printf("%s\n", buf); /* print if non-NULL */
+   139	  
+   140	  return 0;
+   141	}
+   142	/* output from sample runs:
+   143	
+   144	    $ ./stack_corrupt
+   145	    a b 
+   146	    a b
+   147	
+   148	    $ ./stack_corrupt
+   149	    a b c d e
+   150	    a b c d e
+   151	    Segmentation fault
+   152	
+   153	   The problem:
+   154	
+   155	                +=======================+ <--- main's call frame
+   156	                |        ...            |
+   157	                |-----------------------| 
+   158	                | return address        | <--- saved %eip for main
+   159	                +=======================+ <--- my_gets's call frame
+   160	                | saved stack pointer   | <--- saved %ebp for main
+   161	                |-----------------------|
+   162	                | [3] | [2] | [1] | [0] | <--- buffer in my_gets (LE)
+   163	                |-----------------------|
+   164	                |        ...            |
+   165	                +=======================|
+   166	
+   167	   At the assembler level (assembler for main):
+   168	
+   169	     main:
+   170	            pushl %ebp          ;; save main's call frame pointer
+   171	            movl %esp, %ebp     ;; create call frame for my_gets
+   172	            subl $20, %esp      ;; grow the call frame for my_gets
+   173	            pushl %ebx          ;; save %ebx on the stack
+   174	            addl $-12, %esp     ;; grow the call frame some more
+   175	            leal -4(%ebp), %ebx ;; compute buf as %ebp - 4
+   176	            pushl %ebx          ;; save new %ebx == buf on the stack
+   177	            call my_gets        ;; transfer control to my_gets
+   178	*/

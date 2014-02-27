@@ -1,0 +1,12 @@
+0. Emphasize that top-level documentation of a function is what counts: what does the function do?
+
+1. Hwk 3 Answers are messed up on Question 6: 2048 sets, not 1024
+
+2. Hwk 3: Make set in question 7 fully associative and be done with it.
+
+3. Rewrite empSort.c so that the array is not copied: sort the pointers first, then the array of Emps
+
+4. For cache handout, the program about d1 != d2, etc. is messed up.
+
+5. In Final, there's no data hazard in pipeline question.
+

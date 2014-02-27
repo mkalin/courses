@@ -1,0 +1,652 @@
+                              Systems 1: Answers for Homework 4
+
+
+1. Consider this code segment
+
+         int   n = 1234;
+         float f = 1234.0f;
+
+   Here's the internal representation of each in big endian, with the
+   most significant byte to the left:
+
+         n: 00 00 04 d2
+   
+         f: 44 9a 40 00 
+
+   Explain how the bits in the integer variable n and the floating-point variable
+   f are correlated. It may be easiest to show how to derive f from n.
+
+Answer:
+
+It may be useful to show the hex bytes in binary so that int n and
+float f can be lined up in both bases. Here's the binary, with each hex
+digit as four binary digits:
+
+n: 0000 0000  0000 0000  0000 0100  1101 0010
+f: 0100 0100  1001 1010  0100 0000  0000 0000
+
+Because f is nonnegative, its MSB (leftmost bit) is 0. Further, an IEEE 754
+has an "implicit leading 1" in the significand. Taking that into account,
+n's bits and f's bits line up as follows (I've used a * to mark where f's implicit
+leading 1 would have been):
+
+n: 0000...010011010010...
+f: ........*0011010010...
+
+The extraneous 0s have been omitted from both for readability. Note that, with the
+implicit leading bit omitted, the two patterns are the same. Although the bits are
+not in the same positions in n and f, they do match. So far, we've basically handled
+the fractional part (significand).
+Now to the next step, the exponent. The deciminal integer 1,234 is
+
+10011010010.0
+
+in binary. To remove the implicit leading 1, we need to move the binary point ten places to the
+left, which gives us
+
+.0011010010
+
+So the floating point magnitude is 1.0011010010 * 2**10 and the implicit leading 1
+will be dropped.  The unbiased exponent is 10 and the the biased exponent is 137
+because the bias is -127 (that is, 137 - 127 = 10). So the exponent is
+
+10001001
+
+in binary. I've written the exponent in standard (that is, big-endian) format, not in
+little-endian format, which is what IEEE 754 uses.
+
+Now let's lay the whole thing out, padding with 0s on the right:
+
+ 10001001 00110100100000000000000
+
+Next we break this into 4-bit junks, as before, and put the hex digits below. We need
+to include the sign, which is + or 0 in IEEE 754. So there's a leftmost 0. Here's the
+result:
+
+ 0100 0100 1001 1010 1000 0000 0000 0000
+   4    4    9    a    4    0    0    0
+
+The original hex dump is
+
+ 44 9a 40 00
+
+
+2. Consider this code segment:
+
+         int   n = 1234;
+         float f = 1234.0f;
+	 if (n == f) printf("They're equal.\n");
+	 else printf("They're not equal.\n");
+
+   When executed, the output is
+
+         They're equal.
+
+   The == operator simply checks that the bit patterns are the same.
+   What must the compiler be doing so that the program produces the
+   output that it does?
+
+Answer:
+The compiler promotes the int to a float. In effect, the code executes as if
+it had been written
+
+if ((float) n == f) ...
+
+At the machine-language level, comparisons are at the bit level; because ints and
+floats have different bit formats, one type must be converted to the other in order
+to get a reasonable comparison. Were the compiler not to make the conversion, the
+bit patterns would be different in this example and the result would be false
+rather than true.
+
+	
+3. Here's a short C program:
+
+    	   #include <stdio.h>
+    	   #include <math.h>
+    	
+    	   /* function pow raises the 1st arg to the 2nd */
+    	   int main() {
+    	     double d1 = 1.0 / 10.0;
+    	  
+    	     double d2 = pow(2.0, -20.0) * d1;
+    	     printf("d2 == %f\n", d2);
+    	     double d3 = 9.54 * pow(10.0, -8.0);
+    	     printf("d3 == %f\n", d3);
+    	  
+    	     printf("\n");
+    	     if (d2 == d3) printf("d2 == d3\n");
+    	     else printf("d2 != d3\n");
+    	  
+    	     return 0;
+    	   }
+    	
+    	   Here's the output:
+    	
+    	       d2 == 0.000000
+    	       d3 == 0.000000
+    	
+    	       d2 != d3
+    	
+    	   The printf statements for d2 and d3 suggest that each is equal
+    	   to zero but the comparison at the end shows them not to be 
+    	   equal. What's going on? In particular, is the comparison operator 
+    	   == to blame? Explain.
+
+Answer:
+
+For d2 and d3, the external representation, that is, what printf outputs with the
+%f formatter is 0 to six places:
+
+0.000000
+
+This is the printf("%f",...) output but C also has a %e, which is more
+suitable in this case. If you change to printf("%e",...) you'll get
+
+d2 == 9.536743e-08
+d3 == 9.540000e-08
+
+d2 != d3
+
+which is a far better external representation and which, of course, shows
+that d2 != d3.
+
+If you take the comparison to the bit level, it's even clearer. Here's the hex
+dump of d2 and d3, using show_bytesBE ('big endian'):
+
+d2: 3e 79 99 99 99 99 99 9a
+d3: 3e 79 9b d6 8c 73 7e 42
+
+Both d2 and d3 are doubles (IEEE 754 extended floating-point types), which have
+a fractional part of 52 bits and an exponent of 11 bits. Recall that each hex
+digit is four binary digits. Starting from the right, it's clear from
+inspection that the two numbers differ in the rightmost hex pair
+
+d2: 9a
+d3: 42
+
+Indeed, the rightmost 4 bits differ: a in d2 is 1010, whereas 2 in d3 is 0010.
+These digits clearly belong to the fractional part or significand. There
+are further differences, of course, but this difference is sufficient. It's
+worth noting that the sign, exponent fields, and high-order significand bits
+are identical in the two. The problem is that printf("%f",...) doesn't capture
+the difference.
+
+In summary, although the %f external representation does not capture the
+difference in the internal (that is, binary) representation, the
+bitwise == comparison and the %e external representation do capture the
+difference.
+
+4. In the web_client.c program (included in the ZIP), 
+   there's a call to gethostbyname, which takes a string and returns a
+   pointer to a struct hostent. Here's a code segment to illustrate:
+
+      struct hostent* host_ptr = gethostbyname("condor.depaul.edu");
+
+   This pointer is passed to the function dump_host_aux, which prints 
+   information about the host with the given name. In the case of
+   www.yahoo.com, for instance, here's the output:
+
+          Official name: www.yahoo.akadns.net
+          Aliases: www.yahoo.com
+          Host type: AF_INET
+          Address length: 4
+          Addresses: 68.142.197.86
+                     68.142.197.87
+                     68.142.197.90
+                     68.142.197.67
+                     68.142.197.69
+                     68.142.197.75
+                     68.142.197.77
+                     68.142.197.84
+ 
+   The C structure itself looks like this:
+
+     struct hostent {
+        char*    h_name;       ;; official name
+        char**   h_aliases;    ;; alias list
+        int      h_addrtype;   ;; host address type 
+        int      h_length;     ;; length of address 
+        char**   h_addr_list;  ;; list of addresses 
+     };
+
+   Of interest here is the second field in the structure, h_aliases, which
+   is a list of alternative names. (The official name for yahoo is not
+   www.yahoo.com but rather www.yahoo.akadns.net; hence, www.yahoo.com is an
+   alias for this official name.) Here's the loop that prints the aliases:
+
+         printf("Aliases: ");
+         int i = 0;
+         while (host_ptr->h_aliases[i] != NULL) {
+            printf("%.21s\n", host_ptr->h_aliases[i]);
+            i++;
+         }
+
+   So the loop terminates when the ith entry is NULL, which is defined as 0
+   in the header file stdlib.h. 
+   
+   Why is the compiler willing to accept an array of strings that includes
+   an integer at the end?
+
+Answer:
+
+In C, the integer 0 is "overloaded"; that is, it represents the number zero
+as (void*) 0, which is the null address (NULL itself is a C macro). 0 is also 
+the representation of boolean false (any non-zero integer value represents boolean true). 
+The while loop thus could be simplified to 
+
+while (strings[i]) /* while not zero == while not false */
+...
+
+In this content, NULL or 0 represents a pointer value rather than an integer.
+No integer value other than 0 would get by the compiler. If you change 0 to,
+say, 1, the code won't compile.
+
+
+5. Here's a short program, echo.c, that prompts the user to enter a string 
+   from the standard input and then echos the string back to the standard
+   output:
+       
+      #include <stdio.h>
+      #include <stdlib.h>
+
+      char buffer[1024 + 1];
+
+      char* prompt_and_read() {
+         printf("\nPlease enter a string (-1 to exit): ");
+         fgets(buffer, 1024, stdin);
+         return buffer;
+      }
+
+      int main() {
+         while (1) {
+           char* ptr = prompt_and_read();
+           int flag = atoi(ptr);    /* converts string to int */
+           if (flag < 0) break;     /* break out of the loop */
+           printf("You entered: %s\n", ptr);
+         }
+         return 0;
+      }
+
+   Note that array named buffer is not a local variable in 
+   prompt_and_read but rather is defined outside of all functions.
+   (In C jargon, buffer is an extern variable.) Why? In particular,
+   what's the problem with defining buffer inside of prompt_and_read,
+   as show here?
+
+     char* prompt_and_read() {
+         char buffer[1024 + 1];
+         printf("\nPlease enter a string (-1 to exit): ");
+         fgets(buffer, 1024, stdin);
+         return buffer;
+      }
+
+Answer:
+
+In the 2nd version, buffer[1024 + 1] is allocated on the stack and
+thus is in the call frame of prompt_and_read. When prompt_and_read
+returns, the storage for buffer thus can be reallocated to some
+other use (e.g., the caller might call another function whose
+call frame then overwrites buffer). The guiding rule is this:
+In a function, never return a pointer to a stack address.
+
+In the first version, buffer is basically part of the program's
+load module. In particular, storage for buffer is not allocated on
+the stack and thus exists independently of calls to prompt_and_read.
+Note on Java/C#, etc. In these languages, arrays are like objects
+in that they are newed:
+
+// Java prompt_and_read
+char[ ] prompt_and_read() {
+char[ ] buffer = new char[1024 + 1];
+...
+return buffer; // OK, buffer points to storage on the heap, not the stack
+
+The Java buffer will be garbage-collected from the heap.
+
+
+6. Here's a program (included in the ZIP) that conducts an experiment:
+
+#include <stdio.h>
+
+int push_test() {
+  int ret_val;
+  /* movl %esp, %eax    ;; save stack pointer
+     pushl %esp         ;; push stack pointer onto stack
+     popl %edx          ;; pop the stack into %edx
+     subl %edx, %eax    ;; subtract the two values
+     movl %eax, ret_val ;; set up the return value
+  */
+  asm("movl %%esp, %%eax; pushl %%esp; popl %%edx; subl %%edx, %%eax; movl %%eax, %0"
+      : "=r" (ret_val)
+      : /* no input */
+      : "%edx", "%eax");
+  return ret_val;
+}
+
+
+int pop_test() {
+  int ret_val = 0xffffffff;  /* -1 in decimal */
+  /* pushl ret_val       ;; save ret_val on the stack
+     movl %esp, %edx     ;; save the stack pointer
+     popl %esp           ;; pop stack into the stack pointer
+     movl %esp, ret_val  ;; set the popped value as the return value
+     movl %edx, %esp     ;; restore original stack pointer
+  */
+  asm("pushl %1; movl %%esp, %%edx; popl %%esp; movl %%esp, %0; movl %%edx, %%esp"
+      : "=r" (ret_val)
+      : "r" (ret_val)
+      : "%edx");
+  return ret_val;
+}
+
+int main() {
+  printf("push test: %d\n", push_test()); 
+  printf("pop test: %d\n", pop_test()); 
+}
+/* Output:
+
+  push test: 0
+  pop test: -1
+
+*/
+
+   What is the experiment trying to show?
+   Does the experiment succeed?
+
+Answer:
+
+There are two parts to the answer:
+
+   1. What is the experiment trying to show?
+
+   2. Does the experiment succeed? Explain.
+
+The answer to (2) is "No." First, let's look at (1).
+
+Consider the following C program, which implements a simple stack in two ways:
+
+#include <stdio.h>
+
+#define Size (12)
+
+char stack[Size];
+int top1 = 0;
+int top2 = -1;
+
+/* push to current TOP and then change TOP*/
+void push1(char item) {
+  if (top1 >= Size) return;
+
+  /* push and then move top */
+  stack[top1] = item;
+  top1++;
+}
+
+/* change TOP and then push */
+void push2(char item) {
+  if (top2 + 1 >= Size) return;
+
+  /* move top and then push */
+  top2++;
+  stack[top2] = item;
+}
+
+/* change TOP and then pop */
+char pop1() {
+  if (top1 - 1 < 0) return '\0';
+
+  /* move top and then pop */
+  top1--;
+  return stack[top1];
+}
+
+/* pop and then change TOP */
+char pop2() {
+  if (top2 - 1 < -1) return '\0';
+
+  /* pop and then move top */
+  char retval = stack[top2];
+  top2--;
+  return retval;
+}
+
+void dump_stack1() {
+  char c;
+  while ((c = pop1()) != '\0') printf("%c ", c);
+  printf("\n");
+}
+
+void dump_stack2() {
+  char c;
+  while ((c = pop2()) != '\0') printf("%c ", c);
+  printf("\n");
+}
+
+void clear_stack() {
+  int i;
+  for (i = 0; i < Size; i++) stack[i] = '\0';
+}
+
+int main() {
+  char c = 'A';
+  
+  printf("1st approach:\n");
+  int i = 0;
+  while (i++ < Size) push1(c++);
+  dump_stack1();
+
+  clear_stack();
+
+  printf("\n2nd approach:\n");
+  c = 'A';
+  i = 0;
+  while (i++ < Size) push2(c++);
+  dump_stack2();
+
+  return 0;
+}
+/* output:
+
+1st approach:
+L K J I H G F E D C B A 
+
+2nd approach:
+L K J I H G F E D C B A 
+
+*/
+ 
+;;;;
+
+In the first way, the TOP points to the next available slot on the stack. The push operation is
+
+        -- insert the item at TOP
+        -- move TOP to the next open position (in my case, increment top)
+
+The corresponding pop operation is
+
+        -- move TOP back to last insert position (in my case, decrement top)
+        -- return the item at TOP 
+
+The alternative push is
+
+        -- move TOP to the next open position (in my case, increment top)
+        -- insert the item at TOP
+
+The alternative pop is
+
+        -- get the item at TOP to return
+        -- move TOP to the next item (in my case, decrement top)
+        -- return the item
+
+** Short answer, no bonus **
+
+So PushPop is an experiment to determine which approach IA-32 takes on a 32-bit machine.
+Here's a documented version of the assembler:
+
+int push_test() {
+  int ret_val;
+  /* movl %esp, %eax    ;; save stack pointer
+     pushl %esp         ;; push stack pointer: original value or decremented?
+     popl %edx          ;; pop the top value back into %edx
+     subl %edx, %eax    ;; subtract the two values: 0 or 4 results
+     movl %eax, ret_val ;; set up the return value
+  */
+  asm("movl %%esp, %%eax; pushl %%esp; popl %%edx; subl %%edx, %%eax; movl %%eax, %0"
+      : "=r" (ret_val)
+      : /* not input */
+      : "%edx", "%eax");
+  return ret_val;
+}
+
+The key issue is how the second statment
+
+   pushl %esp 
+
+works. In particular, does pushl first adjust %esp and then push? Or does pushl push and then adjust?
+On an Intel box, "adjust" means "decrement," of course. In my C program, "adjust" means "add."
+
+If pushl first decrements and then pushes, then value of %esp saved in %eax should differ from the
+pushed version by 4 bytes. If pushl pushes and then decrements, the saved-in-%eax and the pushed
+versions should be the same and the subtraction in the 4th line should yield zero. On my IA-32 box,
+0 is returned. So pushl _seems_ to work like push1 in the C program above.
+
+;;;;
+
+The pop_test is similar. Here's a docmented version:
+
+int pop_test() {
+  int ret_val = 0xffffffff;
+  /* pushl ret_val       ;; save ret_val on the stack
+     movl %esp, %edx     ;; save the stack pointer
+     popl %esp           ;; pop to the stack pointer: original value or incremented?
+     movl %esp, ret_val  ;; set the popped value as the return value
+     movl %edx, %esp     ;; restore original stack pointer
+  */
+  asm("pushl %1; movl %%esp, %%edx; popl %%esp; movl %%esp, %0; movl %%edx, %%esp"
+      : "=r" (ret_val)
+      : "r" (ret_val)
+      : "%edx");
+  return ret_val;
+}
+
+The action here starts with pushing -1, all 1s in binary and so a distinctive pattern, onto the stack.
+The current stack pointer is saved only to restore it after the experiment, which is done on the
+last line of the ASM. This experiment is neutral about how the push works. We know, in any case, that
+the push will move (that is, decrement) %esp. The question is about
+
+    popl %esp 
+
+Does popl first save the top-of-the-stack value in %esp and then adjust (that is, increment)? Or does
+popl first adjust (increment) and then save? If it first saves, we should get something other than -1.
+If popl first adjusts, thereby pointing back at the pushed -1, we should get -1. On my IA-32 box, I get
+-1. So popl _seems_ to be pop1 in my C program above (except that IA-32 increments %esp and 
+I decrement top1).
+
+Does the experiment work?
+
+My experiment fails, badly in fact because it's misleading. As the text notes (p. 173), the
+pushl instruction is equivalent to
+
+   ;; Example of pushing the %ebp onto the stack
+   subl $4, %esp     ;; adjust stack pointer
+   movl %ebp, (%esp) ;; push a value onto the stack at the new TOP
+
+This is my push2 in the C program above: adjust TOP and then insert value.
+
+The popl instruction is then the inverse:
+
+   ;; Example of getting a value from the stack to return
+   movl (%esp), %eax  ;; copy value at TOP into %eax
+   addl $4, %esp      ;; adjust stack pointer
+
+This is my pop2 in the C program above: pop value and then adjust TOP.
+
+The problem is that when I push the stack pointer itself onto the stack
+
+   pushl %esp
+
+the system first _copies_ the current value of the %esp and then does the
+push, including the adjustment of %esp. So my experiment doesn't pick up 
+the adjusted stack pointer but rather the stack pointer _before_ it's adjusted. 
+
+It's a well-intentioned experiment that misleads rather than informs.
+
+
+7. Here is a C program that should compile and run. The questions are
+included as documentation.
+
+#include <string.h>
+#include <stdio.h>
+
+#define MAX_STRING (500)
+
+int main() {
+  const char* g1 = "Hello, world!";
+  const char* g2 = "Goodbye, cruel world?";
+
+  char s[MAX_STRING + 1];
+
+  /* Document in as much detail as you can. At the least, please
+     explain:
+     
+     1. What is the data type of str_stuff?
+     2. What do the function calls labeled A, B, and C do?
+     3. Pick one of A, B, or C and explain the syntax in detail.
+
+  */
+  char* (*str_stuff[ ])(char*, const char*) = {strcat, strcpy, strtok}; 
+  
+  str_stuff[1](s, g1);   /* A */
+  str_stuff[0](s, g2);   /* B */
+  str_stuff[2](s, ",");  /* C */
+  return 0;
+}
+
+One final part to this question. The C string library includes the
+function
+
+    size_t strcspn(char *s1, const char *s2)
+
+returns the length (size_t is an integer type defined in string.h) of
+the longest substring in s1 that contains none of the characters 
+in s2. Explain why strcspn could not be included in the above list
+(currently consisting of strcat, strcpy, and strtok) within this
+example.
+
+Answer:
+
+   str_stuff is a pointer to an array of pointers to functions that 
+   take two string (char*) arguments and return a string (char*).
+
+Each such function takes two arguments, the first of type char* and the second of 
+type const char*, and returns a value of type char*. A function's name 
+is a pointer to the function's entry point (that is, the function's first 
+executable instruction). In this case, the array is:
+
+    str_stuff[0] == strcat
+    str_stuff[1] == strcpy
+    str_stuff[2] == strtok
+
+The three functions have the same signature, the signature required to be
+an element in str_stuff: return a char* and take two arguments, the first
+of type char* and the second of type const char*.
+
+By contrast, the function strcspn has a different signature: it returns an
+integer (size_t type) and so differs from the other three.
+
+The function calls do the following:
+
+/* invokes strcpy */
+str_stuff[1](s, g1) copies "Hello, world!" into the array s.
+
+/* invokes strcat */
+str_stuff[0](s, g2) concatenates s and "Goodbye, cruel world!".
+
+/* invokes strtok */
+str_stuff[2](s, ",") returns the first token, in this case "Hello", in the
+                     string "Hello, world!Goodbye, cruel world!" using the
+                     comma as the token delimiter.
+
+
+
+

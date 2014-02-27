@@ -1,0 +1,492 @@
+     1	#include <stdio.h>
+     2	#include <float.h>
+     3	/* the next include, for math.h, includes the header file; but the C
+     4	   linker does not automatically link in the corresponding math library,
+     5	   which is libm.a, libm.so, or the like on a Unix/Linux system. 
+     6	   To force the link, you'd
+     7	                                % gcc -o fpoint -lm fpoint.c
+     8	   where fpoint.c is this file.
+     9	*/
+    10	#include <math.h>
+    11	
+    12	/* The industry standard for floating-point numbers is called IEEE 754.
+    13	
+    14	   Short and dirty overview:
+    15	
+    16	   Sign bit: 1 for negative, 0 for nonnegative (just like 2's complement)
+    17	   
+    18	   Significand ("mantissa"): fractional binary number
+    19	
+    20	   Exponent: weights the value of the significand by a power of 2
+    21	
+    22	   C representations:
+    23	
+    24	   The IEEE 754 single-precision type is a C float. There's a 1-bit sign,
+    25	   an 8-bit exponent, and a 23-bit fraction value for a 32-bit floating
+    26	   point type. For the IEEE 754 double-precision type, C has double. Again
+    27	   there's a 1-bit sign but the exponent is now 11 bits and the fraction
+    28	   value is 52 bits for a 64-bit type.
+    29	
+    30	   Here's the layout for single-precision:
+    31	
+    32	    s exponent   significand
+    33	   +-+--------+-----------------------+
+    34	   | |        |                       |
+    35	   +-+--------+-----------------------+
+    36	
+    37	   Normalized Values:
+    38	   
+    39	   The exponent's bit pattern is neither all zeros 00..000 nor all ones 11..111.
+    40	   In this case, the exponent represents a signed integer in "biased" form; that
+    41	   is, the exponent's value 
+    42	
+    43	   E = e - bias
+    44	
+    45	   where e is the value of the exponent bit pattern and bias is 127 for 
+    46	   single-precision and 1023 for double-precision. The upshot is that the
+    47	   biased exponent now ranges between -126 to +127 for single-precision and
+    48	   between -1022 to +1023 for double-precision floating points.
+    49	
+    50	   In normalized values, the fractional part F represents a value 
+    51	
+    52	   0 <= F < 1
+    53	
+    54	   or 0.xxxxxxx...xxx in binary. Note that the binary point is to the left of
+    55	   the most significant bit, the leftmost "x" in this example. The signficand M
+    56	   is then defined to be
+    57	                          M = 1 + F
+    58	
+    59	   sometimes called the "implied leading 1" representation. This representation
+    60	   saves a bit (the assumed 1), which then can be used in the exponent.
+    61	
+    62	   Example 1:
+    63	 
+    64	   The problem: To represent the decimal number -118.625 in IEEE 754 
+    65	                single-precision format.
+    66	
+    67	   The solution:
+    68	
+    69	   ** The number is negative so that the sign bit must be 1.
+    70	
+    71	   ** -118.625 in decimal is -1110110.101 in binary.
+    72	
+    73	   ** If we move the binary point left so that there is a single 1 to its left
+    74	      (the "implied leading 1"), we get -1.110110101 * 2**6 (where the power 6
+    75	      represents the number of positions that the the binary point moved to the
+    76	      left).
+    77	
+    78	   ** So the unbiased exponent is 6 and the bias is -127 (that is, 2**(8 - 1) - 1).
+    79	      Adding 6 to 127 gives 133 so that subtracing the bias (133 - 127) gives us
+    80	      the exponent, 6. In binary, 133 is 10000101 as an unsigned integer.
+    81	 
+    82	   ** The significand is 110110101. Right fill with zeros until the length is
+    83	      23 bits. This yields 11011010100000000000000.
+    84	
+    85	   ** The full representation (with spaces for readability) is
+    86	
+    87	   sign exponent      significand
+    88	      1 10000101 11011010100000000000000
+    89	   
+    90	
+    91	   Example 2:
+    92	
+    93	   Show the layout of 
+    94	
+    95	           float  pi_f = 3.1415f;
+    96	           double pi_d = 3.1415;
+    97	
+    98	   in IEEE 754 single and extended precision.
+    99	
+   100	      Single precision:
+   101	
+   102	                +  128 - 127          1.57575 in decimal
+   103	         sign bit  exponent           significand
+   104	
+   105	                0  10000000     1.10010010000111001010110
+   106	
+   107	             [31]  [30]-[23]    [22]    ...            [0]
+   108	
+   109	         -3.1415 is exactly the same except for the sign bit, 
+   110	         which becomes 1
+   111	
+   112	      Note that the internal representation is little endian in the
+   113	      exponent, with the left side as the least significant. The value
+   114	      is 1, 128 - 127.
+   115	
+   116	
+   117	
+   118	
+   119	
+   120	
+   121	
+   122	      Double precision:
+   123	
+   124	                +  1024 - 1023
+   125	         sign bit  exponent
+   126	
+   127	                0  10000000000  1.1001001000011100101011000000100000110001001001101111
+   128	
+   129	             [63]  [62]...[52]  [51]    ...                                        [0]
+   130	
+   131	   Denormalized Values:
+   132	
+   133	   If the exponent field is all zeros, the represented number is "denormalized." 
+   134	   In this case, the exponent value is 
+   135	
+   136	            E = 1 - bias   
+   137	
+   138	   and the significand value is 
+   139	
+   140	            M = f
+   141	
+   142	   or the fraction without the "implied leading 1."
+   143	
+   144	   Denormalized numbers are needed for two reasons:
+   145	
+   146	      (1) To represent zero. In a normalized number, note that M >= 1 because
+   147	          of the "implied leading 1."
+   148	
+   149	      (2) To support "gradual underflow." Numbers very close to zero can be
+   150	          represented in denormalized form.
+   151	
+   152	   One result of denormalized numbers is that, for floating points as for 
+   153	   integers, -0.0 == +0.0. -0.0 is all zeros except for the sign bit, whereas
+   154	   +0.0 is all zeros. 
+   155	
+   156	   Special Values and NaN:
+   157	
+   158	   Consider the case in which the exponent field is all 1s and the fraction field
+   159	   is all 0s. If the sign is 0, then we have "positive infinity"; and if the 
+   160	   sign is 1, then we have "negative infinity". If the exponent is all 1s but the
+   161	   fraction is non-zero, the result is NaN (Not a Number). An example would be
+   162	
+   163	                    3.1415 / 0.0
+   164	
+   165	*/
+   166	
+   167	void show_bytes(char* msg, unsigned char* ptr, int how_many) {
+   168	  printf("%s\n", msg);
+   169	  int i;
+   170	  for (i = 0; i < how_many; i++) printf(" %.2x", ptr[i]);
+   171	  printf("\n");
+   172	}
+   173	
+   174	
+   175	
+   176	
+   177	
+   178	
+   179	
+   180	
+   181	
+   182	#define POS_INFINITY (1e5000)
+   183	#define NEG_INFINITY (-POS_INFINITY)
+   184	#define NEG_ZERO     (-1.0 / POS_INFINITY)
+   185	
+   186	int main() {
+   187	  int n = 3490593;     /* 3,490,593 */
+   188	  float f = (float) n; /* 3,490,593.0 */
+   189	
+   190	  show_bytes("n = 3490593", (unsigned char*) &n, 
+   191		     sizeof(int)); /* n = 3490593 21 43 35 00 */
+   192	
+   193	  show_bytes("f = 3490593", (unsigned char*) &f, 
+   194		     sizeof(int)); /* f = 3490593 84 0c 55 4a */
+   195	
+   196	  float f1 = 100000.0f;
+   197	  float f2 = (f1 * 1e-5) * 1e5;
+   198	  printf("%f %f\n", f1, f2);
+   199	  
+   200	  printf("Integer -0 equals +0: %d\n", 
+   201		 -0 == +0);         /* true */
+   202	  printf("F-point -0.0 equals +0.0: %d\n", 
+   203		 -0.0 == +0.0);     /* true */
+   204	
+   205	  printf("pi / 0 is %f\n", 
+   206		 3.1415f / 0.0f);              /* pi / 0 is inf */
+   207	
+   208	  printf("pi / -0 is %f\n", 
+   209		 3.1415f / -0.0f);             /* pi / -0 is -inf */
+   210	
+   211	  printf("-INF == +INF: %d\n", 
+   212		 1.1f / 0.0f == 1.1f / -0.0f); /* false */
+   213	
+   214	  printf("square root of -1 is %f\n", 
+   215		 sqrt(-1.0));                  /* square root of -1 is nan */
+   216	
+   217	  printf("Macroed +inf: %f\tMacroed -inf: %f\t Macroed -0: %f\n",
+   218		 POS_INFINITY, NEG_INFINITY, NEG_ZERO); /* inf, -inf, -0 */
+   219	
+   220	  /* cheap C trick: introduce a block so that we can redefine some
+   221	     variables definted above
+   222	  */
+   223	  {
+   224	    float f1 = 0.666667f;
+   225	    float f2 = 0.666666f;
+   226	    float f3 = 0.6666666f;
+   227	    float f4 = 2.0f / 3.0f;
+   228	    float f5 = 2.00001f / 3.000001f;    
+   229	    printf("f1 == %f\tf2 == %f\tf3 == %f\nf4 == %f\tf5 == %f\n", 
+   230		   f1, f2, f3, f4, f5);
+   231	    
+   232	    printf("%f == %f ==> %i\n", f4, f5, f4 == f5);
+   233	    printf("%f == %f ==> %i\n", f4, f5, f4 - f5 <= FLT_EPSILON);
+   234	    /* output:       
+   235	    f1 == 0.666667  f2 == 0.666666  f3 == 0.666667
+   236	    f4 == 0.666667  f5 == 0.666670
+   237	    0.666667 == 0.666670 ==> 0
+   238	    0.666667 == 0.666670 ==> 1
+   239	    */
+   240	  }
+   241	
+   242	  {
+   243	    float f1 = 0.666667f;
+   244	    show_bytes("f1: 0.666667f:", (unsigned char*) &f1, sizeof(float));
+   245	    
+   246	    float f2 = 0.666666f;
+   247	    show_bytes("f2: 0.666666f:", (unsigned char*) &f2, sizeof(float));
+   248	    
+   249	    float f3 = 0.6666666f;
+   250	    show_bytes("f3: 0.666666f:", (unsigned char*) &f3, sizeof(float));
+   251	    
+   252	    float f4 = 2.0f / 3.0f;
+   253	    show_bytes("f4: 2.0f / 3.0f:", (unsigned char*) &f3, sizeof(float));
+   254	    
+   255	    float f5 = 2.00001f / 3.000001f;
+   256	    show_bytes("f5: 200001f / 3.000001f:", (unsigned char*) &f5, sizeof(float));
+   257	    
+   258	    printf("f1 == %f\tf2 == %f\tf3 == %f\nf4 == %f\tf5 == %f\n", 
+   259		   f1, f2, f3, f4, f5);
+   260	    
+   261	    printf("%f == %f ==> %i\n", f4, f5, f4 == f5);
+   262	    printf("fabs(%f - %f) > FLT_EPSILON ==> %d\n",
+   263		   f4, f5, fabs(f4 - f5) > FLT_EPSILON);
+   264	    
+   265	    printf("FLT_EPSILON == %f\nFLT_EPSILON  == 0.0f ==> %d\n", 
+   266		   FLT_EPSILON, FLT_EPSILON == 0.0f);
+   267	    /* output:
+   268	       
+   269	    f1: 0.666667f: b0 aa 2a 3f
+   270	    f2: 0.666666f: b0 aa 2a 3f
+   271	    f3: 0.666666f: b0 aa 2a 3f
+   272	    f4: 2.0f / 3.0f:         b0 aa 2a 3f
+   273	    f5: 200001f / 3.000001f: b0 aa 2a 3f
+   274	    
+   275	    f1 == 0.666667  f2 == 0.666666  f3 == 0.666667
+   276	    f4 == 0.666667  f5 == 0.666670
+   277	    0.666667 == 0.666670 ==> 0
+   278	    
+   279	    fabs(0.666667 - 0.666670) > FLT_EPSILON ==> 1
+   280	    
+   281	    FLT_EPSILON == 0.000000
+   282	    FLT_EPSILON == 0.0f ==> 0
+   283	    */
+   284	  }
+   285	  return 0;
+   286	}
+   287	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   288	
+   289	#include <stdio.h>
+   290	#include <math.h>
+   291	
+   292	int main() {
+   293	  double ans = pow(M_E, M_PI) - M_PI; /* e and pi, respectively */
+   294	  printf("%lf\n", ans); /* 19.999100 prints: expected is 19.99909997 */
+   295	
+   296	  return 0;
+   297	}
+   298	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   299	
+   300	
+   301	
+   302	#include <netinet/in.h>
+   303	#include <arpa/inet.h>
+   304	#include <netdb.h>
+   305	#include <sys/socket.h>
+   306	#include <stdio.h>
+   307	
+   308	typedef struct hostent host_info;
+   309	
+   310	void show_bytes(char* msg, unsigned char* ptr, int how_many) {
+   311	  printf("%s\n", msg);
+   312	  int i;
+   313	  for (i = 0; i < how_many; i++) printf(" %.2x", ptr[i]);
+   314	  printf("\n");
+   315	}
+   316	
+   317	void dump_host_aux(host_info* host_ptr) {
+   318	  if (host_ptr == NULL) return;
+   319	  /* Here's the hostent structure layout:
+   320	
+   321	     struct hostent {
+   322	        char*    h_name;       ;; official name
+   323	        char**   h_aliases;    ;; alias list
+   324	        int      h_addrtype;   ;; host address type 
+   325	        int      h_length;     ;; length of address 
+   326	        char**   h_addr_list;  ;; list of addresses 
+   327	     };
+   328	  */
+   329	  printf("\n");
+   330	  printf("Official name: %s\n", host_ptr->h_name);
+   331	
+   332	  printf("Aliases: ");
+   333	  int i = 0;
+   334	  while (host_ptr->h_aliases[i] != NULL) {
+   335	    printf("%.21s\n", host_ptr->h_aliases[i]);
+   336	    i++;
+   337	  }
+   338	  
+   339	  int type = host_ptr->h_addrtype;
+   340	  const char* type_str = (type == 2) ? "AF_INET" : "AF_INET6";
+   341	
+   342	  printf("Host type: %s\n", type_str);
+   343	
+   344	  printf("Address length: %i\n", host_ptr->h_length);
+   345	
+   346	  printf("Addresses: ");
+   347	  i = 0;
+   348	  while (host_ptr->h_addr_list[i] != NULL) {
+   349	    struct in_addr addr;
+   350	    addr.s_addr = *((unsigned int*) host_ptr->h_addr_list[i]);
+   351	    if (i > 0) printf("           ");
+   352	    printf("%.21s\n", inet_ntoa(addr));
+   353	    i++;
+   354	  }
+   355	  printf("\n");
+   356	}
+   357	void dump_host(const char* host_name) {
+   358	  host_info* host = gethostbyname(host_name);
+   359	  dump_host_aux(host);
+   360	}
+   361	
+   362	int main() {
+   363	
+   364	  /* host and network byte order */
+   365	  int n = 0xabcdef12;
+   366	  show_bytes("IA32 int:", (unsigned char*) &n, sizeof(int));
+   367	  unsigned u = htonl(n);
+   368	  show_bytes("htonl:", (unsigned char*) &u, sizeof(unsigned));
+   369	  u = ntohl(u);
+   370	  show_bytes("ntohl:", (unsigned char*) &n, sizeof(int));
+   371	  /* output:
+   372	
+   373	     IA32 int: 12 ef cd ab
+   374	     htonl:    ab cd ef 12
+   375	     ntohl:    12 ef cd ab
+   376	  */
+   377	
+   378	  /* dotted-decimal addresses in network byte order */
+   379	  struct in_addr inet_address;
+   380	  int flag = inet_aton("140.192.1.6", &inet_address);
+   381	  if (flag) {
+   382	    unsigned long addr = inet_address.s_addr;
+   383	    show_bytes("inet_aton:", (unsigned char*) &addr, sizeof(unsigned long));
+   384	    /*
+   385	        inet_aton: 8c c0 01 06 ;; 140 192 1 6
+   386	    */
+   387	  }
+   388	
+   389	  /* some lookup stuff */
+   390	  dump_host("condor.depaul.edu");
+   391	  dump_host("www.google.com");
+   392	  dump_host("www.yahoo.com");
+   393	  dump_host("localhost");
+   394	  /* output:
+   395	
+   396	    Official name: condor.depaul.edu
+   397	    Aliases:
+   398	    Host type:AF_INET
+   399	    Address length: 4
+   400	    Addresses: 140.192.1.6
+   401	
+   402	    Official name: www.l.google.com
+   403	    Aliases: www.google.com
+   404	    Host type: AF_INET
+   405	    Address length: 4
+   406	    Addresses: 72.14.203.104
+   407	               72.14.203.99
+   408	
+   409	    Official name: www.yahoo.akadns.net
+   410	    Aliases: www.yahoo.com
+   411	    Host type: AF_INET
+   412	    Address length: 4
+   413	    Addresses: 68.142.197.66
+   414	               68.142.197.74
+   415	               68.142.197.79
+   416	               68.142.197.82
+   417	               68.142.197.84
+   418	               68.142.197.85
+   419	               68.142.197.87
+   420	               68.142.197.90
+   421	
+   422	    Official name: localhost.localdomain
+   423	    Aliases: localhost
+   424	    Host type: AF_INET
+   425	    Address length: 4
+   426	    Addresses: 127.0.0.1
+   427	  */
+   428	
+   429	  return 0;
+   430	}
+   431	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   432	
+   433	/* C has storage classes: auto, register, static, and extern
+   434	   Neither auto nor register is used much anymore. By default,
+   435	   every local variable and parameter is auto (i.e., stack based).
+   436	   So
+   437	       int main() {
+   438	          int n;
+   439	          ...
+   440	       }
+   441	
+   442	   is equivalent to
+   443	
+   444	       int main() {
+   445	          auto int n;
+   446	          ...
+   447	       }
+   448	
+   449	   The storage class register recommends to the compiler that an
+   450	   auto variable be stored in a register:
+   451	
+   452	       int main() {
+   453	          register int n;
+   454	          ...
+   455	       }
+   456	
+   457	   Modern compilers do this anyway.
+   458	
+   459	   Global variables, those defined outside any block, are either
+   460	   static or extern:
+   461	
+   462	       /* This is file main.c */
+   463	              int n;
+   464	       static int k;
+   465	       int main() {
+   466	          ...
+   467	       }
+   468	
+   469	    A static variable is visible only within its containing file;
+   470	    an extern variable is visible in any other file that contains
+   471	    "extern" in the declaration:
+   472	
+   473	       /* This is file other.c */
+   474	       extern int n;  /* the int n defined in main.c */
+   475	       void foo() { ... }
+   476	       ...
+   477	
+   478	
+   479	
+   480	
+   481	
+   482	    A local variable, which defaults to auto, may be declared static
+   483	    if initialized with a constant in its definition:
+   484	
+   485	       int return_some_int() {
+   486	          static int multiplier = 13;
+   487	          ...
+   488	       }
+   489	
+   490	    A static variable inside a block, such as multiplier, retains its
+   491	    value across invocations.
+   492	*/
